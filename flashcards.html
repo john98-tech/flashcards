@@ -168,8 +168,30 @@ function render(){
     stat();
 }
 
-function go(d){if(!list.length)return;pos=(pos+d+list.length)%list.length;back=false;render()}
-function mark(v){if(!list.length)return;st[di][list[pos]]=v;if(!back){back=true;render();return}go(1)}
+// تعديل الانتقال: إذا كان الكارت يعرض السؤال وجريت للأمام، يظهر الإجابة أولاً ثم ينتقل
+function go(d){
+    if(!list.length) return;
+    if(!back && d > 0){
+        back = true;
+        render();
+        return;
+    }
+    pos = (pos + d + list.length) % list.length;
+    back = false;
+    render();
+}
+
+function mark(v){
+    if(!list.length) return;
+    st[di][list[pos]] = v;
+    if(!back){
+        back = true;
+        render();
+        return;
+    }
+    go(1);
+}
+
 function flip(){if(list.length){back=!back;render()}}
 
 sel.onchange=function(){di=+sel.value;start(false)};
