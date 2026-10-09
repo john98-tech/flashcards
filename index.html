@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الفلاش كاردس التعليمية</title>
+    <!-- مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- مكتبة بصمة الجهاز FingerprintJS -->
+    <script src="https://openfpcdn.io/fingerprintjs/v3"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; text-align: center; outline: none; }
+        button { background-color: #3498db; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:hover { background-color: #2980b9; }
+        .hidden { display: none; }
+        .card { background: #fdfdfd; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card-category { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
+        .card-question { font-size: 18px; color: #2c3e50; margin: 15px 0; font-weight: 600; }
+        .card-answer { background: #e8f8f5; color: #16a085; padding: 10px; border-radius: 6px; font-weight: bold; display: none; margin-top: 10px; }
+        .error-msg { color: #e74c3c; font-weight: bold; margin-top: 10px; }
+        .success-msg { color: #27ae60; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- شاشة تسجيل الدخول بكود التفعيل -->
+        <div id="auth-section">
+            <h2>تفعيل الاشتراك</h2>
+            <p style="color: #7f8c8d; font-size: 14px;">أدخل كود التفعيل الخاص بك للوصول للمحتوى</p>
+            <input type="text" id="activation-code" placeholder="أدخل الكود هنا (مثال: TEST123)">
+            <button onclick="verifyCode()">تفعيل الدخول</button>
+            <div id="status-message"></div>
+        </div>
+
+        <!-- شاشة عرض الفلاش كاردس -->
+        <div id="content-section" class="hidden">
+            <h2>الكروت التعليمية</h2>
+            <p id="welcome-text" class="success-msg"></p>
+            <div id="cards-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ استبدل القيم التالية ببيانات مشروعك من Supabase ⚠️
+        const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co/rest/v1/
+";
+        const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let visitorId = null;
+
+        // تهيئة بصمة الجهاز عند فتح الصفحة
+        FingerprintJS.load().then(fp => fp.get()).then(result => {
+            visitorId = result.visitorId;
+        });
+
+        async function verifyCode() {
+            const codeInput = document.getElementById('activation-code').value.trim();
+            const messageDiv = document.getElementById('status-message');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
+
+            if (!codeInput) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
+                return;
+            }
+
+            if (!visitorId) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'جاري التعرف على الجهاز، يرجى المحاولة بعد ثانية...';
+                return;
+            }
+
+            try {
+                // 1. البحث عن الكود في قاعدة البيانات
+                const { data, error } = await supabaseClient
+                    .from('activation_codes')
+                    .select('*')
+                    .eq('code', codeInput)
+                    .single();
+
+                if (error || !data) {
+                    messageDiv.className = 'error-msg';
+                    messageDiv.innerText = 'كود التفعيل غير صحيح!';
+                    return;
+                }
+
+                // 2. التحقق من بصمة الجهاز
+                if (data.device_fingerprint === null) {
+                    // الكود جديد ومستخدَم لأول مرة: يتم ربطه ببصمة هذا الجهاز فوراً
+                    await supabaseClient
+                        .from('activation_codes')
+                        .update({ device_fingerprint: visitorId })
+                        .eq('code', codeInput);
+
+                    loadFlashcards();
+                } else if (data.device_fingerprint === visitorId) {
+                    // الجهاز طابق البصمة المسجلة سابقاً
+                    loadFlashcards();
+                } else {
+                    // الكود مفعّل على جهاز آخر
+                    messageDiv.className = 'error-msg';
+                    messageDiv.innerText = 'عذراً، هذا الكود مستخدم بالفعل على جهاز آخر!';
+                }
+
+            } catch (err) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'حدث خطأ أثناء التواصل مع السيرفر.';
+            }
+        }
+
+        async function loadFlashcards() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('content-section').classList.remove('hidden');
+            document.getElementById('welcome-text').innerText = 'تم التفعيل بنجاح! مرحباً بك.';
+
+            // جلب الفلاش كاردس ديناميكياً
+            const { data: flashcards, error } = await supabaseClient
+                .from('flashcards')
+                .select('*');
+
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            if (error || !flashcards.length) {
+                container.innerHTML = '<p>لا توجد كروت متاحة حالياً.</p>';
+                return;
+            }
+
+            flashcards.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.innerHTML = `
+                    <div class="card-category">${card.category || 'عام'}</div>
+                    <div class="card-question">${card.question}</div>
+                    <button onclick="toggleAnswer(this)" style="background:#2ecc71;">إظهار الإجابة</button>
+                    <div class="card-answer">${card.answer}</div>
+                `;
+                container.appendChild(cardEl);
+            });
+        }
+
+        function toggleAnswer(btn) {
+            const answerDiv = btn.nextElementSibling;
+            if (answerDiv.style.display === 'block') {
+                answerDiv.style.display = 'none';
+                btn.innerText = 'إظهار الإجابة';
+            } else {
+                answerDiv.style.display = 'block';
+                btn.innerText = 'إخفاء الإجابة';
+            }
+        }
+    </script>
+</body>
+</html>
