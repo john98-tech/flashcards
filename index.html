@@ -58,61 +58,68 @@
             visitorId = result.visitorId;
         });
 
-        async function verifyCode() {
-            const codeInput = document.getElementById('activation-code').value.trim();
-            const messageDiv = document.getElementById('status-message');
-            messageDiv.className = '';
-            messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
+async function verifyCode() {
+    const codeInput = document.getElementById('activation-code').value.trim();
+    const messageDiv = document.getElementById('status-message');
+    messageDiv.className = '';
+    messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
 
-            if (!codeInput) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
-                return;
-            }
+    if (!codeInput) {
+        messageDiv.className = 'error-msg';
+        messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
+        return;
+    }
 
-            if (!visitorId) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'جاري التعرف على الجهاز، يرجى المحاولة بعد ثانية...';
-                return;
-            }
+    try {
+        // 1. بصمة الجهاز
+        const fp = await FingerprintJS.load();
+        const result = await fp.get();
+        const currentDeviceId = result.visitorId;
 
-            try {
-                // 1. البحث عن الكود في قاعدة البيانات
-                const { data, error } = await supabaseClient
-                    .from('activation_codes')
-                    .select('*')
-                    .eq('code', codeInput)
-                    .single();
+        // 2. الفحص في Supabase
+        const { data, error } = await supabaseClient
+            .from('activation_codes')
+            .select('*')
+            .eq('code', codeInput)
+            .maybeSingle();
 
-                if (error || !data) {
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'كود التفعيل غير صحيح!';
-                    return;
-                }
-
-                // 2. التحقق من بصمة الجهاز
-                if (data.device_fingerprint === null) {
-                    // الكود جديد ومستخدَم لأول مرة: يتم ربطه ببصمة هذا الجهاز فوراً
-                    await supabaseClient
-                        .from('activation_codes')
-                        .update({ device_fingerprint: visitorId })
-                        .eq('code', codeInput);
-
-                    loadFlashcards();
-                } else if (data.device_fingerprint === visitorId) {
-                    // الجهاز طابق البصمة المسجلة سابقاً
-                    loadFlashcards();
-                } else {
-                    // الكود مفعّل على جهاز آخر
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'عذراً، هذا الكود مستخدم بالفعل على جهاز آخر!';
-                }
-
-            } catch (err) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'حدث خطأ أثناء التواصل مع السيرفر.';
-            }
+        if (error || !data) {
+            messageDiv.className = 'error-msg';
+            messageDiv.innerText = 'كود التفعيل غير صحيح أو تعذر الاتصال!';
+            return;
         }
+
+        // 3. لو الكود مستخدم قبل كده
+        if (data.is_used) {
+            if (data.device_id === currentDeviceId) {
+                localStorage.setItem('user_activated', 'true');
+                messageDiv.className = 'success-msg';
+                messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
+                setTimeout(() => window.location.href = 'flashcards.html', 1000);
+            } else {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
+            }
+            return;
+        }
+
+        // 4. ربط الكود بالجهاز لأول مرة
+        await supabaseClient
+            .from('activation_codes')
+            .update({ is_used: true, device_id: currentDeviceId })
+            .eq('id', data.id);
+
+        localStorage.setItem('user_activated', 'true');
+        messageDiv.className = 'success-msg';
+        messageDiv.innerText = 'تم التفعيل بنجاح!';
+        setTimeout(() => window.location.href = 'flashcards.html', 1000);
+
+    } catch (err) {
+        console.error(err);
+        messageDiv.className = 'error-msg';
+        messageDiv.innerText = 'حدث خطأ غير متوقع!';
+    }
+}
 
         async function loadFlashcards() {
             document.getElementById('auth-section').classList.add('hidden');
