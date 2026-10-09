@@ -1,5 +1,41 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en"><head>
+ <!-- كود حماية الصفحة ومنع الدخول المباشر بدون تفعيل -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://openfpcdn.io/fingerprintjs/v3/iife.min.js"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', async () => {
+        const isActivated = localStorage.getItem('user_activated');
+        if (isActivated !== 'true') {
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        try {
+            const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+            const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            const fp = await FingerprintJS.load();
+            const result = await fp.get();
+            
+            const { data } = await supabaseClient
+                .from('activation_codes')
+                .select('is_used')
+                .eq('device_id', result.visitorId)
+                .eq('is_used', true)
+                .maybeSingle();
+
+            if (!data) {
+                localStorage.removeItem('user_activated');
+                window.location.href = 'index.html';
+            }
+        } catch (e) {
+            window.location.href = 'index.html';
+        }
+    });
+</script>
+ <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flash Cards – Biochemistry</title>
 <style>
