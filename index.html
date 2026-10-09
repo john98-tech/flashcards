@@ -47,10 +47,36 @@
 
     <script>
         const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-        // ⚠️ ضعي المفتاح الكامل المنسوخ من Supabase بدلاً من المفتاح الحالي ⚠️
         const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // فحص التفعيل المسبق عند فتح الصفحة تلقائياً
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isActivated = localStorage.getItem('user_activated');
+            if (isActivated === 'true') {
+                try {
+                    const fp = await FingerprintJS.load();
+                    const result = await fp.get();
+                    
+                    const { data } = await supabaseClient
+                        .from('activation_codes')
+                        .select('is_used')
+                        .eq('device_id', result.visitorId)
+                        .eq('is_used', true)
+                        .maybeSingle();
+
+                    if (data) {
+                        loadFlashcards();
+                    } else {
+                        localStorage.removeItem('user_activated');
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
 
         async function verifyCode() {
             const codeInput = document.getElementById('activation-code').value.trim();
