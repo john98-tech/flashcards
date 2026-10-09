@@ -46,155 +46,119 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 
-        const { createClient } = window.supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const { createClient } = window.supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // فحص التفعيل المسبق عند فتح الصفحة تلقائياً
-        window.addEventListener('DOMContentLoaded', async () => {
-            const isActivated = localStorage.getItem('user_activated');
-            if (isActivated === 'true') {
-                try {
-                    const fp = await FingerprintJS.load();
-                    const result = await fp.get();
-                    
-                    const { data } = await supabaseClient
-                        .from('activation_codes')
-                        .select('is_used')
-                        .eq('device_id', result.visitorId)
-                        .eq('is_used', true)
-                        .maybeSingle();
+// فحص التفعيل المسبق عند فتح الصفحة تلقائياً
+window.addEventListener('DOMContentLoaded', async () => {
+    const isActivated = localStorage.getItem('user_activated');
+    if (isActivated === 'true') {
+        try {
+            const fp = await FingerprintJS.load();
+            const result = await fp.get();
+            
+            const { data } = await supabaseClient
+                .from('activation_codes')
+                .select('is_used')
+                .eq('device_id', result.visitorId)
+                .eq('is_used', true)
+                .maybeSingle();
 
-                    if (data) {
-                        loadFlashcards();
-                    } else {
-                        localStorage.removeItem('user_activated');
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
+            if (data) {
+                // تحويل مباشر لصفحة الكروت الجديدة
+                window.location.href = 'flashcards.html';
+            } else {
+                localStorage.removeItem('user_activated');
             }
-        });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+});
 
-        async function verifyCode() {
-            const codeInput = document.getElementById('activation-code').value.trim();
-            const messageDiv = document.getElementById('status-message');
-            messageDiv.className = '';
-            messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
+async function verifyCode() {
+    const codeInput = document.getElementById('activation-code').value.trim();
+    const messageDiv = document.getElementById('status-message');
+    messageDiv.className = '';
+    messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
 
-            if (!codeInput) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
-                return;
-            }
+    if (!codeInput) {
+        messageDiv.className = 'error-msg';
+        messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
+        return;
+    }
 
-            try {
-                // 1. جلب بصمة الجهاز
-                const fp = await FingerprintJS.load();
-                const result = await fp.get();
-                const currentDeviceId = result.visitorId;
+    try {
+        // 1. جلب بصمة الجهاز
+        const fp = await FingerprintJS.load();
+        const result = await fp.get();
+        const currentDeviceId = result.visitorId;
 
-                // 2. الفحص في Supabase
-                const { data, error } = await supabaseClient
-                    .from('activation_codes')
-                    .select('*')
-                    .eq('code', codeInput)
-                    .maybeSingle();
+        // 2. الفحص في Supabase
+        const { data, error } = await supabaseClient
+            .from('activation_codes')
+            .select('*')
+            .eq('code', codeInput)
+            .maybeSingle();
 
-                if (error) {
-                    console.error("Supabase Error:", error);
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'حدث خطأ في الاتصال بقاعدة البيانات!';
-                    return;
-                }
+        if (error) {
+            console.error("Supabase Error:", error);
+            messageDiv.className = 'error-msg';
+            messageDiv.innerText = 'حدث خطأ في الاتصال بقاعدة البيانات!';
+            return;
+        }
 
-                if (!data) {
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'كود التفعيل غير صحيح!';
-                    return;
-                }
+        if (!data) {
+            messageDiv.className = 'error-msg';
+            messageDiv.innerText = 'كود التفعيل غير صحيح!';
+            return;
+        }
 
-                // 3. لو الكود مستخدم قبل كده
-                if (data.is_used) {
-                    if (data.device_id === currentDeviceId) {
-                        localStorage.setItem('user_activated', 'true');
-                        messageDiv.className = 'success-msg';
-                        messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
-                        setTimeout(() => loadFlashcards(), 1000);
-                    } else {
-                        messageDiv.className = 'error-msg';
-                        messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
-                    }
-                    return;
-                }
-
-                // 4. ربط الكود بالجهاز لأول مرة
-                const { error: updateError } = await supabaseClient
-                    .from('activation_codes')
-                    .update({ is_used: true, device_id: currentDeviceId })
-                    .eq('id', data.id);
-
-                if (updateError) {
-                    console.error("Update Error:", updateError);
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'فشل ربط الجهاز بالكود!';
-                    return;
-                }
-
+        // 3. لو الكود مستخدم قبل كده
+        if (data.is_used) {
+            if (data.device_id === currentDeviceId) {
                 localStorage.setItem('user_activated', 'true');
                 messageDiv.className = 'success-msg';
-                messageDiv.innerText = 'تم التفعيل بنجاح!';
-                setTimeout(() => loadFlashcards(), 1000);
-
-            } catch (err) {
-                console.error("Unexpected Error:", err);
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'حدث خطأ غير متوقع!';
-            }
-        }
-
-        async function loadFlashcards() {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('content-section').classList.remove('hidden');
-            document.getElementById('welcome-text').innerText = 'تم التفعيل بنجاح! مرحباً بك.';
-
-            const { data: flashcards, error } = await supabaseClient
-                .from('flashcards')
-                .select('*');
-
-            const container = document.getElementById('cards-container');
-            container.innerHTML = '';
-
-            if (error || !flashcards || !flashcards.length) {
-                container.innerHTML = '<p>لا توجد كروت متاحة حالياً.</p>';
-                return;
-            }
-
-            flashcards.forEach(card => {
-                const cardEl = document.createElement('div');
-                cardEl.className = 'card';
-                cardEl.innerHTML = `
-                    <div class="card-category">${card.category || 'عام'}</div>
-                    <div class="card-question">${card.question}</div>
-                    <button onclick="toggleAnswer(this)" style="background:#2ecc71;">إظهار الإجابة</button>
-                    <div class="card-answer">${card.answer}</div>
-                `;
-                container.appendChild(cardEl);
-            });
-        }
-
-        function toggleAnswer(btn) {
-            const answerDiv = btn.nextElementSibling;
-            if (answerDiv.style.display === 'block') {
-                answerDiv.style.display = 'none';
-                btn.innerText = 'إظهار الإجابة';
+                messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
+                setTimeout(() => {
+                    window.location.href = 'flashcards.html';
+                }, 1000);
             } else {
-                answerDiv.style.display = 'block';
-                btn.innerText = 'إخفاء الإجابة';
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
             }
+            return;
         }
+
+        // 4. ربط الكود بالجهاز لأول مرة
+        const { error: updateError } = await supabaseClient
+            .from('activation_codes')
+            .update({ is_used: true, device_id: currentDeviceId })
+            .eq('id', data.id);
+
+        if (updateError) {
+            console.error("Update Error:", updateError);
+            messageDiv.className = 'error-msg';
+            messageDiv.innerText = 'فشل ربط الجهاز بالكود!';
+            return;
+        }
+
+        localStorage.setItem('user_activated', 'true');
+        messageDiv.className = 'success-msg';
+        messageDiv.innerText = 'تم التفعيل بنجاح!';
+        setTimeout(() => {
+            window.location.href = 'flashcards.html';
+        }, 1000);
+
+    } catch (err) {
+        console.error("Unexpected Error:", err);
+        messageDiv.className = 'error-msg';
+        messageDiv.innerText = 'حدث خطأ غير متوقع!';
+    }
+}
     </script>
 </body>
 </html>
