@@ -131,7 +131,10 @@ async function fetchCardsFromSupabase() {
 // 4. تشغيل نظام الكروت
 function initDeckSystem() {
     sel.innerHTML = '';
-    st = D.map(function(){return{}});
+    // إنشاء مصفوفة حالات لكل كارت بناءً على عددهم الفعلي بالقسم
+    st = D.map(function(d){
+        return new Array(d.cards.length).fill(null); // يبدأوا كلهم فاضيين (null)
+    });
     
     D.forEach(function(d,i){
         var o = document.createElement('option');
@@ -167,12 +170,13 @@ function start(missed){
 
 function stat(){
     if (!D.length) return;
-    var s = st[di], ok = 0, no = 0;
+    var deckStates = st[di];
+    var ok = 0, no = 0;
     
-    // إعادة حساب دقيقة لكل الكروت الموجودة في القسم الحالي
-    for(var k in s){
-        if(s[k] === 'ok') ok++;
-        else if(s[k] === 'no') no++;
+    // عد الحالات الصحيحة والخاطئة لكل كارت في القسم الحالي بدقة تامة
+    for(var i = 0; i < deckStates.length; i++){
+        if(deckStates[i] === 'ok') ok++;
+        else if(deckStates[i] === 'no') no++;
     }
     $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
 }
@@ -207,10 +211,10 @@ function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
     
-    // تسجيل الحالة الجديدة مباشرة (هذا التحديث يضمن عدم تداخل الحالات القديمة)
+    // تسجيل الحالة المباشرة للكارت في مكانه الصحيح بالمصفوفة
     st[di][realCardIdx] = v;
 
-    // لو في قسم الـ Missed واتجاوب صح، بنشيله من اللستة الحالية
+    // لو في قسم الـ Missed واتجاوب صح، بنشيله من اللستة الحالية فوراً
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
         if(pos >= list.length) pos = 0;
