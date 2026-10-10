@@ -12,14 +12,14 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
 :root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;}
 main{max-width:640px;margin:0 auto;padding:16px}
 h1{font-size:1.4rem;margin:.2em 0 .6em}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
 select{max-width:100%}
-.card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
+.card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;}
 .card.back{border-color:var(--acc)}
 .tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
 .crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:10px}
@@ -42,7 +42,7 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 <div class="ctl"><button id="prev">← Prev</button><button id="flip">Flip</button><button id="next">Next →</button></div>
 <div class="ctl" style="margin-top:8px"><button class="no" id="bad">✗ Again</button><button class="ok" id="good">✓ Got it</button></div>
 <div class="stat" id="stat"></div>
-<p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Again, ↓ = Got it.</p>
+<p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
 </main>
 <script>
 // 1. إعدادات Supabase ورابط الحماية
@@ -198,17 +198,16 @@ $('shuf').onchange=function(){start(false)};
 $('card').onclick=flip;$('flip').onclick=flip;$('prev').onclick=function(){go(-1)};$('next').onclick=function(){go(1)};
 $('good').onclick=function(){mark('ok')};$('bad').onclick=function(){mark('no')};
 
-// 5. الحماية واختصارات الكيبورد (مصححة ومنع السكرول الافتراضي)
+// 5. الحماية واختصارات الكيبورد (الأسهم معكوسة: فوق لـ Got it، وتحت لـ Again)
 document.addEventListener('contextmenu', event => event.preventDefault());
 
 document.onkeydown = function(e){
-    // منع اختصارات الفحص (F12, Ctrl+Shift+I, Ctrl+U)
     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
         return false;
     }
 
     if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
-        e.preventDefault(); // منع السكرول تماماً مع المسطرة
+        e.preventDefault();
         flip();
     }
     else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){
@@ -221,11 +220,11 @@ document.onkeydown = function(e){
     }
     else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){
         e.preventDefault();
-        mark('no');
+        mark('ok'); // السهم لفوق بقا لـ Got it
     }
     else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){
         e.preventDefault();
-        mark('ok');
+        mark('no'); // السهم لتحت بقا لـ Again
     }
 };
 </script></body></html>
