@@ -58,7 +58,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var D = [];
-var st = [], di = 0, list = [], pos = 0, back = false;
+var st = [], di = 0, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)}, sel = $('deck');
 
 // 2. فحص التفعيل وحماية الصفحة قبل أي شيء
@@ -145,31 +145,49 @@ function initDeckSystem() {
 }
 
 function start(missed){
+    isMissedMode = missed;
     if (!D.length) return;
     var n = D[di].cards.length, idx = [];
-    for(var i=0;i<n;i++){if(!missed||st[di][i]==='no')idx.push(i)}
-    if($('shuf').checked)idx.sort(function(){return Math.random()-.5});
-    list=idx;pos=0;back=false;render();
+    
+    for(var i = 0; i < n; i++){
+        if(!missed || st[di][i] === 'no') {
+            idx.push(i);
+        }
+    }
+    
+    if($('shuf').checked && !missed) {
+        idx.sort(function(){return Math.random() - .5});
+    }
+    
+    list = idx;
+    pos = 0;
+    back = false;
+    render();
 }
 
 function stat(){
     if (!D.length) return;
-    var s=st[di],ok=0,no=0;
-    for(var k in s){if(s[k]==='ok')ok++;else no++}
-    $('stat').textContent='✓ '+ok+'    ✗ '+no;
+    var s = st[di], ok = 0, no = 0;
+    
+    // عد فقط الكروت التي تم التفاعل معها فعلياً
+    for(var k in s){
+        if(s[k] === 'ok') ok++;
+        else if(s[k] === 'no') no++;
+    }
+    $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
 }
 
 function render(){
-    var c=$('card');
+    var c = $('card');
     if(!list.length){
-        c.className='card';
-        c.innerHTML='<div class="txt">No cards here yet. Mark some as ✗ Again, or press All cards.</div>';
+        c.className = 'card';
+        c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
         stat();
         return;
     }
-    var x=D[di].cards[list[pos]];
-    c.className='card'+(back?' back':'');
-    c.innerHTML='<div class="tag">'+x.s+' · '+(pos+1)+' / '+list.length+'</div>'+(x.c?'<div class="crumb">'+x.c.replace(/</g,'&lt;')+'</div>':'')+'<div class="txt">'+(back?x.b:x.f)+'</div><div class="hint"'+(back?' style="visibility:hidden"':'')+'>Press ✓ Got it or ✗ Again to see the answer</div>';
+    var x = D[di].cards[list[pos]];
+    c.className = 'card' + (back ? ' back' : '');
+    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.crumb ? '<div class="crumb">' + x.crumb.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
     stat();
 }
 
@@ -187,7 +205,18 @@ function go(d){
 
 function mark(v){
     if(!list.length) return;
-    st[di][list[pos]] = v;
+    var realCardIdx = list[pos];
+    st[di][realCardIdx] = v; // حفظ الحالة (ok أو no) للسؤال بالتحديد
+
+    // لو احنا في قسم الـ Missed وحل الصح (ok)، بنشيله من اللستة فوراً
+    if(isMissedMode && v === 'ok'){
+        list.splice(pos, 1);
+        if(pos >= list.length) pos = 0;
+        back = false;
+        render();
+        return;
+    }
+
     if(!back){
         back = true;
         render();
@@ -198,18 +227,15 @@ function mark(v){
 
 function flip(){if(list.length){back=!back;render()}}
 
-sel.onchange=function(){di=+sel.value;start(false)};
-$('all').onclick=function(){start(false)};
-$('miss').onclick=function(){start(true)};
-$('shuf').onchange=function(){start(false)};
-$('card').onclick=flip;$('flip').onclick=flip;$('prev').onclick=function(){go(-1)};$('next').onclick=function(){go(1)};
-$('good').onclick=function(){mark('ok')};$('bad').onclick=function(){mark('no')};
+sel.onchange = function(){ di = +sel.value; start(false); };
+$('all').onclick = function(){ start(false); };
+$('miss').onclick = function(){ start(true); };
+$('shuf').onchange = function(){ start(false); };
+$('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
+$('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
 
-// 5. حماية إضافية تمنع تحديد النص (Select) بالماوس نهائياً
-document.addEventListener('selectstart', function(e) {
-    e.preventDefault();
-});
-
+// الحماية واختصارات الكيبورد
+document.addEventListener('selectstart', function(e) { e.preventDefault(); });
 document.addEventListener('contextmenu', event => event.preventDefault());
 
 document.onkeydown = function(e){
