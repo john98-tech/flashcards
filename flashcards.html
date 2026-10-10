@@ -94,17 +94,45 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// 3. دالة جلب الأسئلة وتنظيمها في مجموعات (Decks)
+// 3. دالة جلب كل الأسئلة بدون أي حد أقصى (سحب تراكمي بالدفعة)
 async function fetchCardsFromSupabase() {
-    const { data, error } = await supabaseClient.from('flashcards').select('*');
-    
-    if (error || !data || data.length === 0) {
+    let allData = [];
+    let step = 1000;
+    let from = 0;
+    let to = 999;
+    let keepFetching = true;
+
+    while (keepFetching) {
+        const { data, error } = await supabaseClient
+            .from('flashcards')
+            .select('*')
+            .range(from, to);
+
+        if (error) {
+            console.error("Error fetching data:", error);
+            break;
+        }
+
+        if (data && data.length > 0) {
+            allData = allData.concat(data);
+            if (data.length < step) {
+                keepFetching = false; // خلصنا كل الصفوف الموجودة في الجدول
+            } else {
+                from += step;
+                to += step;
+            }
+        } else {
+            keepFetching = false;
+        }
+    }
+
+    if (allData.length === 0) {
         $('card').innerHTML = '<div class="txt">No cards available in database yet.</div>';
         return;
     }
 
     var decksMap = {};
-    data.forEach(item => {
+    allData.forEach(item => {
         var categoryName = item.category || 'General';
         if (!decksMap[categoryName]) {
             decksMap[categoryName] = [];
@@ -131,9 +159,8 @@ async function fetchCardsFromSupabase() {
 // 4. تشغيل نظام الكروت
 function initDeckSystem() {
     sel.innerHTML = '';
-    // إنشاء مصفوفة حالات لكل كارت بناءً على عددهم الفعلي بالقسم
     st = D.map(function(d){
-        return new Array(d.cards.length).fill(null); // يبدأوا كلهم فاضيين (null)
+        return new Array(d.cards.length).fill(null);
     });
     
     D.forEach(function(d,i){
@@ -173,7 +200,6 @@ function stat(){
     var deckStates = st[di];
     var ok = 0, no = 0;
     
-    // عد الحالات الصحيحة والخاطئة لكل كارت في القسم الحالي بدقة تامة
     for(var i = 0; i < deckStates.length; i++){
         if(deckStates[i] === 'ok') ok++;
         else if(deckStates[i] === 'no') no++;
@@ -211,10 +237,8 @@ function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
     
-    // تسجيل الحالة المباشرة للكارت في مكانه الصحيح بالمصفوفة
     st[di][realCardIdx] = v;
 
-    // لو في قسم الـ Missed واتجاوب صح، بنشيله من اللستة الحالية فوراً
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
         if(pos >= list.length) pos = 0;
@@ -263,11 +287,11 @@ document.onkeydown = function(e){
     }
     else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){
         e.preventDefault();
-        mark('ok'); // فوق لـ Got it
+        mark('ok');
     }
     else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){
         e.preventDefault();
-        mark('no'); // تحت لـ Again
+        mark('no');
     }
 };
 </script></body></html>
