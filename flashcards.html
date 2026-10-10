@@ -169,7 +169,7 @@ function stat(){
     if (!D.length) return;
     var s = st[di], ok = 0, no = 0;
     
-    // عد فقط الكروت التي تم التفاعل معها فعلياً
+    // إعادة حساب دقيقة لكل الكروت الموجودة في القسم الحالي
     for(var k in s){
         if(s[k] === 'ok') ok++;
         else if(s[k] === 'no') no++;
@@ -206,9 +206,11 @@ function go(d){
 function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
-    st[di][realCardIdx] = v; // حفظ الحالة (ok أو no) للسؤال بالتحديد
+    
+    // تسجيل الحالة الجديدة مباشرة (هذا التحديث يضمن عدم تداخل الحالات القديمة)
+    st[di][realCardIdx] = v;
 
-    // لو احنا في قسم الـ Missed وحل الصح (ok)، بنشيله من اللستة فوراً
+    // لو في قسم الـ Missed واتجاوب صح، بنشيله من اللستة الحالية
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
         if(pos >= list.length) pos = 0;
