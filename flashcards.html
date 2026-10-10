@@ -94,7 +94,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// 3. دالة جلب كل الأسئلة بدون أي حد أقصى (سحب تراكمي بالدفعة)
+// 3. دالة جلب كل الأسئلة بالترتيب الصحيح بدون أي حد أقصى
 async function fetchCardsFromSupabase() {
     let allData = [];
     let step = 1000;
@@ -106,6 +106,7 @@ async function fetchCardsFromSupabase() {
         const { data, error } = await supabaseClient
             .from('flashcards')
             .select('*')
+            .order('id', { ascending: true }) // ترتيب الكروت تصاعدياً حسب الـ ID لضمان ظهورها سطر بـ سطر وبالترتيب
             .range(from, to);
 
         if (error) {
@@ -116,7 +117,7 @@ async function fetchCardsFromSupabase() {
         if (data && data.length > 0) {
             allData = allData.concat(data);
             if (data.length < step) {
-                keepFetching = false; // خلصنا كل الصفوف الموجودة في الجدول
+                keepFetching = false; 
             } else {
                 from += step;
                 to += step;
