@@ -42,7 +42,7 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 <div class="ctl"><button id="prev">← Prev</button><button id="flip">Flip</button><button id="next">Next →</button></div>
 <div class="ctl" style="margin-top:8px"><button class="no" id="bad">✗ Again</button><button class="ok" id="good">✓ Got it</button></div>
 <div class="stat" id="stat"></div>
-<p class="hint" style="text-align:center">Got it / Again shows the answer, press again for the next card. Keys: Space = flip, F = Again, J = Got it, arrows = Prev / Next.</p>
+<p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Again, ↓ = Got it.</p>
 </main>
 <script>
 // 1. إعدادات Supabase ورابط الحماية
@@ -79,7 +79,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // لو الجهاز مفعل بنجاح، جلب الأسئلة من Supabase
         await fetchCardsFromSupabase();
 
     } catch (e) {
@@ -97,7 +96,6 @@ async function fetchCardsFromSupabase() {
         return;
     }
 
-    // تجميع الأسئلة حسب القسم (category)
     var decksMap = {};
     data.forEach(item => {
         var categoryName = item.category || 'General';
@@ -168,7 +166,6 @@ function render(){
     stat();
 }
 
-// تعديل الانتقال: إذا كان الكارت يعرض السؤال وجريت للأمام، يظهر الإجابة أولاً ثم ينتقل
 function go(d){
     if(!list.length) return;
     if(!back && d > 0){
@@ -201,21 +198,30 @@ $('shuf').onchange=function(){start(false)};
 $('card').onclick=flip;$('flip').onclick=flip;$('prev').onclick=function(){go(-1)};$('next').onclick=function(){go(1)};
 $('good').onclick=function(){mark('ok')};$('bad').onclick=function(){mark('no')};
 
-// تم تحديث الاختصارات هنا لتناسب اللابتوب (بدون Numpad)
-document.onkeydown=function(e){
-    var key = e.key.toLowerCase();
-    if(key===' '||key==='enter'){e.preventDefault();flip()}
-    else if(key==='arrowright')go(1);
-    else if(key==='arrowleft')go(-1);
-    else if(key==='f')mark('no'); // حرف F لـ Again
-    else if(key==='j')mark('ok'); // حرف J لـ Got it
-};
-
-// 5. حماية إضافية من الفضوليين (منع الكليك يمين والأدوات)
+// 5. الحماية واختصارات الكيبورد (المسافة، Enter، والأسهم فقط)
 document.addEventListener('contextmenu', event => event.preventDefault());
-document.onkeydown = function (e) {
+
+document.onkeydown = function(e){
+    // منع اختصارات الفحص (F12, Ctrl+Shift+I, Ctrl+U)
     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
         return false;
+    }
+
+    if(e.key === ' ' || e.key === 'Enter'){
+        e.preventDefault();
+        flip();
+    }
+    else if(e.key === 'ArrowRight'){
+        go(1); // السهم اليمين للتالي
+    }
+    else if(e.key === 'ArrowLeft'){
+        go(-1); // السهم الشمال للسابق
+    }
+    else if(e.key === 'ArrowUp'){
+        mark('no'); // السهم اللي فوق لـ Again
+    }
+    else if(e.key === 'ArrowDown'){
+        mark('ok'); // السهم اللي تحت لـ Got it
     }
 };
 </script></body></html>
