@@ -4,365 +4,175 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة الفلاش كاردس التعليمية</title>
+    <!-- مكتبة Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
         
-        body {
-            background: linear-gradient(135deg, #0f766e, #14201d, #3b82f6);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            color: #1e293b;
-        }
-
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Container الرئيسي بالزجاج الضبابي */
-        .app-container {
-            max-width: 850px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.93);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 25px 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* الشريط العلوي */
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 18px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .header-title {
-            margin: 0;
-            color: #0f766e;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .user-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* زر التفعيل الأنيق */
-        .btn-activate {
-            background: linear-gradient(135deg, #0f766e, #115e59);
-            color: white;
-            border: none;
-            padding: 9px 18px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-activate:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
-        }
-
-        .btn-logout {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 9px 15px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: 0.2s;
-        }
-        .btn-logout:hover { background: #dc2626; }
-
-        /* اختيار القسم */
-        .section-selector {
-            margin-bottom: 25px;
-            text-align: right;
-        }
-
-        .section-selector label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #1d2b27;
-            margin-bottom: 8px;
-        }
-
-        .custom-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #cbd5e1;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #1e293b;
-            background: white;
-            outline: none;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .custom-select:focus {
-            border-color: #0f766e;
-            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
-        }
-
-        /* بطاقة الفلاش كارد */
-        .card-display {
-            background: white;
-            border-radius: 16px;
-            padding: 40px 25px;
-            text-align: center;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-            border: 2px solid #e2e8f0;
-            min-height: 220px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-
-        /* صندوق المحتوى المقفول */
-        .locked-box {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .locked-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-
-        .locked-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #991b1b;
-            margin-bottom: 8px;
-        }
-
-        .locked-desc {
-            font-size: 0.9rem;
-            color: #64748b;
-            margin-bottom: 18px;
-        }
-
-        /* النافذة المنبثقة Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(5px);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 420px;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-            text-align: center;
-            position: relative;
-        }
-
-        .modal-content h3 {
-            margin-top: 0;
-            color: #0f766e;
-            font-size: 1.3rem;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 12px 15px;
-            margin: 18px 0;
-            border: 2px solid #cbd5e1;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            text-align: center;
-            letter-spacing: 2px;
-            outline: none;
-        }
-        .modal-content input:focus {
-            border-color: #0f766e;
-            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
-        }
-
-        .btn-modal-submit {
-            background: #0f766e;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-modal-submit:hover { background: #115e59; }
-
-        .btn-close-modal {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: #f1f5f9;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #64748b;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-close-modal:hover { background: #e2e8f0; color: #0f172a; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; text-align: center; outline: none; }
+        
+        button { background-color: #3498db; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.3s; }
+        button:hover { background-color: #2980b9; }
 
         .hidden { display: none !important; }
-        .status-msg { margin-top: 12px; font-size: 0.88rem; font-weight: bold; }
-        .error-text { color: #dc2626; }
-        .success-text { color: #16a34a; }
+        
+        .card { background: #fdfdfd; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: right; }
+        .card-category { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
+        .card-question { font-size: 18px; color: #2c3e50; margin: 15px 0; font-weight: 600; }
+        .card-answer { background: #e8f8f5; color: #16a085; padding: 10px; border-radius: 6px; font-weight: bold; display: none; margin-top: 10px; text-align: center; }
+        
+        .error-msg { color: #e74c3c; font-weight: bold; margin-top: 10px; }
+        .success-msg { color: #27ae60; font-weight: bold; margin-top: 10px; }
+
+        /* ستايل اختيار القسم القائمة المنسدلة */
+        .section-selector { margin-bottom: 20px; text-align: right; }
+        .section-selector label { display: block; font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; }
+        .custom-select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; font-weight: bold; color: #2c3e50; background: white; outline: none; cursor: pointer; }
+
+        /* صندوق قفل القسم المدفوع */
+        .locked-section { background: #fff5f5; border: 2px dashed #feb2b2; border-radius: 10px; padding: 25px; margin-top: 20px; text-align: center; }
+        .locked-section h3 { color: #c53030; margin-top: 0; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
+    <div class="container">
         
-        <!-- الشريط العلوي -->
-        <div class="header-bar">
-            <h2 class="header-title">منصة الفلاش كاردس</h2>
-            <div class="user-actions">
-                <button id="btn-activate-code" class="btn-activate" onclick="openCodeModal()">
-                    🔑 إدخال كود التفعيل
-                </button>
-                <button class="btn-logout" onclick="logout()">خروج</button>
-            </div>
+        <!-- شاشة إدخال الكود وتفعيل الحساب -->
+        <div id="auth-section">
+            <h2>تفعيل اشتراك المنصة</h2>
+            <p style="color: #7f8c8d; font-size: 14px;">أدخل كود التفعيل الخاص بك للوصول للمحتوى الكامل</p>
+            <input type="text" id="activation-code" placeholder="أدخل كود التفعيل هنا">
+            <button onclick="verifyCode()">تفعيل الدخول</button>
+            <div id="status-message"></div>
         </div>
 
-        <!-- القائمة المنسدلة لاختيار القسم -->
-        <div class="section-selector">
-            <label for="subject-select">اختر الفصل / القسم الدراسي:</label>
-            <select id="subject-select" class="custom-select" onchange="onSubjectChange()">
-                <!-- القسم المجاني: ضع data-is-free="true" -->
-                <option value="intro" data-is-free="true">🔓 المقدمة والتمهيد (قسم مجاني)</option>
-                
-                <!-- الأقسام المدفوعة: ضع data-is-free="false" وعلامة القفل 🔒 -->
-                <option value="unit1" data-is-free="false">🔒 الوحدة الأولى: التركيب والوظيفة (مدفوع)</option>
-                <option value="unit2" data-is-free="false">🔒 الوحدة الثانية: أجهزة الجسم (مدفوع)</option>
-                <option value="unit3" data-is-free="false">🔒 الوحدة الثالثة: المنهج المتقدم (مدفوع)</option>
-            </select>
-        </div>
+        <!-- شاشة عرض الفلاش كاردس والأقسام -->
+        <div id="content-section" class="hidden">
+            <h2>الكروت التعليمية</h2>
+            <p id="welcome-text" class="success-msg"></p>
 
-        <!-- عرض الكروت -->
-        <div class="card-display">
-            <!-- المحتوى المقفول -->
-            <div id="content-locked" class="locked-box hidden">
-                <div class="locked-icon">🔒</div>
-                <div class="locked-title">هذا القسم مغلق!</div>
-                <div class="locked-desc">عفواً، هذا القسم مخصص للمشتركين فقط. يرجى إدخال كود التفعيل لفتحه.</div>
-                <button class="btn-activate" style="margin:0 auto;" onclick="openCodeModal()">🔑 إدخال كود التفعيل الآن</button>
+            <!-- القائمة المنسدلة للاختيار بين المجاني والمدفوع -->
+            <div class="section-selector">
+                <label for="subject-select">اختر القسم الدراسي:</label>
+                <select id="subject-select" class="custom-select" onchange="onSubjectChange()">
+                    <!-- قسم مجاني -->
+                    <option value="free" data-is-free="true">🔓 القسم المجاني (متاحة للجميع)</option>
+                    
+                    <!-- أقسام مدفوعة (عليها علامة قفل 🔒) -->
+                    <option value="unit1" data-is-free="false">🔒 الوحدة الأولى: التركيب والوظيفة (مدفوع)</option>
+                    <option value="unit2" data-is-free="false">🔒 الوحدة الثانية: أجهزة الجسم (مدفوع)</option>
+                </select>
             </div>
 
-            <!-- المحتوى المفتوح (المجاني أو المدفوع بعد التفعيل) -->
-            <div id="content-unlocked">
-                <h3 id="card-question" style="color: #0f766e; margin-top:0;">💡 أهلاً بك! اختر الفصل الدراسي للبدء.</h3>
-                <p id="card-answer" style="color: #475569; font-weight:600;">(اضغط على القائمة المنسدلة أعلاه للتنقل بين الأقسام)</p>
+            <!-- صندوق الحظر لو القسم مدفوع والمستخدم لم يفعل الكود -->
+            <div id="locked-box" class="locked-section hidden">
+                <h3>🔒 هذا القسم مغلق</h3>
+                <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">هذا القسم مخصص للمشتركين فقط. أدخل كود التفعيل لفتحه فوراً.</p>
+                <input type="text" id="quick-activation-code" placeholder="أدخل الكود هنا...">
+                <button onclick="verifyQuickCode()" style="background-color: #27ae60;">تفعيل هذا القسم</button>
+                <div id="quick-status-msg"></div>
             </div>
-        </div>
 
-    </div>
-
-    <!-- Pop-up Modal لتفعيل الكود -->
-    <div id="codeModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="btn-close-modal" onclick="closeCodeModal()">✕</button>
-            <h3>تفعيل الحساب والمنهج</h3>
-            <p style="font-size:0.85rem; color:#64748b; margin-bottom: 5px;">أدخل كود التفعيل الخاص بك لفتح جميع الأقسام والوحدات المغلقة فوراً.</p>
-            
-            <input type="text" id="activation-code-input" placeholder="أدخل الكود هنا...">
-            <button class="btn-modal-submit" onclick="submitActivationCode()">تفعيل الآن</button>
-            <div id="modal-status" class="status-msg"></div>
+            <!-- حاوية عرض الكروت -->
+            <div id="cards-container"></div>
         </div>
     </div>
 
     <script>
         const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
-        const { createClient } = window.supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentUser = null;
-        let isUserActivated = false; // هل الحساب مفعل بكود أم لا
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let isUserActivated = false; // هل الحساب مفعل بكود صحيح أم لا
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) {
-                window.location.href = 'index.html';
-                return;
+        // التحقق الأولي عند فتح الصفحة لو كان مفعل قبل كدة في الجلسة
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedActivation = localStorage.getItem('is_activated');
+            if (savedActivation === 'true') {
+                isUserActivated = true;
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('content-section').classList.remove('hidden');
+                document.getElementById('welcome-text').innerText = 'أهلاً بك! حسابك مَفعل بالكامل.';
+                onSubjectChange();
             }
-            currentUser = session.user;
-            await verifySingleSession();
-            await checkActivationStatus();
-            onSubjectChange(); // تحديث العرض حسب القسم المختار عند الفتح
         });
 
-        // التحقق من الجلسة الواحدة
-        async function verifySingleSession() {
-            const localToken = localStorage.getItem('session_token');
-            const { data } = await supabaseClient
-                .from('active_sessions')
-                .select('session_token')
-                .eq('user_id', currentUser.id)
-                .single();
+        // التحقق من كود التفعيل الرئيسي
+        async function verifyCode() {
+            const codeInput = document.getElementById('activation-code').value.trim();
+            const messageDiv = document.getElementById('status-message');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري التحقق من الكود...';
 
-            if (data && data.session_token !== localToken) {
-                alert("تم تسجيل الدخول بحسابك من جهاز آخر!");
-                await supabaseClient.auth.signOut();
-                window.location.href = 'index.html';
+            if (!codeInput) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activation_codes')
+                    .select('*')
+                    .eq('code', codeInput)
+                    .single();
+
+                if (error || !data) {
+                    messageDiv.className = 'error-msg';
+                    messageDiv.innerText = 'كود التفعيل غير صحيح!';
+                    return;
+                }
+
+                // نجاح التفعيل
+                isUserActivated = true;
+                localStorage.setItem('is_activated', 'true');
+
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('content-section').classList.remove('hidden');
+                document.getElementById('welcome-text').innerText = 'تم التفعيل بنجاح! مرحباً بك.';
+                onSubjectChange();
+
+            } catch (err) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'حدث خطأ أثناء التواصل مع السيرفر.';
             }
         }
 
-        // فحص حالة التفعيل في Supabase
-        async function checkActivationStatus() {
-            const { data } = await supabaseClient
+        // تفعيل سريع من داخل صندوق القفل لو اختار قسم مدفوع
+        async function verifyQuickCode() {
+            const codeInput = document.getElementById('quick-activation-code').value.trim();
+            const messageDiv = document.getElementById('quick-status-msg');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري التحقق...';
+
+            if (!codeInput) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال الكود!';
+                return;
+            }
+
+            const { data, error } = await supabaseClient
                 .from('activation_codes')
                 .select('*')
-                .eq('used_by', currentUser.id);
+                .eq('code', codeInput)
+                .single();
 
-            if (data && data.length > 0) {
+            if (error || !data) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'الكود غير صحيح!';
+            } else {
                 isUserActivated = true;
-                // إخفاء زرار التفعيل العلوي إذا كان الحساب مفعلاً بالكامل
-                document.getElementById('btn-activate-code').classList.add('hidden');
+                localStorage.setItem('is_activated', 'true');
+                messageDiv.className = 'success-msg';
+                messageDiv.innerText = 'تم التفعيل بنجاح!';
+                setTimeout(() => {
+                    onSubjectChange();
+                }, 800);
             }
         }
 
@@ -372,92 +182,62 @@
             const selectedOption = select.options[select.selectedIndex];
             const isFree = selectedOption.getAttribute('data-is-free') === 'true';
 
-            const lockedBox = document.getElementById('content-locked');
-            const unlockedBox = document.getElementById('content-unlocked');
+            const lockedBox = document.getElementById('locked-box');
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
 
-            // إذا كان القسم مدفوعاً والحساب غير مفعل -> إظهار صندوق القفل
+            // لو القسم مدفوع والحساب لم يُفعل
             if (!isFree && !isUserActivated) {
                 lockedBox.classList.remove('hidden');
-                unlockedBox.classList.add('hidden');
-            } else {
-                // إذا كان مجانياً أو الحساب مفعل بالكامل -> عرض المحتوى
-                lockedBox.classList.add('hidden');
-                unlockedBox.classList.remove('hidden');
-                
-                // أمثلة لمحتوى الأقسام المختلفة
-                const q = document.getElementById('card-question');
-                const a = document.getElementById('card-answer');
-                
-                if (select.value === 'intro') {
-                    q.innerText = "💡 سؤال مجاني: ما هي عينة الدراسة المبدئية؟";
-                    a.innerText = "الإجابة: هي جزء ممثل للجمهور يستهدف قياس المفاهيم الأساسية.";
-                } else if (select.value === 'unit1') {
-                    q.innerText = "🧬 سؤال الوحدة الأولى: ما هو العضو المسؤول عن تصفية الدم؟";
-                    a.innerText = "الإجابة: الكلية (Kidney).";
-                } else if (select.value === 'unit2') {
-                    q.innerText = "🔬 سؤال الوحدة الثانية: كم عدد حجرات قلب الإنسان؟";
-                    a.innerText = "الإجابة: 4 حجرات (أذينان وبطينان).";
-                } else {
-                    q.innerText = "📚 سؤال المنهج المتقدم: ما اسم العملية القائمة على بناء البروتين؟";
-                    a.innerText = "الإجابة: الترجمة والترانسكريبشن في الخلية.";
-                }
-            }
-        }
-
-        function openCodeModal() {
-            document.getElementById('codeModal').classList.remove('hidden');
-            document.getElementById('modal-status').innerText = '';
-        }
-
-        function closeCodeModal() {
-            document.getElementById('codeModal').classList.add('hidden');
-        }
-
-        // إرسال الكود للتحقق
-        async function submitActivationCode() {
-            const codeInput = document.getElementById('activation-code-input').value.trim();
-            const statusDiv = document.getElementById('modal-status');
-            
-            if (!codeInput) {
-                statusDiv.className = 'status-msg error-text';
-                statusDiv.innerText = 'يرجى كتابة الكود أولاً!';
                 return;
             }
 
-            statusDiv.className = 'status-msg';
-            statusDiv.innerText = 'جاري التحقق...';
+            // لو القسم متاح (مجاني أو مفعل)
+            lockedBox.classList.add('hidden');
 
-            const { data, error } = await supabaseClient
-                .from('activation_codes')
-                .select('*')
-                .eq('code', codeInput)
-                .is('used_by', null)
-                .single();
-
-            if (error || !data) {
-                statusDiv.className = 'status-msg error-text';
-                statusDiv.innerText = 'الكود غير صحيح أو مستخدم من قبل!';
-            } else {
-                await supabaseClient
-                    .from('activation_codes')
-                    .update({ used_by: currentUser.id, activated_at: new Date() })
-                    .eq('id', data.id);
-
-                statusDiv.className = 'status-msg success-text';
-                statusDiv.innerText = 'تم التفعيل بنجاح! جاري فتح كافة الأقسام...';
-                
-                setTimeout(() => {
-                    closeCodeModal();
-                    isUserActivated = true;
-                    document.getElementById('btn-activate-code').classList.add('hidden');
-                    onSubjectChange(); // إعادة فتح القسم الحالي
-                }, 1000);
+            if (select.value === 'free') {
+                // محتوى القسم المجاني
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-category">العينة المجانية</div>
+                        <div class="card-question">💡 ما هي الوحدة الأساسية لبناء الكائنات الحية؟</div>
+                        <button onclick="toggleAnswer(this)" style="background:#2ecc71; width:auto; padding:8px 15px; font-size:14px;">إظهار الإجابة</button>
+                        <div class="card-answer">الإجابة: الخلية (Cell)</div>
+                    </div>
+                `;
+            } else if (select.value === 'unit1') {
+                // محتوى الوحدة الأولى
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-category">الوحدة الأولى</div>
+                        <div class="card-question">🧬 ما هو العضو المسؤول عن تصفية الدم في جسم الإنسان؟</div>
+                        <button onclick="toggleAnswer(this)" style="background:#2ecc71; width:auto; padding:8px 15px; font-size:14px;">إظهار الإجابة</button>
+                        <div class="card-answer">الإجابة: الكلية (Kidney)</div>
+                    </div>
+                `;
+            } else if (select.value === 'unit2') {
+                // محتوى الوحدة الثانية
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-category">الوحدة الثانية</div>
+                        <div class="card-question">🔬 كم عدد حجرات قلب الإنسان الأساسية؟</div>
+                        <button onclick="toggleAnswer(this)" style="background:#2ecc71; width:auto; padding:8px 15px; font-size:14px;">إظهار الإجابة</button>
+                        <div class="card-answer">الإجابة: 4 حجرات (أذينان وبطينان)</div>
+                    </div>
+                `;
             }
         }
 
-        async function logout() {
-            await supabaseClient.auth.signOut();
-            window.location.href = 'index.html';
+        // إظهار وإخفاء الإجابة لكل كارت
+        function toggleAnswer(btn) {
+            const answerDiv = btn.nextElementSibling;
+            if (answerDiv.style.display === 'block') {
+                answerDiv.style.display = 'none';
+                btn.innerText = 'إظهار الإجابة';
+            } else {
+                answerDiv.style.display = 'block';
+                btn.innerText = 'إخفاء الإجابة';
+            }
         }
     </script>
 </body>
