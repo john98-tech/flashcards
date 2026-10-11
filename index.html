@@ -6,8 +6,6 @@
     <title>منصة الفلاش كاردس التعليمية</title>
     <!-- مكتبة Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- مكتبة بصمة الجهاز FingerprintJS -->
-    <script src="https://openfpcdn.io/fingerprintjs/v3/iife.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
@@ -31,7 +29,6 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* عناصر متحركة في الخلفية */
         .bg-shapes div {
             position: absolute;
             border-radius: 50%;
@@ -49,7 +46,7 @@
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.93);
             backdrop-filter: blur(12px);
             padding: 35px;
             border-radius: 16px;
@@ -70,7 +67,6 @@
         h2 { color: #1d2b27; margin-bottom: 8px; font-size: 1.6rem; }
         p.subtitle { color: #5b6b66; font-size: 0.9rem; margin-bottom: 25px; }
 
-        /* التبويبات (Tabs) */
         .tabs {
             display: flex;
             justify-content: space-between;
@@ -150,7 +146,7 @@
             color: #334155;
             border: 2px solid #cbd5e1;
             padding: 11px;
-            font-size: 0.95Font;
+            font-size: 0.95rem;
             font-weight: 600;
             border-radius: 8px;
             cursor: pointer;
@@ -171,7 +167,6 @@
 </head>
 <body>
 
-    <!-- أشكال متحركة للخلفية -->
     <div class="bg-shapes">
         <div></div>
         <div></div>
@@ -180,26 +175,16 @@
 
     <div class="container">
         <h2>منصة الفلاش كاردس</h2>
-        <p class="subtitle" id="subtitle-text">أدخل كود التفعيل أو سجل حسابك للمتابعة</p>
+        <p class="subtitle" id="subtitle-text">سجل دخولك أو أنشئ حساباً للمتابعة</p>
 
         <!-- التبويبات -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('activate')">تفعيل الكود</button>
-            <button class="tab-btn" onclick="switchTab('login')">تسجيل الدخول</button>
+            <button class="tab-btn active" onclick="switchTab('login')">تسجيل الدخول</button>
             <button class="tab-btn" onclick="switchTab('signup')">حساب جديد</button>
         </div>
 
-        <!-- قسم 1: تفعيل الكود (الوضع الافتراضي) -->
-        <div id="tab-activate" class="auth-tab">
-            <div class="form-group">
-                <label>كود التفعيل الخاص بك</label>
-                <input type="text" id="activation-code" placeholder="مثال: TEST123">
-            </div>
-            <button class="btn-main" onclick="verifyCode()">تفعيل ودخول</button>
-        </div>
-
-        <!-- قسم 2: تسجيل الدخول (الإيميل والباسورد) -->
-        <div id="tab-login" class="auth-tab hidden">
+        <!-- قسم 1: تسجيل الدخول -->
+        <div id="tab-login" class="auth-tab">
             <div class="form-group">
                 <label>البريد الإلكتروني</label>
                 <input type="email" id="login-email" placeholder="name@example.com">
@@ -208,16 +193,16 @@
                 <label>كلمة المرور</label>
                 <input type="password" id="login-password" placeholder="••••••••">
             </div>
-            <button class="btn-main" onclick="loginWithEmail()">دخول</button>
+            <button class="btn-main" onclick="loginWithEmail()">دخول للمنصة</button>
             
             <div class="divider">أو</div>
             <button class="btn-google" onclick="loginWithGoogle()">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-                تسجيل الدخول باستخدام جوجل
+                الدخول باستخدام جوجل
             </button>
         </div>
 
-        <!-- قسم 3: إنشاء حساب جديد -->
+        <!-- قسم 2: إنشاء حساب جديد -->
         <div id="tab-signup" class="auth-tab hidden">
             <div class="form-group">
                 <label>البريد الإلكتروني</label>
@@ -227,7 +212,7 @@
                 <label>كلمة المرور</label>
                 <input type="password" id="signup-password" placeholder="•••••••• (6 أحرف على الأقل)">
             </div>
-            <button class="btn-main" onclick="signUpWithEmail()">إنشاء حساب</button>
+            <button class="btn-main" onclick="signUpWithEmail()">إنشاء الحساب</button>
 
             <div class="divider">أو</div>
             <button class="btn-google" onclick="loginWithGoogle()">
@@ -246,121 +231,41 @@
         const { createClient } = window.supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // التبديل بين التبويبات
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.add('hidden'));
-
             document.getElementById('status-message').innerText = '';
 
-            if (tabName === 'activate') {
-                event.target.classList.add('active');
-                document.getElementById('tab-activate').classList.remove('hidden');
-                document.getElementById('subtitle-text').innerText = 'أدخل كود التفعيل الخاص بك للوصول للمحتوى';
-            } else if (tabName === 'login') {
+            if (tabName === 'login') {
                 event.target.classList.add('active');
                 document.getElementById('tab-login').classList.remove('hidden');
-                document.getElementById('subtitle-text').innerText = 'تسجيل الدخول لحسابك التعليمي';
+                document.getElementById('subtitle-text').innerText = 'سجل دخولك للوصول إلى حسابك';
             } else if (tabName === 'signup') {
                 event.target.classList.add('active');
                 document.getElementById('tab-signup').classList.remove('hidden');
-                document.getElementById('subtitle-text').innerText = 'أنشئ حساباً جديداً وابدأ رحلتك';
+                document.getElementById('subtitle-text').innerText = 'أنشئ حساباً جديداً وابدأ الآن';
             }
         }
 
-        // فحص التفعيل المسبق عند فتح الصفحة
+        // فحص هل المستخدم مسجل دخول بالفعل عند فتح الصفحة
         window.addEventListener('DOMContentLoaded', async () => {
-            const isActivated = localStorage.getItem('user_activated');
-            if (isActivated === 'true') {
-                try {
-                    const fp = await FingerprintJS.load();
-                    const result = await fp.get();
-                    
-                    const { data } = await supabaseClient
-                        .from('activation_codes')
-                        .select('is_used')
-                        .eq('device_id', result.visitorId)
-                        .eq('is_used', true)
-                        .maybeSingle();
-
-                    if (data) {
-                        window.location.href = 'flashcards.html';
-                    } else {
-                        localStorage.removeItem('user_activated');
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                window.location.href = 'flashcards.html';
             }
         });
 
-        // تحقق الكود القديم (مع البصمة)
-        async function verifyCode() {
-            const codeInput = document.getElementById('activation-code').value.trim();
-            const messageDiv = document.getElementById('status-message');
-            messageDiv.className = '';
-            messageDiv.innerText = 'جاري التحقق من الكود...';
-
-            if (!codeInput) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
-                return;
-            }
-
-            try {
-                const fp = await FingerprintJS.load();
-                const result = await fp.get();
-                const currentDeviceId = result.visitorId;
-
-                const { data, error } = await supabaseClient
-                    .from('activation_codes')
-                    .select('*')
-                    .eq('code', codeInput)
-                    .maybeSingle();
-
-                if (error || !data) {
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'كود التفعيل غير صحيح أو حدث خطأ!';
-                    return;
-                }
-
-                if (data.is_used) {
-                    if (data.device_id === currentDeviceId) {
-                        localStorage.setItem('user_activated', 'true');
-                        messageDiv.className = 'success-msg';
-                        messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
-                        setTimeout(() => window.location.href = 'flashcards.html', 1000);
-                    } else {
-                        messageDiv.className = 'error-msg';
-                        messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
-                    }
-                    return;
-                }
-
-                const { error: updateError } = await supabaseClient
-                    .from('activation_codes')
-                    .update({ is_used: true, device_id: currentDeviceId })
-                    .eq('id', data.id);
-
-                if (updateError) {
-                    messageDiv.className = 'error-msg';
-                    messageDiv.innerText = 'فشل ربط الجهاز بالكود!';
-                    return;
-                }
-
-                localStorage.setItem('user_activated', 'true');
-                messageDiv.className = 'success-msg';
-                messageDiv.innerText = 'تم التفعيل بنجاح!';
-                setTimeout(() => window.location.href = 'flashcards.html', 1000);
-
-            } catch (err) {
-                console.error(err);
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'حدث خطأ غير متوقع!';
-            }
+        // إنشاء جلسة جديدة فريدة لمنع الجلسات المتعددة
+        async function registerSession(userId) {
+            const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+            localStorage.setItem('session_token', token);
+            await supabaseClient.from('active_sessions').upsert({
+                user_id: userId,
+                session_token: token,
+                updated_at: new Date().toISOString()
+            });
         }
 
-        // تسجيل الدخول بجوجل عبر Supabase Auth
         async function loginWithGoogle() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
@@ -369,60 +274,60 @@
                 }
             });
             if (error) {
-                const msg = document.getElementById('status-message');
-                msg.className = 'error-msg';
-                msg.innerText = 'فشل تسجيل الدخول بواسطة جوجل: ' + error.message;
+                showError('فشل تسجيل الدخول بجوجل: ' + error.message);
             }
         }
 
-        // تسجيل الدخول بالإيميل وكلمة المرور
         async function loginWithEmail() {
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
-            const messageDiv = document.getElementById('status-message');
-            messageDiv.className = '';
-            messageDiv.innerText = 'جاري تسجيل الدخول...';
+            showMsg('جاري تسجيل الدخول...', false);
 
             if (!email || !password) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'يرجى إدخال البريد وكلمة المرور!';
+                showError('يرجى إدخال البريد وكلمة المرور!');
                 return;
             }
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'خطأ في البريد أو كلمة المرور: ' + error.message;
+                showError('خطأ في البريد أو كلمة المرور: ' + error.message);
             } else {
-                localStorage.setItem('user_activated', 'true');
-                messageDiv.className = 'success-msg';
-                messageDiv.innerText = 'تم الدخول بنجاح! جاري التوجيه...';
-                setTimeout(() => window.location.href = 'flashcards.html', 1000);
+                await registerSession(data.user.id);
+                showMsg('تم الدخول بنجاح! جاري التوجيه...', true);
+                setTimeout(() => window.location.href = 'flashcards.html', 800);
             }
         }
 
-        // إنشاء حساب جديد بالإيميل وكلمة المرور
         async function signUpWithEmail() {
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
-            const messageDiv = document.getElementById('status-message');
-            messageDiv.className = '';
-            messageDiv.innerText = 'جاري إنشاء الحساب...';
+            showMsg('جاري إنشاء الحساب...', false);
 
             if (!email || password.length < 6) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'يرجى إدخال إيميل صحيح وباسورد لا يقل عن 6 أحرف!';
+                showError('يرجى إدخال إيميل صحيح وباسورد لا يقل عن 6 أحرف!');
                 return;
             }
 
             const { data, error } = await supabaseClient.auth.signUp({ email, password });
             if (error) {
-                messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'فشل إنشاء الحساب: ' + error.message;
+                showError('فشل إنشاء الحساب: ' + error.message);
             } else {
-                messageDiv.className = 'success-msg';
-                messageDiv.innerText = 'تم إنشاء الحساب بنجاح! تحقق من بريدك الإلكتروني للتحقق إذا لزم الأمر.';
+                if (data.user) await registerSession(data.user.id);
+                showMsg('تم إنشاء الحساب بنجاح! جاري التوجيه...', true);
+                setTimeout(() => window.location.href = 'flashcards.html', 1000);
             }
+        }
+
+        function showError(msg) {
+            const m = document.getElementById('status-message');
+            m.className = 'error-msg';
+            m.innerText = msg;
+        }
+
+        function showMsg(msg, isSuccess) {
+            const m = document.getElementById('status-message');
+            m.className = isSuccess ? 'success-msg' : '';
+            m.innerText = msg;
         }
     </script>
 </body>
