@@ -3,219 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة الفلاش كاردس</title>
+    <title>منصة الفلاش كاردس التعليمية</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
         body {
-            background-color: #f1f5f9;
+            background: linear-gradient(135deg, #0f766e, #14201d, #3b82f6);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Container الرئيسي بالزجاج الضبابي */
+        .app-container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.93);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 25px 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* الشريط العلوي */
-        .top-bar {
+        .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #ffffff;
-            padding: 15px 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 18px;
             margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
-        .top-bar h2 { margin: 0; color: #0f766e; font-size: 1.4rem; }
+        .header-title {
+            margin: 0;
+            color: #0f766e;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
 
-        .bar-actions {
+        .user-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .btn-code {
-            background: #0f766e;
+        /* زر التفعيل الأنيق */
+        .btn-activate {
+            background: linear-gradient(135deg, #0f766e, #115e59);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 9px 18px;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 6px;
         }
-        .btn-code:hover { background: #115e59; }
+        .btn-activate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
+        }
 
         .btn-logout {
             background: #ef4444;
             color: white;
             border: none;
-            padding: 8px 14px;
-            border-radius: 8px;
+            padding: 9px 15px;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
             font-size: 0.85rem;
-        }
-
-        /* حاوية الأقسام */
-        .main-container {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .section-card {
-            background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #f1f5f9;
-            padding-bottom: 10px;
-        }
-
-        .section-header h3 { margin: 0; font-size: 1.2rem; }
-        .badge-free { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .badge-pro { background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-
-        /* الكروت */
-        .flashcard {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 10px;
-            text-align: center;
-            font-size: 1.1rem;
-            color: #334155;
-            cursor: pointer;
             transition: 0.2s;
         }
-        .flashcard:hover { border-color: #0f766e; background: #f0fdf4; }
+        .btn-logout:hover { background: #dc2626; }
 
-        /* حالة الحظر للمحتوى المدفوع */
-        .locked-banner {
-            text-align: center;
-            padding: 30px;
-            background: #fff7ed;
-            border: 2px dashed #fdba74;
-            border-radius: 12px;
-            color: #9a3412;
+        /* اختيار القسم */
+        .section-selector {
+            margin-bottom: 25px;
+            text-align: right;
         }
 
-        /* النافذة المنبثقة (Modal) */
+        .section-selector label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1d2b27;
+            margin-bottom: 8px;
+        }
+
+        .custom-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            background: white;
+            outline: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .custom-select:focus {
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+        }
+
+        /* بطاقة الفلاش كارد */
+        .card-display {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            border: 2px solid #e2e8f0;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        /* صندوق المحتوى المقفول */
+        .locked-box {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .locked-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .locked-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #991b1b;
+            margin-bottom: 8px;
+        }
+
+        .locked-desc {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 18px;
+        }
+
+        /* النافذة المنبثقة Modal */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(5px);
             display: flex; justify-content: center; align-items: center;
             z-index: 1000;
+            animation: fadeIn 0.3s ease;
         }
 
-        .modal-card {
-            background: white; width: 90%; max-width: 400px;
-            padding: 25px; border-radius: 16px; text-align: center;
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 420px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            text-align: center;
             position: relative;
         }
 
-        .modal-card input {
-            width: 100%; padding: 12px; margin: 15px 0;
-            border: 2px solid #cbd5e1; border-radius: 8px;
-            text-align: center; letter-spacing: 2px; font-size: 1rem;
+        .modal-content h3 {
+            margin-top: 0;
+            color: #0f766e;
+            font-size: 1.3rem;
         }
 
-        .modal-btn {
-            background: #0f766e; color: white; border: none;
-            width: 100%; padding: 12px; border-radius: 8px;
-            font-weight: bold; cursor: pointer;
+        .modal-content input {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 18px 0;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            text-align: center;
+            letter-spacing: 2px;
+            outline: none;
+        }
+        .modal-content input:focus {
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
         }
 
-        .close-modal {
-            position: absolute; top: 15px; left: 15px;
-            background: none; border: none; font-size: 1.2rem; cursor: pointer;
+        .btn-modal-submit {
+            background: #0f766e;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
         }
+        .btn-modal-submit:hover { background: #115e59; }
+
+        .btn-close-modal {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #64748b;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-close-modal:hover { background: #e2e8f0; color: #0f172a; }
 
         .hidden { display: none !important; }
-        .status-text { margin-top: 10px; font-size: 0.85rem; font-weight: bold; }
-        .error { color: #dc2626; }
-        .success { color: #16a34a; }
+        .status-msg { margin-top: 12px; font-size: 0.88rem; font-weight: bold; }
+        .error-text { color: #dc2626; }
+        .success-text { color: #16a34a; }
     </style>
 </head>
 <body>
 
-    <!-- الشريط العلوي -->
-    <div class="top-bar">
-        <h2>منصة الفلاش كاردس</h2>
-        <div class="bar-actions">
-            <button id="btn-activate-header" class="btn-code" onclick="openCodeModal()">🔑 إدخال كود التفعيل</button>
-            <button class="btn-logout" onclick="logout()">خروج</button>
-        </div>
-    </div>
-
-    <div class="main-container">
-
-        <!-- 1. القسم المجاني (متاح للجميع دائماً) -->
-        <div class="section-card">
-            <div class="section-header">
-                <h3 style="color:#15803d;">🎁 العينة المجانية (Free Sample)</h3>
-                <span class="badge-free">متاح مجاناً</span>
-            </div>
-            <p style="font-size:0.9rem; color:#64748b;">هذه كروت تجريبية متاح معاينتها فوراً للجميع:</p>
-            
-            <div class="flashcard">
-                💡 <strong>سؤال مجاني:</strong> ما هي الوحدة الأساسية لبناء الكائنات الحية؟<br>
-                <small style="color:#0f766e; display:block; margin-top:8px;">(اضغط للتعرف على الإجابة: الخلية)</small>
+    <div class="app-container">
+        
+        <!-- الشريط العلوي -->
+        <div class="header-bar">
+            <h2 class="header-title">منصة الفلاش كاردس</h2>
+            <div class="user-actions">
+                <button id="btn-activate-code" class="btn-activate" onclick="openCodeModal()">
+                    🔑 إدخال كود التفعيل
+                </button>
+                <button class="btn-logout" onclick="logout()">خروج</button>
             </div>
         </div>
 
-        <!-- 2. القسم المدفوع (يحتاج كود تفعيل) -->
-        <div class="section-card">
-            <div class="section-header">
-                <h3 style="color:#b45309;">⭐ المنهج الكامل (Pro Version)</h3>
-                <span class="badge-pro" id="pro-status-badge">🔒 يحتاج تفعيل</span>
+        <!-- القائمة المنسدلة لاختيار القسم -->
+        <div class="section-selector">
+            <label for="subject-select">اختر الفصل / القسم الدراسي:</label>
+            <select id="subject-select" class="custom-select" onchange="onSubjectChange()">
+                <!-- القسم المجاني: ضع data-is-free="true" -->
+                <option value="intro" data-is-free="true">🔓 المقدمة والتمهيد (قسم مجاني)</option>
+                
+                <!-- الأقسام المدفوعة: ضع data-is-free="false" وعلامة القفل 🔒 -->
+                <option value="unit1" data-is-free="false">🔒 الوحدة الأولى: التركيب والوظيفة (مدفوع)</option>
+                <option value="unit2" data-is-free="false">🔒 الوحدة الثانية: أجهزة الجسم (مدفوع)</option>
+                <option value="unit3" data-is-free="false">🔒 الوحدة الثالثة: المنهج المتقدم (مدفوع)</option>
+            </select>
+        </div>
+
+        <!-- عرض الكروت -->
+        <div class="card-display">
+            <!-- المحتوى المقفول -->
+            <div id="content-locked" class="locked-box hidden">
+                <div class="locked-icon">🔒</div>
+                <div class="locked-title">هذا القسم مغلق!</div>
+                <div class="locked-desc">عفواً، هذا القسم مخصص للمشتركين فقط. يرجى إدخال كود التفعيل لفتحه.</div>
+                <button class="btn-activate" style="margin:0 auto;" onclick="openCodeModal()">🔑 إدخال كود التفعيل الآن</button>
             </div>
 
-            <!-- محتوى مغلق قبل التفعيل -->
-            <div id="pro-locked" class="locked-banner">
-                <p style="font-size:1.1rem; font-weight:bold; margin-bottom:10px;">🔒 هذا المحتوى خاص بالمشتركين فقط</p>
-                <p style="font-size:0.85rem; margin-bottom:15px;">ادخل كود التفعيل المخصص لك لفتح كافة كروت وبنك أسئلة المنهج الكامل.</p>
-                <button class="btn-code" style="margin: 0 auto;" onclick="openCodeModal()">🔑 إدخال كود التفعيل الآن</button>
-            </div>
-
-            <!-- محتوى يظهر بعد التفعيل فقط -->
-            <div id="pro-unlocked" class="hidden">
-                <div class="flashcard">
-                    🧬 <strong>سؤال المنهج 1:</strong> ما هو المكون المسؤول عن إنتاج الطاقة داخل الخلية؟ (المايتوكندريا)
-                </div>
-                <div class="flashcard">
-                    🔬 <strong>سؤال المنهج 2:</strong> كم عدد كروموسومات الخلايا الجسدية في الإنسان؟ (46 كروموسوم)
-                </div>
+            <!-- المحتوى المفتوح (المجاني أو المدفوع بعد التفعيل) -->
+            <div id="content-unlocked">
+                <h3 id="card-question" style="color: #0f766e; margin-top:0;">💡 أهلاً بك! اختر الفصل الدراسي للبدء.</h3>
+                <p id="card-answer" style="color: #475569; font-weight:600;">(اضغط على القائمة المنسدلة أعلاه للتنقل بين الأقسام)</p>
             </div>
         </div>
 
     </div>
 
-    <!-- النافذة المنبثقة (Modal) -->
+    <!-- Pop-up Modal لتفعيل الكود -->
     <div id="codeModal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <button class="close-modal" onclick="closeCodeModal()">✕</button>
-            <h3 style="color:#0f766e;">تفعيل المنهج الكامل</h3>
-            <p style="font-size:0.85rem; color:#64748b;">أدخل كود التفعيل المكون من رمزك الخاص</p>
+        <div class="modal-content">
+            <button class="btn-close-modal" onclick="closeCodeModal()">✕</button>
+            <h3>تفعيل الحساب والمنهج</h3>
+            <p style="font-size:0.85rem; color:#64748b; margin-bottom: 5px;">أدخل كود التفعيل الخاص بك لفتح جميع الأقسام والوحدات المغلقة فوراً.</p>
+            
             <input type="text" id="activation-code-input" placeholder="أدخل الكود هنا...">
-            <button class="modal-btn" onclick="submitActivationCode()">تفعيل الآن</button>
-            <div id="modal-status" class="status-text"></div>
+            <button class="btn-modal-submit" onclick="submitActivationCode()">تفعيل الآن</button>
+            <div id="modal-status" class="status-msg"></div>
         </div>
     </div>
 
@@ -226,6 +322,7 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        let isUserActivated = false; // هل الحساب مفعل بكود أم لا
 
         window.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -236,8 +333,10 @@
             currentUser = session.user;
             await verifySingleSession();
             await checkActivationStatus();
+            onSubjectChange(); // تحديث العرض حسب القسم المختار عند الفتح
         });
 
+        // التحقق من الجلسة الواحدة
         async function verifySingleSession() {
             const localToken = localStorage.getItem('session_token');
             const { data } = await supabaseClient
@@ -253,7 +352,7 @@
             }
         }
 
-        // فحص هل المستخدم مفعل المنهج أم لا
+        // فحص حالة التفعيل في Supabase
         async function checkActivationStatus() {
             const { data } = await supabaseClient
                 .from('activation_codes')
@@ -261,17 +360,47 @@
                 .eq('used_by', currentUser.id);
 
             if (data && data.length > 0) {
-                // تفعيل المنهج الكامل
-                document.getElementById('pro-locked').classList.add('hidden');
-                document.getElementById('pro-unlocked').classList.remove('hidden');
-                
-                const badge = document.getElementById('pro-status-badge');
-                badge.innerText = '✅ مفعّل بالكامل';
-                badge.style.background = '#dcfce7';
-                badge.style.color = '#15803d';
+                isUserActivated = true;
+                // إخفاء زرار التفعيل العلوي إذا كان الحساب مفعلاً بالكامل
+                document.getElementById('btn-activate-code').classList.add('hidden');
+            }
+        }
 
-                // إخفاء زرار التفعيل العلوي لأنه خلاص فعل
-                document.getElementById('btn-activate-header').classList.add('hidden');
+        // عند تغيير القسم من القائمة المنسدلة
+        function onSubjectChange() {
+            const select = document.getElementById('subject-select');
+            const selectedOption = select.options[select.selectedIndex];
+            const isFree = selectedOption.getAttribute('data-is-free') === 'true';
+
+            const lockedBox = document.getElementById('content-locked');
+            const unlockedBox = document.getElementById('content-unlocked');
+
+            // إذا كان القسم مدفوعاً والحساب غير مفعل -> إظهار صندوق القفل
+            if (!isFree && !isUserActivated) {
+                lockedBox.classList.remove('hidden');
+                unlockedBox.classList.add('hidden');
+            } else {
+                // إذا كان مجانياً أو الحساب مفعل بالكامل -> عرض المحتوى
+                lockedBox.classList.add('hidden');
+                unlockedBox.classList.remove('hidden');
+                
+                // أمثلة لمحتوى الأقسام المختلفة
+                const q = document.getElementById('card-question');
+                const a = document.getElementById('card-answer');
+                
+                if (select.value === 'intro') {
+                    q.innerText = "💡 سؤال مجاني: ما هي عينة الدراسة المبدئية؟";
+                    a.innerText = "الإجابة: هي جزء ممثل للجمهور يستهدف قياس المفاهيم الأساسية.";
+                } else if (select.value === 'unit1') {
+                    q.innerText = "🧬 سؤال الوحدة الأولى: ما هو العضو المسؤول عن تصفية الدم؟";
+                    a.innerText = "الإجابة: الكلية (Kidney).";
+                } else if (select.value === 'unit2') {
+                    q.innerText = "🔬 سؤال الوحدة الثانية: كم عدد حجرات قلب الإنسان؟";
+                    a.innerText = "الإجابة: 4 حجرات (أذينان وبطينان).";
+                } else {
+                    q.innerText = "📚 سؤال المنهج المتقدم: ما اسم العملية القائمة على بناء البروتين؟";
+                    a.innerText = "الإجابة: الترجمة والترانسكريبشن في الخلية.";
+                }
             }
         }
 
@@ -284,17 +413,18 @@
             document.getElementById('codeModal').classList.add('hidden');
         }
 
+        // إرسال الكود للتحقق
         async function submitActivationCode() {
             const codeInput = document.getElementById('activation-code-input').value.trim();
             const statusDiv = document.getElementById('modal-status');
             
             if (!codeInput) {
-                statusDiv.className = 'status-text error';
+                statusDiv.className = 'status-msg error-text';
                 statusDiv.innerText = 'يرجى كتابة الكود أولاً!';
                 return;
             }
 
-            statusDiv.className = 'status-text';
+            statusDiv.className = 'status-msg';
             statusDiv.innerText = 'جاري التحقق...';
 
             const { data, error } = await supabaseClient
@@ -305,7 +435,7 @@
                 .single();
 
             if (error || !data) {
-                statusDiv.className = 'status-text error';
+                statusDiv.className = 'status-msg error-text';
                 statusDiv.innerText = 'الكود غير صحيح أو مستخدم من قبل!';
             } else {
                 await supabaseClient
@@ -313,13 +443,15 @@
                     .update({ used_by: currentUser.id, activated_at: new Date() })
                     .eq('id', data.id);
 
-                statusDiv.className = 'status-text success';
-                statusDiv.innerText = 'تم تفعيل المنهج بنجاح!';
+                statusDiv.className = 'status-msg success-text';
+                statusDiv.innerText = 'تم التفعيل بنجاح! جاري فتح كافة الأقسام...';
                 
                 setTimeout(() => {
                     closeCodeModal();
-                    checkActivationStatus();
-                }, 800);
+                    isUserActivated = true;
+                    document.getElementById('btn-activate-code').classList.add('hidden');
+                    onSubjectChange(); // إعادة فتح القسم الحالي
+                }, 1000);
             }
         }
 
