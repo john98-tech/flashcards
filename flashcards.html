@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flash Cards – Dynamic Supabase</title>
 
-<!-- مكتبات الحماية والربط مع Supabase -->
+<!-- مكتبة Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://openfpcdn.io/fingerprintjs/v3/iife.min.js"></script>
 
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -23,7 +22,12 @@ body, html, * {
 }
 body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif}
 main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:1.4rem;margin:.2em 0 .6em}
+
+.top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-family: system-ui, sans-serif; }
+h1{font-size:1.4rem;margin:0}
+.btn-logout { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.btn-logout:hover { background: #dc2626; }
+
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
@@ -33,70 +37,85 @@ select{max-width:100%}
 .tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
 .crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:10px}
 .txt{font-size:1.25rem}
-.bl{display:inline-block;min-width:4em;font-weight:700;color:var(--fg);outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
-
-.ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
-mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weight:700;padding:0 3px;border-radius:3px}
 .hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
 .ctl{display:flex;gap:8px;justify-content:space-between;font-family:system-ui,sans-serif}
 .ctl button{flex:1}
 .ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
 .stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
-</style></head><body><main>
-<h1>Flash Cards</h1>
-<div class="row"><select id="deck"></select>
-<label><input type="checkbox" id="shuf"> Shuffle</label>
-<button id="all">All cards</button><button id="miss">Review missed</button></div>
-<div class="card" id="card"><div class="txt">Loading protected content...</div></div>
-<div class="ctl"><button id="prev">← Prev</button><button id="flip">Flip</button><button id="next">Next →</button></div>
-<div class="ctl" style="margin-top:8px"><button class="no" id="bad">✗ Again</button><button class="ok" id="good">✓ Got it</button></div>
-<div class="stat" id="stat"></div>
-<p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
+</style>
+</head>
+<body>
+<main>
+    <div class="top-header">
+        <h1>Flash Cards</h1>
+        <button class="btn-logout" onclick="logout()">تسجيل الخروج</button>
+    </div>
+
+    <div class="row">
+        <select id="deck"></select>
+        <label><input type="checkbox" id="shuf"> Shuffle</label>
+        <button id="all">All cards</button>
+        <button id="miss">Review missed</button>
+    </div>
+
+    <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
+    
+    <div class="ctl">
+        <button id="prev">← Prev</button>
+        <button id="flip">Flip</button>
+        <button id="next">Next →</button>
+    </div>
+    
+    <div class="ctl" style="margin-top:8px">
+        <button class="no" id="bad">✗ Again</button>
+        <button class="ok" id="good">✓ Got it</button>
+    </div>
+    
+    <div class="stat" id="stat"></div>
+    <p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
 </main>
+
 <script>
-// 1. إعدادات Supabase ورابط الحماية
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var D = [];
 var st = [], di = 0, list = [], pos = 0, back = false, isMissedMode = false;
+var currentUser = null;
 var $ = function(i){return document.getElementById(i)}, sel = $('deck');
 
-// 2. فحص التفعيل وحماية الصفحة قبل أي شيء
+// 1. التحقق من جلسة Supabase والجلسة الواحدة عند فتح الصفحة
 window.addEventListener('DOMContentLoaded', async () => {
-    const isActivated = localStorage.getItem('user_activated');
-    if (isActivated !== 'true') {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    
+    if (!session) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    currentUser = session.user;
+
+    // فحص الجلسة الواحدة لمنع التداخل من جهاز آخر
+    const localToken = localStorage.getItem('session_token');
+    const { data: sessionData } = await supabaseClient
+        .from('active_sessions')
+        .select('session_token')
+        .eq('user_id', currentUser.id)
+        .single();
+
+    if (sessionData && sessionData.session_token !== localToken) {
+        alert("تم تسجيل الدخول بحسابك من جهاز آخر!");
+        await supabaseClient.auth.signOut();
+        localStorage.removeItem('session_token');
         window.location.href = 'index.html';
         return;
     }
 
-    try {
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
-
-        const { data } = await supabaseClient
-            .from('activation_codes')
-            .select('is_used')
-            .eq('device_id', result.visitorId)
-            .eq('is_used', true)
-            .maybeSingle();
-
-        if (!data) {
-            localStorage.removeItem('user_activated');
-            window.location.href = 'index.html';
-            return;
-        }
-
-        await fetchCardsFromSupabase();
-
-    } catch (e) {
-        console.error(e);
-        window.location.href = 'index.html';
-    }
+    await fetchCardsFromSupabase();
 });
 
-// 3. دالة جلب كل الأسئلة مرتبة حسب الترقيم اليدوي بدقة تامة
+// 2. جلب الأسئلة من Supabase مرتبة حسب الترتيب الصحيح
 async function fetchCardsFromSupabase() {
     let allData = [];
     let step = 1000;
@@ -159,7 +178,6 @@ async function fetchCardsFromSupabase() {
     initDeckSystem();
 }
 
-// 4. تشغيل نظام الكروت
 function initDeckSystem() {
     sel.innerHTML = '';
     st = D.map(function(d){
@@ -239,7 +257,6 @@ function go(d){
 function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
-    
     st[di][realCardIdx] = v;
 
     if(isMissedMode && v === 'ok'){
@@ -260,6 +277,12 @@ function mark(v){
 
 function flip(){if(list.length){back=!back;render()}}
 
+async function logout() {
+    await supabaseClient.auth.signOut();
+    localStorage.removeItem('session_token');
+    window.location.href = 'index.html';
+}
+
 sel.onchange = function(){ di = +sel.value; start(false); };
 $('all').onclick = function(){ start(false); };
 $('miss').onclick = function(){ start(true); };
@@ -267,7 +290,7 @@ $('shuf').onchange = function(){ start(false); };
 $('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
 $('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
 
-// الحماية واختصارات الكيبورد
+// حظر الاختصارات الضارة وتفعيل التنقل بالكيبورد
 document.addEventListener('selectstart', function(e) { e.preventDefault(); });
 document.addEventListener('contextmenu', event => event.preventDefault());
 
