@@ -10,155 +10,420 @@
     <script src="https://openfpcdn.io/fingerprintjs/v3/iife.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .container { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
-        h2 { color: #2c3e50; margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; text-align: center; outline: none; }
-        button { background-color: #3498db; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.3s; }
-        button:hover { background-color: #2980b9; }
-        .hidden { display: none; }
-        .card { background: #fdfdfd; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .card-category { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; }
-        .card-question { font-size: 18px; color: #2c3e50; margin: 15px 0; font-weight: 600; }
-        .card-answer { background: #e8f8f5; color: #16a085; padding: 10px; border-radius: 6px; font-weight: bold; display: none; margin-top: 10px; }
-        .error-msg { color: #e74c3c; font-weight: bold; margin-top: 10px; }
-        .success-msg { color: #27ae60; font-weight: bold; margin-top: 10px; }
+        
+        body {
+            background: linear-gradient(135deg, #0f766e, #14201d, #3b82f6);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* عناصر متحركة في الخلفية */
+        .bg-shapes div {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            animation: float 12s infinite alternate ease-in-out;
+            z-index: 1;
+        }
+        .bg-shapes div:nth-child(1) { width: 120px; height: 120px; top: 10%; left: 10%; animation-duration: 8s; }
+        .bg-shapes div:nth-child(2) { width: 200px; height: 200px; bottom: 15%; right: 10%; animation-duration: 14s; }
+        .bg-shapes div:nth-child(3) { width: 80px; height: 80px; top: 50%; right: 20%; animation-duration: 10s; }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-40px) rotate(360deg); }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            z-index: 2;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 { color: #1d2b27; margin-bottom: 8px; font-size: 1.6rem; }
+        p.subtitle { color: #5b6b66; font-size: 0.9rem; margin-bottom: 25px; }
+
+        /* التبويبات (Tabs) */
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            background: #e2e8f0;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #5b6b66;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background: #ffffff;
+            color: #0f766e;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        label { display: block; font-size: 0.85rem; color: #1d2b27; margin-bottom: 5px; font-weight: 600; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: 0.3s;
+            background: #fff;
+        }
+        input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15); }
+
+        .btn-main {
+            background: #0f766e;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s;
+            margin-top: 5px;
+        }
+        .btn-main:hover { background: #115e59; transform: translateY(-1px); }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        .divider::before { margin-left: 10px; }
+        .divider::after { margin-right: 10px; }
+
+        .btn-google {
+            background: #ffffff;
+            color: #334155;
+            border: 2px solid #cbd5e1;
+            padding: 11px;
+            font-size: 0.95Font;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
+        }
+        .btn-google:hover { background: #f8fafc; border-color: #94a3b8; }
+        .btn-google img { width: 20px; height: 20px; }
+
+        .hidden { display: none !important; }
+        .error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
+        .success-msg { color: #16a34a; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
+    <!-- أشكال متحركة للخلفية -->
+    <div class="bg-shapes">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+
     <div class="container">
-        <!-- شاشة تسجيل الدخول بكود التفعيل -->
-        <div id="auth-section">
-            <h2>تفعيل الاشتراك</h2>
-            <p style="color: #7f8c8d; font-size: 14px;">أدخل كود التفعيل الخاص بك للوصول للمحتوى</p>
-            <input type="text" id="activation-code" placeholder="أدخل الكود هنا (مثال: TEST123)">
-            <button onclick="verifyCode()">تفعيل الدخول</button>
-            <div id="status-message"></div>
+        <h2>منصة الفلاش كاردس</h2>
+        <p class="subtitle" id="subtitle-text">أدخل كود التفعيل أو سجل حسابك للمتابعة</p>
+
+        <!-- التبويبات -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('activate')">تفعيل الكود</button>
+            <button class="tab-btn" onclick="switchTab('login')">تسجيل الدخول</button>
+            <button class="tab-btn" onclick="switchTab('signup')">حساب جديد</button>
         </div>
 
-        <!-- شاشة عرض الفلاش كاردس -->
-        <div id="content-section" class="hidden">
-            <h2>الكروت التعليمية</h2>
-            <p id="welcome-text" class="success-msg"></p>
-            <div id="cards-container"></div>
+        <!-- قسم 1: تفعيل الكود (الوضع الافتراضي) -->
+        <div id="tab-activate" class="auth-tab">
+            <div class="form-group">
+                <label>كود التفعيل الخاص بك</label>
+                <input type="text" id="activation-code" placeholder="مثال: TEST123">
+            </div>
+            <button class="btn-main" onclick="verifyCode()">تفعيل ودخول</button>
         </div>
+
+        <!-- قسم 2: تسجيل الدخول (الإيميل والباسورد) -->
+        <div id="tab-login" class="auth-tab hidden">
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" id="login-email" placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            <button class="btn-main" onclick="loginWithEmail()">دخول</button>
+            
+            <div class="divider">أو</div>
+            <button class="btn-google" onclick="loginWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                تسجيل الدخول باستخدام جوجل
+            </button>
+        </div>
+
+        <!-- قسم 3: إنشاء حساب جديد -->
+        <div id="tab-signup" class="auth-tab hidden">
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" id="signup-email" placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="signup-password" placeholder="•••••••• (6 أحرف على الأقل)">
+            </div>
+            <button class="btn-main" onclick="signUpWithEmail()">إنشاء حساب</button>
+
+            <div class="divider">أو</div>
+            <button class="btn-google" onclick="loginWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                التسجيل باستخدام جوجل
+            </button>
+        </div>
+
+        <div id="status-message"></div>
     </div>
 
     <script>
-const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+        const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 
-const { createClient } = window.supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// فحص التفعيل المسبق عند فتح الصفحة تلقائياً
-window.addEventListener('DOMContentLoaded', async () => {
-    const isActivated = localStorage.getItem('user_activated');
-    if (isActivated === 'true') {
-        try {
-            const fp = await FingerprintJS.load();
-            const result = await fp.get();
-            
-            const { data } = await supabaseClient
-                .from('activation_codes')
-                .select('is_used')
-                .eq('device_id', result.visitorId)
-                .eq('is_used', true)
-                .maybeSingle();
+        // التبديل بين التبويبات
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.add('hidden'));
 
-            if (data) {
-                // تحويل مباشر لصفحة الكروت الجديدة
-                window.location.href = 'flashcards.html';
-            } else {
-                localStorage.removeItem('user_activated');
+            document.getElementById('status-message').innerText = '';
+
+            if (tabName === 'activate') {
+                event.target.classList.add('active');
+                document.getElementById('tab-activate').classList.remove('hidden');
+                document.getElementById('subtitle-text').innerText = 'أدخل كود التفعيل الخاص بك للوصول للمحتوى';
+            } else if (tabName === 'login') {
+                event.target.classList.add('active');
+                document.getElementById('tab-login').classList.remove('hidden');
+                document.getElementById('subtitle-text').innerText = 'تسجيل الدخول لحسابك التعليمي';
+            } else if (tabName === 'signup') {
+                event.target.classList.add('active');
+                document.getElementById('tab-signup').classList.remove('hidden');
+                document.getElementById('subtitle-text').innerText = 'أنشئ حساباً جديداً وابدأ رحلتك';
             }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-});
-
-async function verifyCode() {
-    const codeInput = document.getElementById('activation-code').value.trim();
-    const messageDiv = document.getElementById('status-message');
-    messageDiv.className = '';
-    messageDiv.innerText = 'جاري التحقق من الكود ورابط الجهاز...';
-
-    if (!codeInput) {
-        messageDiv.className = 'error-msg';
-        messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
-        return;
-    }
-
-    try {
-        // 1. جلب بصمة الجهاز
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
-        const currentDeviceId = result.visitorId;
-
-        // 2. الفحص في Supabase
-        const { data, error } = await supabaseClient
-            .from('activation_codes')
-            .select('*')
-            .eq('code', codeInput)
-            .maybeSingle();
-
-        if (error) {
-            console.error("Supabase Error:", error);
-            messageDiv.className = 'error-msg';
-            messageDiv.innerText = 'حدث خطأ في الاتصال بقاعدة البيانات!';
-            return;
         }
 
-        if (!data) {
-            messageDiv.className = 'error-msg';
-            messageDiv.innerText = 'كود التفعيل غير صحيح!';
-            return;
-        }
+        // فحص التفعيل المسبق عند فتح الصفحة
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isActivated = localStorage.getItem('user_activated');
+            if (isActivated === 'true') {
+                try {
+                    const fp = await FingerprintJS.load();
+                    const result = await fp.get();
+                    
+                    const { data } = await supabaseClient
+                        .from('activation_codes')
+                        .select('is_used')
+                        .eq('device_id', result.visitorId)
+                        .eq('is_used', true)
+                        .maybeSingle();
 
-        // 3. لو الكود مستخدم قبل كده
-        if (data.is_used) {
-            if (data.device_id === currentDeviceId) {
+                    if (data) {
+                        window.location.href = 'flashcards.html';
+                    } else {
+                        localStorage.removeItem('user_activated');
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
+
+        // تحقق الكود القديم (مع البصمة)
+        async function verifyCode() {
+            const codeInput = document.getElementById('activation-code').value.trim();
+            const messageDiv = document.getElementById('status-message');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري التحقق من الكود...';
+
+            if (!codeInput) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال الكود أولاً!';
+                return;
+            }
+
+            try {
+                const fp = await FingerprintJS.load();
+                const result = await fp.get();
+                const currentDeviceId = result.visitorId;
+
+                const { data, error } = await supabaseClient
+                    .from('activation_codes')
+                    .select('*')
+                    .eq('code', codeInput)
+                    .maybeSingle();
+
+                if (error || !data) {
+                    messageDiv.className = 'error-msg';
+                    messageDiv.innerText = 'كود التفعيل غير صحيح أو حدث خطأ!';
+                    return;
+                }
+
+                if (data.is_used) {
+                    if (data.device_id === currentDeviceId) {
+                        localStorage.setItem('user_activated', 'true');
+                        messageDiv.className = 'success-msg';
+                        messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
+                        setTimeout(() => window.location.href = 'flashcards.html', 1000);
+                    } else {
+                        messageDiv.className = 'error-msg';
+                        messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
+                    }
+                    return;
+                }
+
+                const { error: updateError } = await supabaseClient
+                    .from('activation_codes')
+                    .update({ is_used: true, device_id: currentDeviceId })
+                    .eq('id', data.id);
+
+                if (updateError) {
+                    messageDiv.className = 'error-msg';
+                    messageDiv.innerText = 'فشل ربط الجهاز بالكود!';
+                    return;
+                }
+
                 localStorage.setItem('user_activated', 'true');
                 messageDiv.className = 'success-msg';
-                messageDiv.innerText = 'تم التعرف على جهازك! جاري الدخول...';
-                setTimeout(() => {
-                    window.location.href = 'flashcards.html';
-                }, 1000);
-            } else {
+                messageDiv.innerText = 'تم التفعيل بنجاح!';
+                setTimeout(() => window.location.href = 'flashcards.html', 1000);
+
+            } catch (err) {
+                console.error(err);
                 messageDiv.className = 'error-msg';
-                messageDiv.innerText = 'هذا الكود مستخدم بالفعل على جهاز آخر!';
+                messageDiv.innerText = 'حدث خطأ غير متوقع!';
             }
-            return;
         }
 
-        // 4. ربط الكود بالجهاز لأول مرة
-        const { error: updateError } = await supabaseClient
-            .from('activation_codes')
-            .update({ is_used: true, device_id: currentDeviceId })
-            .eq('id', data.id);
-
-        if (updateError) {
-            console.error("Update Error:", updateError);
-            messageDiv.className = 'error-msg';
-            messageDiv.innerText = 'فشل ربط الجهاز بالكود!';
-            return;
+        // تسجيل الدخول بجوجل عبر Supabase Auth
+        async function loginWithGoogle() {
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/flashcards.html'
+                }
+            });
+            if (error) {
+                const msg = document.getElementById('status-message');
+                msg.className = 'error-msg';
+                msg.innerText = 'فشل تسجيل الدخول بواسطة جوجل: ' + error.message;
+            }
         }
 
-        localStorage.setItem('user_activated', 'true');
-        messageDiv.className = 'success-msg';
-        messageDiv.innerText = 'تم التفعيل بنجاح!';
-        setTimeout(() => {
-            window.location.href = 'flashcards.html';
-        }, 1000);
+        // تسجيل الدخول بالإيميل وكلمة المرور
+        async function loginWithEmail() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const messageDiv = document.getElementById('status-message');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري تسجيل الدخول...';
 
-    } catch (err) {
-        console.error("Unexpected Error:", err);
-        messageDiv.className = 'error-msg';
-        messageDiv.innerText = 'حدث خطأ غير متوقع!';
-    }
-}
+            if (!email || !password) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال البريد وكلمة المرور!';
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'خطأ في البريد أو كلمة المرور: ' + error.message;
+            } else {
+                localStorage.setItem('user_activated', 'true');
+                messageDiv.className = 'success-msg';
+                messageDiv.innerText = 'تم الدخول بنجاح! جاري التوجيه...';
+                setTimeout(() => window.location.href = 'flashcards.html', 1000);
+            }
+        }
+
+        // إنشاء حساب جديد بالإيميل وكلمة المرور
+        async function signUpWithEmail() {
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const messageDiv = document.getElementById('status-message');
+            messageDiv.className = '';
+            messageDiv.innerText = 'جاري إنشاء الحساب...';
+
+            if (!email || password.length < 6) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'يرجى إدخال إيميل صحيح وباسورد لا يقل عن 6 أحرف!';
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+                messageDiv.className = 'error-msg';
+                messageDiv.innerText = 'فشل إنشاء الحساب: ' + error.message;
+            } else {
+                messageDiv.className = 'success-msg';
+                messageDiv.innerText = 'تم إنشاء الحساب بنجاح! تحقق من بريدك الإلكتروني للتحقق إذا لزم الأمر.';
+            }
+        }
     </script>
 </body>
 </html>
