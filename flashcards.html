@@ -1,410 +1,290 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Flash Cards – Dynamic Supabase</title>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة الفلاش كاردس</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
 
-<!-- مكتبة Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        /* الشريط العلوي */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
 
-<style>
-:root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
-:root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
-body, html, * {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-}
-body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif}
-main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:1.4rem;margin:.2em 0 .6em}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
-select,button,input{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
-button{cursor:pointer;transition:0.3s}
-button:hover{opacity: 0.9;}
-select, input{outline: none;}
-select{max-width:100%}
+        .top-bar h2 { margin: 0; color: #0f766e; font-size: 1.4rem; }
 
-.card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
-.card.back{border-color:var(--acc)}
-.tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
-.crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:10px}
-.txt{font-size:1.25rem}
-.bl{display:inline-block;min-width:4em;font-weight:700;color:var(--fg);outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center}
+        .bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-.ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
-mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
-.hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
-.ctl{display:flex;gap:8px;justify-content:space-between;font-family:system-ui,sans-serif}
-.ctl button{flex:1}
-.ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
-.stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
+        /* زرار الكود الصغير في الركن */
+        .btn-code {
+            background: #0f766e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-code:hover { background: #115e59; }
 
-/* واجهة إدخال كود التفعيل */
-#activation-section {
-    background: var(--card);
-    border: 2px dashed var(--acc);
-    border-radius: 14px;
-    padding: 30px 20px;
-    text-align: center;
-    margin-top: 30px;
-    font-family: system-ui, sans-serif;
-}
-#activation-section h3 { margin-top: 0; color: var(--fg); font-size: 1.2rem; }
-#activation-section p { color: var(--mut); font-size: 0.9rem; margin-bottom: 20px; }
-.code-input-group { display: flex; gap: 10px; justify-content: center; max-width: 400px; margin: 0 auto; }
-.code-input-group input { flex: 1; text-align: center; letter-spacing: 2px; font-weight: bold; }
-.hidden { display: none !important; }
-.msg { margin-top: 12px; font-size: 0.85rem; font-weight: bold; }
-.msg-success { color: var(--ok); }
-.msg-error { color: var(--no); }
-</style>
+        .btn-logout {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* محتوى الكروت */
+        .cards-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            margin-top: 20px;
+            font-size: 1.3rem;
+            color: #1e293b;
+        }
+
+        /* النافذة المنبثقة (Modal) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-card {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-card h3 { margin-top: 0; color: #0f766e; }
+        .modal-card input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .modal-btn {
+            background: #0f766e;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .hidden { display: none !important; }
+        .status-text { margin-top: 10px; font-size: 0.85rem; font-weight: bold; }
+        .error { color: #dc2626; }
+        .success { color: #16a34a; }
+    </style>
 </head>
 <body>
-<main>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1>Flash Cards</h1>
-        <button id="logout-btn" style="font-size: 0.8rem; padding: 4px 10px;">تسجيل الخروج</button>
-    </div>
 
-    <!-- المحتوى التعليمي (يظهر فقط عند التفعيل) -->
-    <div id="learning-content" class="hidden">
-        <div class="row">
-            <select id="deck"></select>
-            <label><input type="checkbox" id="shuf"> Shuffle</label>
-            <button id="all">All cards</button>
-            <button id="miss">Review missed</button>
+    <!-- الشريط العلوي -->
+    <div class="top-bar">
+        <h2>منصة الفلاش كاردس</h2>
+        <div class="bar-actions">
+            <!-- زرار الكود الصغير في الركن -->
+            <button class="btn-code" onclick="openCodeModal()">🔑 إدخال كود التفعيل</button>
+            <button class="btn-logout" onclick="logout()">خروج</button>
         </div>
-        <div class="card" id="card"><div class="txt">Loading content...</div></div>
-        <div class="ctl"><button id="prev">← Prev</button><button id="flip">Flip</button><button id="next">Next →</button></div>
-        <div class="ctl" style="margin-top:8px"><button class="no" id="bad">✗ Again</button><button class="ok" id="good">✓ Got it</button></div>
-        <div class="stat" id="stat"></div>
-        <p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
     </div>
 
-    <!-- قسم إدخال كود التفعيل (يظهر لو الحساب غير مفعّل) -->
-    <div id="activation-section" class="hidden">
-        <h3>تفعيل اشتراك المنصة</h3>
-        <p>حسابك غير مفعّل. أدخل كود التفعيل الخاص بك للوصول إلى كافة الكروت التعليمية.</p>
-        <div class="code-input-group">
-            <input type="text" id="activation-code" placeholder="أدخل الكود هنا">
-            <button id="activate-btn" onclick="activateAccount()">تفعيل الآن</button>
+    <!-- المحتوى الرئيسي للمادة/الكروت -->
+    <div class="cards-container">
+        <div id="content-locked" class="card">
+            🔒 المادة مغلقة! يرجى الضغط على زر **"إدخال كود التفعيل"** أعلاه لتفعيل الحساب والوصول إلى الفلاش كاردس.
         </div>
-        <div id="activation-msg" class="msg"></div>
+
+        <div id="content-unlocked" class="card hidden">
+            🎉 أهلاً بك! تم تفعيل المادة بنجاح، يمكنك الآن استعراض كافة الفلاش كاردس.
+        </div>
     </div>
-</main>
 
-<script>
-const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <!-- النافذة المنبثقة (Modal) لإدخال الكود -->
+    <div id="codeModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <button class="close-modal" onclick="closeCodeModal()">✕</button>
+            <h3>تفعيل الحساب</h3>
+            <p style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">أدخل كود التفعيل المكون من رمزك الخاص للوصول للمحتوى</p>
+            <input type="text" id="activation-code-input" placeholder="أدخل الكود هنا...">
+            <button class="modal-btn" onclick="submitActivationCode()">تفعيل الآن</button>
+            <div id="modal-status" class="status-text"></div>
+        </div>
+    </div>
 
-var D = [];
-var st = [], di = 0, list = [], pos = 0, back = false, isMissedMode = false;
-var $ = function(i){return document.getElementById(i)}, sel = $('deck');
-let currentUser = null;
+    <script>
+        const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 1. فحص الجلسة والحماية عند تحميل الصفحة
-window.addEventListener('DOMContentLoaded', async () => {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    
-    if (!session) {
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    currentUser = session.user;
+        let currentUser = null;
 
-    // فحص الجلسة النشطة (منع فتح حسابين في نفس الوقت)
-    const localToken = localStorage.getItem('session_token');
-    const { data: sessionData } = await supabaseClient
-        .from('active_sessions')
-        .select('session_token')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-
-    if (sessionData && localToken && sessionData.session_token !== localToken) {
-        alert('تم تسجيل الدخول من جهاز آخر. سيتم تسجيل خروجك.');
-        await supabaseClient.auth.signOut();
-        localStorage.clear();
-        window.location.href = 'index.html';
-        return;
-    }
-
-    // فحص هل حساب المستخدم مفعّل بكود مسبقاً؟
-    const { data: activationData } = await supabaseClient
-        .from('activation_codes')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-
-    if (activationData && activationData.is_used) {
-        // الحساب مفعّل، اعرض المحتوى
-        $('activation-section').classList.add('hidden');
-        $('learning-content').classList.remove('hidden');
-        await fetchCardsFromSupabase();
-    } else {
-        // الحساب غير مفعّل، اظهر واجهة إدخال الكود
-        $('learning-content').classList.add('hidden');
-        $('activation-section').classList.remove('hidden');
-    }
-});
-
-// 2. دالة تفعيل الحساب بالكود المدخل
-async function activateAccount() {
-    const codeInput = $('activation-code').value.trim();
-    const msgDiv = $('activation-msg');
-    msgDiv.className = 'msg';
-    
-    if (!codeInput) {
-        msgDiv.className = 'msg msg-error';
-        msgDiv.innerText = 'يرجى إدخال الكود أولاً!';
-        return;
-    }
-
-    msgDiv.innerText = 'جاري التحقق من الكود...';
-
-    // البحث عن الكود في جدول الأكواد
-    const { data: codeRecord, error } = await supabaseClient
-        .from('activation_codes')
-        .select('*')
-        .eq('code', codeInput)
-        .maybeSingle();
-
-    if (error || !codeRecord) {
-        msgDiv.className = 'msg msg-error';
-        msgDiv.innerText = 'كود التفعيل غير صحيح!';
-        return;
-    }
-
-    if (codeRecord.is_used && codeRecord.user_id !== currentUser.id) {
-        msgDiv.className = 'msg msg-error';
-        msgDiv.innerText = 'هذا الكود مستخدم بالفعل على حساب آخر!';
-        return;
-    }
-
-    // ربط الكود بحساب المستخدم الحالي وتفعيله
-    const { error: updateError } = await supabaseClient
-        .from('activation_codes')
-        .update({ is_used: true, user_id: currentUser.id })
-        .eq('id', codeRecord.id);
-
-    if (updateError) {
-        msgDiv.className = 'msg msg-error';
-        msgDiv.innerText = 'حدث خطأ أثناء تفعيل الكود، حاول مرة أخرى.';
-        return;
-    }
-
-    msgDiv.className = 'msg msg-success';
-    msgDiv.innerText = 'تم التفعيل بنجاح! جاري فتح المحتوى...';
-
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
-}
-
-// زر تسجيل الخروج
-$('logout-btn').onclick = async () => {
-    await supabaseClient.auth.signOut();
-    localStorage.clear();
-    window.location.href = 'index.html';
-};
-
-// 3. جلب الكروت التعليمية من Supabase
-async function fetchCardsFromSupabase() {
-    let allData = [];
-    let step = 1000;
-    let from = 0;
-    let to = 999;
-    let keepFetching = true;
-
-    while (keepFetching) {
-        const { data, error } = await supabaseClient
-            .from('flashcards')
-            .select('*')
-            .order('card_order', { ascending: true }) // الترتيب الدقيق حسب الـ card_order الذي أنشأناه
-            .range(from, to);
-
-        if (error) {
-            console.error("Error fetching data:", error);
-            break;
-        }
-
-        if (data && data.length > 0) {
-            allData = allData.concat(data);
-            if (data.length < step) {
-                keepFetching = false; 
-            } else {
-                from += step;
-                to += step;
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'index.html';
+                return;
             }
-        } else {
-            keepFetching = false;
-        }
-    }
-
-    if (allData.length === 0) {
-        $('card').innerHTML = '<div class="txt">No cards available in database yet.</div>';
-        return;
-    }
-
-    var decksMap = {};
-    allData.forEach(item => {
-        var categoryName = item.category || 'General';
-        if (!decksMap[categoryName]) {
-            decksMap[categoryName] = [];
-        }
-        decksMap[categoryName].push({
-            f: item.question,
-            b: item.answer,
-            s: categoryName,
-            c: item.crumb || ''
+            currentUser = session.user;
+            await verifySingleSession();
+            await checkActivationStatus();
         });
-    });
 
-    D = [];
-    for (var cat in decksMap) {
-        D.push({
-            n: cat,
-            cards: decksMap[cat]
-        });
-    }
+        // التحقق من الجلسة الواحدة
+        async function verifySingleSession() {
+            const localToken = localStorage.getItem('session_token');
+            const { data } = await supabaseClient
+                .from('active_sessions')
+                .select('session_token')
+                .eq('user_id', currentUser.id)
+                .single();
 
-    initDeckSystem();
-}
-
-function initDeckSystem() {
-    sel.innerHTML = '';
-    st = D.map(function(d){
-        return new Array(d.cards.length).fill(null);
-    });
-    
-    D.forEach(function(d,i){
-        var o = document.createElement('option');
-        o.value = i;
-        o.textContent = d.n + ' (' + d.cards.length + ')';
-        sel.appendChild(o);
-    });
-
-    di = 0;
-    start(false);
-}
-
-function start(missed){
-    isMissedMode = missed;
-    if (!D.length) return;
-    var n = D[di].cards.length, idx = [];
-    
-    for(var i = 0; i < n; i++){
-        if(!missed || st[di][i] === 'no') {
-            idx.push(i);
+            if (data && data.session_token !== localToken) {
+                alert("تم تسجيل الدخول بحسابك من جهاز آخر!");
+                await supabaseClient.auth.signOut();
+                window.location.href = 'index.html';
+            }
         }
-    }
-    
-    if($('shuf').checked && !missed) {
-        idx.sort(function(){return Math.random() - .5});
-    }
-    
-    list = idx;
-    pos = 0;
-    back = false;
-    render();
-}
 
-function stat(){
-    if (!D.length) return;
-    var deckStates = st[di];
-    var ok = 0, no = 0;
-    
-    for(var i = 0; i < deckStates.length; i++){
-        if(deckStates[i] === 'ok') ok++;
-        else if(deckStates[i] === 'no') no++;
-    }
-    $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
-}
+        // فحص هل المستخدم مفعل الكود من قبل أم لا
+        async function checkActivationStatus() {
+            const { data } = await supabaseClient
+                .from('activation_codes')
+                .select('*')
+                .eq('used_by', currentUser.id);
 
-function render(){
-    var c = $('card');
-    if(!list.length){
-        c.className = 'card';
-        c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
-        stat();
-        return;
-    }
-    var x = D[di].cards[list[pos]];
-    c.className = 'card' + (back ? ' back' : '');
-    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.crumb ? '<div class="crumb">' + x.crumb.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
-    stat();
-}
+            if (data && data.length > 0) {
+                document.getElementById('content-locked').classList.add('hidden');
+                document.getElementById('content-unlocked').classList.remove('hidden');
+            }
+        }
 
-function go(d){
-    if(!list.length) return;
-    if(!back && d > 0){
-        back = true;
-        render();
-        return;
-    }
-    pos = (pos + d + list.length) % list.length;
-    back = false;
-    render();
-}
+        // فتح وإغلاق النافذة المنبثقة
+        function openCodeModal() {
+            document.getElementById('codeModal').classList.remove('hidden');
+            document.getElementById('modal-status').innerText = '';
+        }
 
-function mark(v){
-    if(!list.length) return;
-    var realCardIdx = list[pos];
-    st[di][realCardIdx] = v;
+        function closeCodeModal() {
+            document.getElementById('codeModal').classList.add('hidden');
+        }
 
-    if(isMissedMode && v === 'ok'){
-        list.splice(pos, 1);
-        if(pos >= list.length) pos = 0;
-        back = false;
-        render();
-        return;
-    }
+        // إرسال الكود للتحقق
+        async function submitActivationCode() {
+            const codeInput = document.getElementById('activation-code-input').value.trim();
+            const statusDiv = document.getElementById('modal-status');
+            
+            if (!codeInput) {
+                statusDiv.className = 'status-text error';
+                statusDiv.innerText = 'يرجى كتابة الكود أولاً!';
+                return;
+            }
 
-    if(!back){
-        back = true;
-        render();
-        return;
-    }
-    go(1);
-}
+            statusDiv.className = 'status-text';
+            statusDiv.innerText = 'جاري التحقق...';
 
-function flip(){if(list.length){back=!back;render()}}
+            const { data, error } = await supabaseClient
+                .from('activation_codes')
+                .select('*')
+                .eq('code', codeInput)
+                .is('used_by', null)
+                .single();
 
-sel.onchange = function(){ di = +sel.value; start(false); };
-$('all').onclick = function(){ start(false); };
-$('miss').onclick = function(){ start(true); };
-$('shuf').onchange = function(){ start(false); };
-$('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
-$('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
+            if (error || !data) {
+                statusDiv.className = 'status-text error';
+                statusDiv.innerText = 'الكود غير صحيح أو مستخدم من قبل!';
+            } else {
+                // ربط الكود بالمسخدم
+                await supabaseClient
+                    .from('activation_codes')
+                    .update({ used_by: currentUser.id, activated_at: new Date() })
+                    .eq('id', data.id);
 
-// اختصارات لوحة المفاتيح
-document.onkeydown = function(e){
-    if(e.target.tagName === 'INPUT') return; // السماح بالكتابة في حقل الإدخال بشكل طبيعي
-    
-    if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
-        e.preventDefault();
-        flip();
-    }
-    else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){
-        e.preventDefault();
-        go(1);
-    }
-    else if(e.key === 'ArrowLeft' || e.code === 'ArrowLeft'){
-        e.preventDefault();
-        go(-1);
-    }
-    else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){
-        e.preventDefault();
-        mark('ok');
-    }
-    else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){
-        e.preventDefault();
-        mark('no');
-    }
-};
-</script></body></html>
+                statusDiv.className = 'status-text success';
+                statusDiv.innerText = 'تم التفعيل بنجاح!';
+                
+                // كيفية التحقق من نجاح الخطوة: التوجيه وتعديل واجهة المستخدم
+                setTimeout(() => {
+                    closeCodeModal();
+                    checkActivationStatus();
+                }, 1000);
+            }
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
