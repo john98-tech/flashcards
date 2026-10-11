@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flash Cards – Dynamic Supabase</title>
 
@@ -106,7 +108,7 @@ async function fetchCardsFromSupabase() {
         const { data, error } = await supabaseClient
             .from('flashcards')
             .select('*')
-            .order('card_order', { ascending: true }) // الترتيب حسب عمود الترقيم اليدوي
+            .order('card_order', { ascending: true })
             .range(from, to);
 
         if (error) {
@@ -295,4 +297,6 @@ document.onkeydown = function(e){
         mark('no');
     }
 };
-</script></body></html>
+</script>
+</body>
+</html>
