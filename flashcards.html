@@ -3,9 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flash Cards – Dynamic Supabase</title>
 
-<!-- مكتبات الحماية والربط مع Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://openfpcdn.io/fingerprintjs/v3/iife.min.js"></script>
 
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -22,9 +20,11 @@ body, html, * {
 body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif}
 main{max-width:640px;margin:0 auto;padding:16px}
 h1{font-size:1.4rem;margin:.2em 0 .6em}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
 select{max-width:100%}
 .card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
 .card.back{border-color:var(--acc)}
@@ -32,7 +32,6 @@ select{max-width:100%}
 .crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:10px}
 .txt{font-size:1.25rem}
 .bl{display:inline-block;min-width:4em;font-weight:700;color:var(--fg);outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
-
 .ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
 mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weight:700;padding:0 3px;border-radius:3px}
 .hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
@@ -40,8 +39,20 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 .ctl button{flex:1}
 .ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
 .stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
+
+/* نافذة إدخال الكود */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal.hidden{display:none}
+.mbox{width:100%;max-width:380px;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:22px;font-family:system-ui,sans-serif}
+.mbox h2{font-size:1.15rem;margin:0 0 6px;font-family:Georgia,serif}
+.mbox input{width:100%;padding:9px 12px;margin:10px 0;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;font:1rem system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;outline:none;-webkit-user-select:text;-moz-user-select:text;user-select:text}
+.mbox input:focus{outline:2px solid var(--acc)}
+.msg-ok{color:var(--ok)}.msg-no{color:var(--no)}
 </style></head><body><main>
-<h1>Flash Cards</h1>
+<div class="top">
+  <h1>Flash Cards</h1>
+  <div class="row" style="margin:0"><button id="unlock">🔑 Unlock</button><button id="logout">Logout</button></div>
+</div>
 <div class="row"><select id="deck"></select>
 <label><input type="checkbox" id="shuf"> Shuffle</label>
 <button id="all">All cards</button><button id="miss">Review missed</button></div>
@@ -51,144 +62,198 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 <div class="stat" id="stat"></div>
 <p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
 </main>
+
+<!-- نافذة إدخال كود التفعيل -->
+<div class="modal hidden" id="modal">
+  <div class="mbox">
+    <h2>Unlock content</h2>
+    <div class="hint" style="margin:0">Enter your access code to unlock a premium deck.</div>
+    <input id="codeInput" type="text" placeholder="ENTER CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <div class="ctl">
+      <button id="codeCancel">Cancel</button>
+      <button class="ok" id="codeGo">Unlock</button>
+    </div>
+    <div class="stat" id="codeMsg"></div>
+  </div>
+</div>
+
 <script>
-// 1. إعدادات Supabase ورابط الحماية
+// 1. إعدادات Supabase
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-var D = [];
-var st = [], di = 0, list = [], pos = 0, back = false, isMissedMode = false;
+var CATS = [];        // كل الأقسام (مجانية ومدفوعة) من جدول categories
+var unlocked = {};    // الأقسام المدفوعة اللي المستخدم فتحها
+var D = [];           // الأقسام المتاحة للمستخدم فعلاً (وفيها الكروت)
+var st = {};          // تقدم المستخدم لكل قسم (بالاسم)
+var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)}, sel = $('deck');
+var currentUserId = null;
+var kicked = false;
 
-// 2. فحص التفعيل وحماية الصفحة قبل أي شيء (مع تعديل البصمة لتتطابق بسلاسة)
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+// 2. الرجوع لصفحة الدخول (مع مسح الجلسة)
+async function kickOut() {
+    if (kicked) return;
+    kicked = true;
+    localStorage.removeItem('session_token');
+    try { await supabaseClient.auth.signOut(); } catch (e) {}
+    window.location.href = 'index.html';
+}
+
+// 3. التأكد إن المستخدم مسجل دخول وإن الجلسة دي هي الجلسة النشطة الوحيدة
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return false;
+    currentUserId = session.user.id;
+
+    const localToken = localStorage.getItem('session_token');
+    if (!localToken) return false;
+
+    const { data, error } = await supabaseClient
+        .from('active_sessions')
+        .select('session_token')
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+    if (error) return true; // مشكلة شبكة مؤقتة: منطردش المستخدم
+    return !!data && data.session_token === localToken;
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
-    const isActivated = localStorage.getItem('user_activated');
-    if (isActivated !== 'true') {
-        window.location.href = 'index.html';
-        return;
-    }
-
     try {
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
+        if (!(await checkSession())) { await kickOut(); return; }
+        await loadAll();
 
-        const { data } = await supabaseClient
-            .from('activation_codes')
-            .select('is_used')
-            .eq('device_id', result.visitorId)
-            .maybeSingle();
-
-        if (!data) {
-            localStorage.removeItem('user_activated');
-            window.location.href = 'index.html';
-            return;
-        }
-
-        await fetchCardsFromSupabase();
-
+        setInterval(async () => { if (!(await checkSession())) kickOut(); }, 20000);
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && !(await checkSession())) kickOut();
+        });
+        supabaseClient.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_OUT') kickOut();
+        });
     } catch (e) {
         console.error(e);
-        window.location.href = 'index.html';
+        await kickOut();
     }
 });
 
-// 3. دالة جلب كل الأسئلة مرتبة حسب الترقيم اليدوي بدقة تامة
-async function fetchCardsFromSupabase() {
-    let allData = [];
-    let step = 1000;
-    let from = 0;
-    let to = 999;
-    let keepFetching = true;
+$('logout').onclick = kickOut;
 
-    while (keepFetching) {
+// 4. جلب الكروت (السيرفر بيرجّع بس المجاني + اللي المستخدم فتحه بفضل RLS)
+async function fetchCards() {
+    var all = [], step = 1000, from = 0;
+    while (true) {
         const { data, error } = await supabaseClient
             .from('flashcards')
             .select('*')
-            .order('card_order', { ascending: true }) // الترتيب حسب عمود الترقيم اليدوي
-            .range(from, to);
-
-        if (error) {
-            console.error("Error fetching data:", error);
-            break;
-        }
-
-        if (data && data.length > 0) {
-            allData = allData.concat(data);
-            if (data.length < step) {
-                keepFetching = false; 
-            } else {
-                from += step;
-                to += step;
-            }
-        } else {
-            keepFetching = false;
-        }
+            .order('card_order', { ascending: true })
+            .range(from, from + step - 1);
+        if (error) { console.error("Error fetching data:", error); return null; }
+        all = all.concat(data || []);
+        if (!data || data.length < step) break;
+        from += step;
     }
+    return all;
+}
 
-    if (allData.length === 0) {
-        $('card').innerHTML = '<div class="txt">No cards available in database yet.</div>';
+function isOpen(c){ return !!c.is_free || !!unlocked[c.name]; }
+function getDeck(name){ return D.find(function(d){ return d.n === name; }); }
+
+// تحميل الأقسام + الفتح + الكروت وإعادة بناء القايمة
+async function loadAll(preferName) {
+    const res = await Promise.all([
+        supabaseClient.from('categories').select('name,is_free,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
+        supabaseClient.from('user_unlocks').select('category')
+    ]);
+    var cr = res[0], ur = res[1];
+    if (cr.error) {
+        $('card').innerHTML = '<div class="txt">Error loading decks: ' + esc(cr.error.message) + '</div>';
+        return;
+    }
+    CATS = cr.data || [];
+    unlocked = {};
+    ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
+
+    const cards = await fetchCards();
+    if (cards === null) {
+        $('card').innerHTML = '<div class="txt">Error loading cards.</div>';
         return;
     }
 
-    var decksMap = {};
-    allData.forEach(item => {
-        var categoryName = item.category || 'General';
-        if (!decksMap[categoryName]) {
-            decksMap[categoryName] = [];
-        }
-        decksMap[categoryName].push({
-            f: item.question,
-            b: item.answer,
-            s: categoryName,
-            c: item.crumb || ''
-        });
+    var map = {};
+    cards.forEach(function(item){
+        var n = item.category || 'General';
+        if (!map[n]) map[n] = [];
+        map[n].push({ f: item.question, b: item.answer, s: n, c: item.crumb || '' });
     });
 
-    D = [];
-    for (var cat in decksMap) {
-        D.push({
-            n: cat,
-            cards: decksMap[cat]
-        });
-    }
+    D = CATS.filter(function(c){ return isOpen(c) && map[c.name]; })
+            .map(function(c){ return { n: c.name, cards: map[c.name] }; });
 
-    initDeckSystem();
-}
-
-// 4. تشغيل نظام الكروت
-function initDeckSystem() {
-    sel.innerHTML = '';
-    st = D.map(function(d){
-        return new Array(d.cards.length).fill(null);
-    });
-    
-    D.forEach(function(d,i){
-        var o = document.createElement('option');
-        o.value = i;
-        o.textContent = d.n + ' (' + d.cards.length + ')';
-        sel.appendChild(o);
+    D.forEach(function(d){
+        if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null);
     });
 
-    di = 0;
+    // اختيار القسم الحالي: المطلوب، ثم الحالي، ثم أول قسم متاح (المجاني الأول)
+    var order = CATS.filter(function(c){ return c.is_free; }).concat(CATS.filter(function(c){ return !c.is_free; }));
+    var firstOpen = null;
+    for (var i = 0; i < order.length; i++) { if (getDeck(order[i].name)) { firstOpen = order[i].name; break; } }
+    curName = (preferName && getDeck(preferName)) ? preferName
+            : (curName && getDeck(curName)) ? curName
+            : firstOpen;
+
+    buildSelect();
+    sel.value = curName || '';
     start(false);
 }
 
+// 5. بناء القايمة المنسدلة: مجاني / مدفوع (🔒 للمقفول)
+function buildSelect() {
+    sel.innerHTML = '';
+    addGroup('Free', CATS.filter(function(c){ return c.is_free; }));
+    addGroup('Premium', CATS.filter(function(c){ return !c.is_free; }));
+}
+function addGroup(label, arr) {
+    if (!arr.length) return;
+    var g = document.createElement('optgroup');
+    g.label = label;
+    arr.forEach(function(c){
+        var open = isOpen(c), deck = getDeck(c.name);
+        var o = document.createElement('option');
+        o.value = c.name;
+        o.textContent = (open ? '' : '🔒 ') + c.name + (open && deck ? ' (' + deck.cards.length + ')' : '');
+        g.appendChild(o);
+    });
+    sel.appendChild(g);
+}
+
+sel.onchange = function(){
+    var c = CATS.find(function(x){ return x.name === sel.value; });
+    if (!c || !isOpen(c)) {
+        sel.value = curName || '';
+        openModal();
+        return;
+    }
+    curName = c.name;
+    start(false);
+};
+
+// 6. نظام الكروت
 function start(missed){
     isMissedMode = missed;
-    if (!D.length) return;
-    var n = D[di].cards.length, idx = [];
-    
+    var d = getDeck(curName);
+    if (!d) { list = []; pos = 0; back = false; render(); return; }
+    var n = d.cards.length, idx = [];
+
     for(var i = 0; i < n; i++){
-        if(!missed || st[di][i] === 'no') {
-            idx.push(i);
-        }
+        if(!missed || st[d.n][i] === 'no') idx.push(i);
     }
-    
     if($('shuf').checked && !missed) {
         idx.sort(function(){return Math.random() - .5});
     }
-    
     list = idx;
     pos = 0;
     back = false;
@@ -196,28 +261,34 @@ function start(missed){
 }
 
 function stat(){
-    if (!D.length) return;
-    var deckStates = st[di];
+    var s = st[curName];
+    if (!s) { $('stat').textContent = ''; return; }
     var ok = 0, no = 0;
-    
-    for(var i = 0; i < deckStates.length; i++){
-        if(deckStates[i] === 'ok') ok++;
-        else if(deckStates[i] === 'no') no++;
+    for(var i = 0; i < s.length; i++){
+        if(s[i] === 'ok') ok++;
+        else if(s[i] === 'no') no++;
     }
     $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
 }
 
 function render(){
     var c = $('card');
+    var d = getDeck(curName);
+    if(!d){
+        c.className = 'card';
+        c.innerHTML = '<div class="txt">No decks available yet. Use 🔑 Unlock to enter an access code.</div>';
+        stat();
+        return;
+    }
     if(!list.length){
         c.className = 'card';
         c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
         stat();
         return;
     }
-    var x = D[di].cards[list[pos]];
+    var x = d.cards[list[pos]];
     c.className = 'card' + (back ? ' back' : '');
-    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.crumb ? '<div class="crumb">' + x.crumb.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
+    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
     stat();
 }
 
@@ -236,8 +307,8 @@ function go(d){
 function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
-    
-    st[di][realCardIdx] = v;
+
+    st[curName][realCardIdx] = v;
 
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
@@ -257,7 +328,42 @@ function mark(v){
 
 function flip(){if(list.length){back=!back;render()}}
 
-sel.onchange = function(){ di = +sel.value; start(false); };
+// 7. نافذة كود التفعيل
+function codeMsg(text, kind){
+    var m = $('codeMsg');
+    m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : '');
+    m.textContent = text;
+}
+function openModal(){
+    codeMsg('', null);
+    $('codeInput').value = '';
+    $('modal').classList.remove('hidden');
+    setTimeout(function(){ $('codeInput').focus(); }, 50);
+}
+function closeModal(){ $('modal').classList.add('hidden'); }
+
+async function redeem(){
+    var code = $('codeInput').value.trim().toUpperCase();
+    if (!code) { codeMsg('Please enter a code.', false); return; }
+    $('codeGo').disabled = true;
+    codeMsg('Checking...', null);
+
+    const { data, error } = await supabaseClient.rpc('redeem_code', { p_code: code });
+    $('codeGo').disabled = false;
+
+    if (error) { codeMsg(error.message, false); return; }
+
+    var names = Array.isArray(data) ? data : [];
+    codeMsg('Unlocked: ' + names.join(', '), true);
+    await loadAll(names[0]);
+    setTimeout(closeModal, 1200);
+}
+
+$('unlock').onclick = openModal;
+$('codeCancel').onclick = closeModal;
+$('codeGo').onclick = redeem;
+$('modal').onclick = function(e){ if (e.target === this) closeModal(); };
+
 $('all').onclick = function(){ start(false); };
 $('miss').onclick = function(){ start(true); };
 $('shuf').onchange = function(){ start(false); };
@@ -265,12 +371,22 @@ $('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function
 $('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
 
 // الحماية واختصارات الكيبورد
-document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+document.addEventListener('selectstart', function(e) {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    e.preventDefault();
+});
 document.addEventListener('contextmenu', event => event.preventDefault());
 
 document.onkeydown = function(e){
     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
         return false;
+    }
+
+    // لو نافذة الكود مفتوحة: Enter = تفعيل، Esc = إغلاق، والباقي يتكتب عادي
+    if (!$('modal').classList.contains('hidden')) {
+        if (e.key === 'Enter') { e.preventDefault(); redeem(); }
+        else if (e.key === 'Escape') { closeModal(); }
+        return;
     }
 
     if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
