@@ -125,44 +125,9 @@
         }
         .btn-main:hover { background: #115e59; transform: translateY(-1px); }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 20px 0;
-            color: #94a3b8;
-            font-size: 0.85rem;
-        }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #cbd5e1;
-        }
-        .divider::before { margin-left: 10px; }
-        .divider::after { margin-right: 10px; }
-
-        .btn-google {
-            background: #ffffff;
-            color: #334155;
-            border: 2px solid #cbd5e1;
-            padding: 11px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: 0.3s;
-        }
-        .btn-google:hover { background: #f8fafc; border-color: #94a3b8; }
-        .btn-google img { width: 20px; height: 20px; }
-
         .hidden { display: none !important; }
-        .error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
-        .success-msg { color: #16a34a; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
+        .error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 15px; }
+        .success-msg { color: #16a34a; font-size: 0.85rem; font-weight: bold; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -194,12 +159,6 @@
                 <input type="password" id="login-password" placeholder="••••••••">
             </div>
             <button class="btn-main" onclick="loginWithEmail()">دخول للمنصة</button>
-            
-            <div class="divider">أو</div>
-            <button class="btn-google" onclick="loginWithGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-                الدخول باستخدام جوجل
-            </button>
         </div>
 
         <!-- قسم 2: إنشاء حساب جديد -->
@@ -213,12 +172,6 @@
                 <input type="password" id="signup-password" placeholder="•••••••• (6 أحرف على الأقل)">
             </div>
             <button class="btn-main" onclick="signUpWithEmail()">إنشاء الحساب</button>
-
-            <div class="divider">أو</div>
-            <button class="btn-google" onclick="loginWithGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-                التسجيل باستخدام جوجل
-            </button>
         </div>
 
         <div id="status-message"></div>
@@ -264,18 +217,6 @@
                 session_token: token,
                 updated_at: new Date().toISOString()
             });
-        }
-
-        async function loginWithGoogle() {
-            const { error } = await supabaseClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.origin + '/flashcards.html'
-                }
-            });
-            if (error) {
-                showError('فشل تسجيل الدخول بجوجل: ' + error.message);
-            }
         }
 
         async function loginWithEmail() {
@@ -324,7 +265,7 @@
             m.innerText = msg;
         }
 
-        function showMsg(msg, isSuccess) {
+    function showMsg(msg, isSuccess) {
             const m = document.getElementById('status-message');
             m.className = isSuccess ? 'success-msg' : '';
             m.innerText = msg;
