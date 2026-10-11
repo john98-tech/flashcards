@@ -2,153 +2,53 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>منصة الفلاش كاردس التعليمية</title>
-    <!-- مكتبة Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        body {
-            background: linear-gradient(135deg, #0f766e, #14201d, #3b82f6);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            overflow-x: hidden;
-            position: relative;
-        }
+        :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+        @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
+        :root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
+        html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif;min-height:100vh}
+        main{max-width:440px;margin:0 auto;padding:16px}
+        h1{font-size:1.4rem;margin:.2em 0 .2em;text-align:center}
+        .sub{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin:0 0 14px}
 
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+        .box{margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px}
+        .row{display:flex;gap:8px;font-family:system-ui,sans-serif;font-size:.9rem;margin:0 0 14px}
+        select,button,input{font:inherit}
+        button{padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px;cursor:pointer}
+        .row button{flex:1}
+        .row button.active{background:var(--acc);color:var(--bg);font-weight:700}
 
-        .bg-shapes div {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            animation: float 12s infinite alternate ease-in-out;
-            z-index: 1;
-        }
-        .bg-shapes div:nth-child(1) { width: 120px; height: 120px; top: 10%; left: 10%; animation-duration: 8s; }
-        .bg-shapes div:nth-child(2) { width: 200px; height: 200px; bottom: 15%; right: 10%; animation-duration: 14s; }
-        .bg-shapes div:nth-child(3) { width: 80px; height: 80px; top: 50%; right: 20%; animation-duration: 10s; }
+        .auth-tab{font-family:system-ui,sans-serif}
+        label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:4px}
+        .form-group{margin-bottom:12px}
+        input{width:100%;padding:9px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;font-size:.95rem;outline:none}
+        input:focus{border-color:var(--acc);outline:2px solid var(--acc);outline-offset:0}
+        .btn-main{width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--acc);background:var(--acc);color:var(--bg);font-weight:700}
+        .btn-main:disabled{opacity:.6;cursor:wait}
 
-        @keyframes float {
-            0% { transform: translateY(0px) rotate(0deg); }
-            100% { transform: translateY(-40px) rotate(360deg); }
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.93);
-            backdrop-filter: blur(12px);
-            padding: 35px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 440px;
-            text-align: center;
-            z-index: 2;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h2 { color: #1d2b27; margin-bottom: 8px; font-size: 1.6rem; }
-        p.subtitle { color: #5b6b66; font-size: 0.9rem; margin-bottom: 25px; }
-
-        .tabs {
-            display: flex;
-            justify-content: space-between;
-            background: #e2e8f0;
-            border-radius: 10px;
-            padding: 4px;
-            margin-bottom: 20px;
-        }
-        .tab-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            padding: 10px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #5b6b66;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: 0.3s;
-        }
-        .tab-btn.active {
-            background: #ffffff;
-            color: #0f766e;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            text-align: right;
-        }
-        label { display: block; font-size: 0.85rem; color: #1d2b27; margin-bottom: 5px; font-weight: 600; }
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-            transition: 0.3s;
-            background: #fff;
-        }
-        input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15); }
-
-        .btn-main {
-            background: #0f766e;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            transition: 0.3s;
-            margin-top: 5px;
-        }
-        .btn-main:hover { background: #115e59; transform: translateY(-1px); }
-
-        .hidden { display: none !important; }
-        .error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 15px; }
-        .success-msg { color: #16a34a; font-size: 0.85rem; font-weight: bold; margin-top: 15px; }
+        .hidden{display:none !important}
+        #status-message{font:.9rem system-ui,sans-serif;text-align:center;margin-top:10px;min-height:1.2em}
+        .error-msg{color:var(--no);font-weight:700}
+        .success-msg{color:var(--ok);font-weight:700}
+        .info-msg{color:var(--mut)}
     </style>
 </head>
 <body>
+<main>
+    <h1>منصة الفلاش كاردس</h1>
+    <p class="sub" id="subtitle-text">سجل دخولك للوصول إلى حسابك</p>
 
-    <div class="bg-shapes">
-        <div></div>
-        <div></div>
-        <div></div>
-    </div>
-
-    <div class="container">
-        <h2>منصة الفلاش كاردس</h2>
-        <p class="subtitle" id="subtitle-text">سجل دخولك أو أنشئ حساباً للمتابعة</p>
-
-        <!-- التبويبات -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('login')">تسجيل الدخول</button>
-            <button class="tab-btn" onclick="switchTab('signup')">حساب جديد</button>
+    <div class="box">
+        <div class="row">
+            <button class="active" id="btn-login" onclick="switchTab('login')">تسجيل الدخول</button>
+            <button id="btn-signup" onclick="switchTab('signup')">حساب جديد</button>
         </div>
 
-        <!-- قسم 1: تسجيل الدخول -->
         <div id="tab-login" class="auth-tab">
             <div class="form-group">
                 <label>البريد الإلكتروني</label>
@@ -158,10 +58,9 @@
                 <label>كلمة المرور</label>
                 <input type="password" id="login-password" placeholder="••••••••">
             </div>
-            <button class="btn-main" onclick="loginWithEmail()">دخول للمنصة</button>
+            <button class="btn-main" id="login-submit" onclick="loginWithEmail()">دخول للمنصة</button>
         </div>
 
-        <!-- قسم 2: إنشاء حساب جديد -->
         <div id="tab-signup" class="auth-tab hidden">
             <div class="form-group">
                 <label>البريد الإلكتروني</label>
@@ -171,105 +70,136 @@
                 <label>كلمة المرور</label>
                 <input type="password" id="signup-password" placeholder="•••••••• (6 أحرف على الأقل)">
             </div>
-            <button class="btn-main" onclick="signUpWithEmail()">إنشاء الحساب</button>
+            <button class="btn-main" id="signup-submit" onclick="signUpWithEmail()">إنشاء الحساب</button>
         </div>
 
         <div id="status-message"></div>
     </div>
+</main>
 
-    <script>
-        const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+<script>
+    const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const { createClient } = window.supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    function switchTab(tabName) {
+        document.querySelectorAll('.row button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.add('hidden'));
+        document.getElementById('status-message').innerText = '';
+        document.getElementById('btn-' + tabName).classList.add('active');
+        document.getElementById('tab-' + tabName).classList.remove('hidden');
+        document.getElementById('subtitle-text').innerText =
+            tabName === 'login' ? 'سجل دخولك للوصول إلى حسابك' : 'أنشئ حساباً جديداً وابدأ الآن';
+    }
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.add('hidden'));
-            document.getElementById('status-message').innerText = '';
+    // لو في جلسة صالحة (ونفس الجهاز هو صاحب آخر دخول) نوجّه للكروت، وإلا نمسح الجلسة القديمة
+    window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
 
-            if (tabName === 'login') {
-                event.target.classList.add('active');
-                document.getElementById('tab-login').classList.remove('hidden');
-                document.getElementById('subtitle-text').innerText = 'سجل دخولك للوصول إلى حسابك';
-            } else if (tabName === 'signup') {
-                event.target.classList.add('active');
-                document.getElementById('tab-signup').classList.remove('hidden');
-                document.getElementById('subtitle-text').innerText = 'أنشئ حساباً جديداً وابدأ الآن';
-            }
-        }
-
-        // فحص هل المستخدم مسجل دخول بالفعل عند فتح الصفحة
-        window.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
+        const localToken = localStorage.getItem('session_token');
+        if (localToken) {
+            const { data } = await supabaseClient
+                .from('active_sessions')
+                .select('session_token')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+            if (data && data.session_token === localToken) {
                 window.location.href = 'flashcards.html';
-            }
-        });
-
-        // إنشاء جلسة جديدة فريدة لمنع الجلسات المتعددة
-        async function registerSession(userId) {
-            const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            localStorage.setItem('session_token', token);
-            await supabaseClient.from('active_sessions').upsert({
-                user_id: userId,
-                session_token: token,
-                updated_at: new Date().toISOString()
-            });
-        }
-
-        async function loginWithEmail() {
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            showMsg('جاري تسجيل الدخول...', false);
-
-            if (!email || !password) {
-                showError('يرجى إدخال البريد وكلمة المرور!');
                 return;
             }
-
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                showError('خطأ في البريد أو كلمة المرور: ' + error.message);
-            } else {
-                await registerSession(data.user.id);
-                showMsg('تم الدخول بنجاح! جاري التوجيه...', true);
-                setTimeout(() => window.location.href = 'flashcards.html', 800);
-            }
         }
+        await supabaseClient.auth.signOut();
+        localStorage.removeItem('session_token');
+    });
 
-        async function signUpWithEmail() {
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            showMsg('جاري إنشاء الحساب...', false);
+    // تسجيل توكن فريد للجلسة الحالية (أي جهاز تاني يدخل بنفس الحساب يلغي الجلسة دي)
+    async function registerSession(userId) {
+        const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const { error } = await supabaseClient.from('active_sessions').upsert(
+            { user_id: userId, session_token: token, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+        );
+        if (error) throw error;
+        localStorage.setItem('session_token', token);
+    }
 
-            if (!email || password.length < 6) {
-                showError('يرجى إدخال إيميل صحيح وباسورد لا يقل عن 6 أحرف!');
-                return;
-            }
+    async function loginWithEmail() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        if (!email || !password) { showError('يرجى إدخال البريد وكلمة المرور!'); return; }
 
-            const { data, error } = await supabaseClient.auth.signUp({ email, password });
-            if (error) {
-                showError('فشل إنشاء الحساب: ' + error.message);
-            } else {
-                if (data.user) await registerSession(data.user.id);
-                showMsg('تم إنشاء الحساب بنجاح! جاري التوجيه...', true);
-                setTimeout(() => window.location.href = 'flashcards.html', 1000);
-            }
+        const btn = document.getElementById('login-submit');
+        btn.disabled = true;
+        showMsg('جاري تسجيل الدخول...', false);
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            btn.disabled = false;
+            showError('خطأ في البريد أو كلمة المرور: ' + error.message);
+            return;
         }
-
-        function showError(msg) {
-            const m = document.getElementById('status-message');
-            m.className = 'error-msg';
-            m.innerText = msg;
+        try {
+            await registerSession(data.user.id);
+        } catch (e) {
+            await supabaseClient.auth.signOut();
+            btn.disabled = false;
+            showError('تعذر تسجيل الجلسة: ' + e.message);
+            return;
         }
+        showMsg('تم الدخول بنجاح! جاري التوجيه...', true);
+        setTimeout(() => window.location.href = 'flashcards.html', 600);
+    }
 
+    async function signUpWithEmail() {
+        const email = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value;
+        if (!email || password.length < 6) { showError('يرجى إدخال إيميل صحيح وباسورد لا يقل عن 6 أحرف!'); return; }
+
+        const btn = document.getElementById('signup-submit');
+        btn.disabled = true;
+        showMsg('جاري إنشاء الحساب...', false);
+
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) {
+            btn.disabled = false;
+            showError('فشل إنشاء الحساب: ' + error.message);
+            return;
+        }
+        // لو تأكيد الإيميل مفعّل في Supabase مش بتتفتح جلسة إلا بعد التأكيد
+        if (!data.session) {
+            btn.disabled = false;
+            showMsg('تم إنشاء الحساب! راجع بريدك لتأكيد الإيميل ثم سجّل الدخول.', true);
+            return;
+        }
+        try {
+            await registerSession(data.user.id);
+        } catch (e) {
+            await supabaseClient.auth.signOut();
+            btn.disabled = false;
+            showError('تعذر تسجيل الجلسة: ' + e.message);
+            return;
+        }
+        showMsg('تم إنشاء الحساب بنجاح! جاري التوجيه...', true);
+        setTimeout(() => window.location.href = 'flashcards.html', 800);
+    }
+
+    function showError(msg) {
+        const m = document.getElementById('status-message');
+        m.className = 'error-msg';
+        m.innerText = msg;
+    }
     function showMsg(msg, isSuccess) {
-            const m = document.getElementById('status-message');
-            m.className = isSuccess ? 'success-msg' : '';
-            m.innerText = msg;
-        }
-    </script>
+        const m = document.getElementById('status-message');
+        m.className = isSuccess ? 'success-msg' : 'info-msg';
+        m.innerText = msg;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        if (!document.getElementById('tab-login').classList.contains('hidden')) loginWithEmail();
+        else signUpWithEmail();
+    });
+</script>
 </body>
 </html>
