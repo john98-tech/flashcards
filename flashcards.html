@@ -51,7 +51,7 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 </style></head><body><main>
 <div class="top">
   <h1>Flash Cards</h1>
-  <div class="row" style="margin:0"><button id="unlock">🔑 Unlock</button><button id="logout">Logout</button></div>
+  <div class="row" style="margin:0"><button id="adminBtn" style="display:none">⚙ Admin</button><button id="unlock">🔑 Unlock</button><button id="logout">Logout</button></div>
 </div>
 <div class="row"><select id="deck"></select>
 <label><input type="checkbox" id="shuf"> Shuffle</label>
@@ -126,6 +126,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         if (!(await checkSession())) { await kickOut(); return; }
         await loadAll();
+        // زرار الأدمن بيظهر للأدمن بس
+        supabaseClient.rpc('is_admin').then(function(r){ if (r.data === true) $('adminBtn').style.display = ''; });
 
         setInterval(async () => { if (!(await checkSession())) kickOut(); }, 20000);
         document.addEventListener('visibilitychange', async () => {
@@ -141,6 +143,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 $('logout').onclick = kickOut;
+$('adminBtn').onclick = function(){ window.location.href = 'admin.html'; };
 
 // 4. جلب الكروت (السيرفر بيرجّع بس المجاني + اللي المستخدم فتحه بفضل RLS)
 async function fetchCards() {
