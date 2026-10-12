@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin – Flash Cards</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
+:root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:16px}
+h1{font:1.4rem Georgia,serif;margin:.2em 0}
+h2{font:1.1rem Georgia,serif;margin:0 0 8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button,select,input,textarea{font:inherit;padding:7px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px}
+button{border-color:var(--acc);cursor:pointer}
+button.primary{background:var(--acc);color:var(--bg);font-weight:700}
+button.danger{border-color:var(--no);color:var(--no)}
+button.sm{padding:3px 8px;font-size:.8rem}
+button:disabled{opacity:.6;cursor:wait}
+input[type=checkbox]{padding:0;width:auto}
+textarea{width:100%;min-height:80px;resize:vertical}
+.tabs button.active{background:var(--acc);color:var(--bg);font-weight:700}
+.box{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.list{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--bg);margin:8px 0}
+.item{display:flex;gap:8px;align-items:center;padding:4px 0;cursor:pointer}
+.mut{color:var(--mut);font-size:.85rem}
+.msg{min-height:1.3em;font-weight:600;margin-top:8px}
+.msg.ok{color:var(--ok)}.msg.no{color:var(--no)}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--mut)}
+.hidden{display:none !important}
+</style></head><body><main>
+
+<div class="top">
+  <h1>⚙ Admin panel</h1>
+  <div class="row" style="margin:0"><button onclick="location.href='flashcards.html'">← Back to cards</button></div>
+</div>
+
+<div id="gate" class="box"><div id="gateMsg">Checking access...</div></div>
+
+<div id="app" class="hidden">
+  <div class="row tabs">
+    <button class="active" data-tab="decks">Free / Premium</button>
+    <button data-tab="gen">Generate codes</button>
+    <button data-tab="codes">All codes</button>
+  </div>
+
+  <!-- ====== 1) Free / Premium ====== -->
+  <section id="tab-decks">
+    <div class="box">
+      <h2>Which decks are free?</h2>
+      <div class="mut">Checked = free for everyone. Unchecked = premium (needs a code).</div>
+      <div class="row">
+        <input type="text" id="deckSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
+        <button id="deckAllFree">Check visible</button>
+        <button id="deckAllPaid">Uncheck visible</button>
+      </div>
+      <div class="list" id="deckList"></div>
+      <div class="row">
+        <button class="primary" id="deckSave">Save changes</button>
+        <span class="mut" id="deckCount"></span>
+      </div>
+      <div class="msg" id="deckMsg"></div>
+    </div>
+  </section>
+
+  <!-- ====== 2) Generate ====== -->
+  <section id="tab-gen" class="hidden">
+    <div class="box">
+      <h2>1. Pick the decks the codes will unlock</h2>
+      <div class="row">
+        <input type="text" id="genSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
+        <button id="genPrem">All premium</button>
+        <button id="genAll">All</button>
+        <button id="genNone">None</button>
+      </div>
+      <div class="list" id="genList"></div>
+      <div class="mut" id="genSelCount"></div>
+    </div>
+
+    <div class="box">
+      <h2>2. How many codes?</h2>
+      <div class="grid">
+        <label class="f">Number of codes<input type="number" id="genCount" min="1" max="5000" value="10"></label>
+        <label class="f">Users per code<input type="number" id="genMax" min="1" value="1"></label>
+        <label class="f">Prefix (optional)<input type="text" id="genPrefix" placeholder="MED-" maxlength="10"></label>
+      </div>
+      <label class="f" style="margin-top:10px">Or: one code per name (one name per line, overrides the number above)
+        <textarea id="genNames" placeholder="Ahmed&#10;Mona&#10;Omar"></textarea>
+      </label>
+      <div class="row"><button class="primary" id="genGo">Generate</button></div>
+      <div class="msg" id="genMsg"></div>
+    </div>
+
+    <div class="box hidden" id="genResult">
+      <h2>New codes</h2>
+      <div class="row">
+        <button id="genCopy">Copy all</button>
+        <button id="genCsv">Download CSV</button>
+      </div>
+      <div class="wrap"><table><thead><tr><th>Code</th><th>Name</th></tr></thead><tbody id="genBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ====== 3) Codes ====== -->
+  <section id="tab-codes" class="hidden">
+    <div class="box">
+      <div class="row">
+        <select id="codeFilter">
+          <option value="all">All</option>
+          <option value="unused">Unused</option>
+          <option value="used">Used</option>
+          <option value="disabled">Disabled</option>
+        </select>
+        <input type="text" id="codeSearch" placeholder="Search code, name, email, deck..." style="flex:1;min-width:160px">
+        <button id="codeReload">Refresh</button>
+      </div>
+      <div class="row">
+        <button id="codeCopy">Copy listed codes</button>
+        <button id="codeCsv">Download CSV</button>
+        <span class="mut" id="codeCount"></span>
+      </div>
+      <div class="msg" id="codeMsg"></div>
+      <div class="wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Decks</th><th>Used</th><th>Used by</th><th>Name</th><th></th></tr></thead>
+          <tbody id="codeBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+var $ = function(i){ return document.getElementById(i); };
+var CATS = [], CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
+
+// ---------- helpers ----------
+function el(tag, props, kids){
+  var e = document.createElement(tag);
+  if (props) Object.keys(props).forEach(function(k){
+    if (k === 'text') e.textContent = props[k];
+    else if (k === 'class') e.className = props[k];
+    else if (k.slice(0,2) === 'on') e[k] = props[k];
+    else e.setAttribute(k, props[k]);
+  });
+  (kids || []).forEach(function(c){ e.appendChild(c); });
+  return e;
+}
+function setMsg(id, text, kind){ var m = $(id); m.className = 'msg ' + (kind || ''); m.textContent = text || ''; }
+function copyText(t){
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
+  return new Promise(function(res){
+    var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); res();
+  });
+}
+function toCsv(rows){
+  return '\ufeff' + rows.map(function(r){
+    return r.map(function(v){ return '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"'; }).join(',');
+  }).join('\r\n');
+}
+function download(name, text){
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ---------- start ----------
+async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    $('gateMsg').innerHTML = '';
+    $('gateMsg').appendChild(document.createTextNode('Please log in first from '));
+    $('gateMsg').appendChild(el('a', { href: 'index.html', text: 'the login page' }));
+    $('gateMsg').appendChild(document.createTextNode(', then open this page again.'));
+    return;
+  }
+  const { data: ok, error } = await sb.rpc('is_admin');
+  if (error || ok !== true) {
+    $('gateMsg').textContent = error
+      ? 'Admin setup is not finished yet: ' + error.message
+      : 'This account is not an admin.';
+    return;
+  }
+  $('gate').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  await loadCats();
+  await loadCodes();
+}
+window.addEventListener('DOMContentLoaded', init);
+
+// ---------- tabs ----------
+document.querySelectorAll('.tabs button').forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active');
+    ['decks','gen','codes'].forEach(function(t){ $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab); });
+    if (b.dataset.tab === 'codes') loadCodes();
+  };
+});
+
+// ---------- decks ----------
+async function loadCats(){
+  const { data, error } = await sb.from('categories').select('name,is_free,sort_order')
+    .order('sort_order', { ascending: true }).order('name', { ascending: true });
+  if (error) { setMsg('deckMsg', error.message, 'no'); return; }
+  CATS = data || [];
+  GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; }));
+  renderDecks(); renderGen();
+}
+function updDeckCount(){
+  var f = CATS.filter(function(c){ return c.is_free; }).length;
+  $('deckCount').textContent = f + ' free · ' + (CATS.length - f) + ' premium';
+}
+function renderDecks(){
+  var q = $('deckSearch').value.toLowerCase(), box = $('deckList');
+  box.innerHTML = '';
+  CATS.forEach(function(c){
+    if (q && c.name.toLowerCase().indexOf(q) < 0) return;
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = !!c.is_free;
+    cb.onchange = function(){ c.is_free = cb.checked; updDeckCount(); };
+    box.appendChild(el('label', { class: 'item' }, [cb, el('span', { text: c.name })]));
+  });
+  updDeckCount();
+}
+function setVisible(val){
+  var q = $('deckSearch').value.toLowerCase();
+  CATS.forEach(function(c){ if (!q || c.name.toLowerCase().indexOf(q) >= 0) c.is_free = val; });
+  renderDecks();
+}
+$('deckSearch').oninput = renderDecks;
+$('deckAllFree').onclick = function(){ setVisible(true); };
+$('deckAllPaid').onclick = function(){ setVisible(false); };
+$('deckSave').onclick = async function(){
+  var btn = $('deckSave'); btn.disabled = true; setMsg('deckMsg', 'Saving...');
+  var free = CATS.filter(function(c){ return c.is_free; }).map(function(c){ return c.name; });
+  var paid = CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; });
+  var r1 = await sb.rpc('admin_set_free', { p_names: free, p_free: true });
+  var r2 = r1.error ? r1 : await sb.rpc('admin_set_free', { p_names: paid, p_free: false });
+  btn.disabled = false;
+  if (r2.error) { setMsg('deckMsg', r2.error.message, 'no'); return; }
+  setMsg('deckMsg', 'Saved ✓', 'ok');
+};
+
+// ---------- generate ----------
+function updGenCount(){ $('genSelCount').textContent = GEN.size + ' deck(s) selected'; }
+function renderGen(){
+  var q = $('genSearch').value.toLowerCase(), box = $('genList');
+  box.innerHTML = '';
+  CATS.forEach(function(c){
+    if (q && c.name.toLowerCase().indexOf(q) < 0) return;
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = GEN.has(c.name);
+    cb.onchange = function(){ if (cb.checked) GEN.add(c.name); else GEN.delete(c.name); updGenCount(); };
+    box.appendChild(el('label', { class: 'item' }, [cb, el('span', { text: c.name + (c.is_free ? '  (free)' : '') })]));
+  });
+  updGenCount();
+}
+$('genSearch').oninput = renderGen;
+$('genPrem').onclick = function(){ GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; })); renderGen(); };
+$('genAll').onclick  = function(){ GEN = new Set(CATS.map(function(c){ return c.name; })); renderGen(); };
+$('genNone').onclick = function(){ GEN = new Set(); renderGen(); };
+
+$('genGo').onclick = async function(){
+  var cats = Array.from(GEN);
+  if (!cats.length) { setMsg('genMsg', 'Pick at least one deck.', 'no'); return; }
+  var names = $('genNames').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+  var args = {
+    p_categories: cats,
+    p_max_uses: Math.max(1, parseInt($('genMax').value, 10) || 1),
+    p_prefix: $('genPrefix').value.trim().toUpperCase()
+  };
+  if (names.length) args.p_notes = names;
+  else {
+    var n = parseInt($('genCount').value, 10);
+    if (!n || n < 1 || n > 5000) { setMsg('genMsg', 'Number of codes must be between 1 and 5000.', 'no'); return; }
+    args.p_count = n;
+  }
+  var btn = $('genGo'); btn.disabled = true; setMsg('genMsg', 'Generating...');
+  const { data, error } = await sb.rpc('admin_generate_codes', args);
+  btn.disabled = false;
+  if (error) { setMsg('genMsg', error.message, 'no'); return; }
+  LASTGEN = data || [];
+  var tb = $('genBody'); tb.innerHTML = '';
+  LASTGEN.forEach(function(r){
+    tb.appendChild(el('tr', null, [
+      el('td', { class: 'mono', text: r.new_code }),
+      el('td', { text: r.new_note || '' })
+    ]));
+  });
+  $('genResult').classList.remove('hidden');
+  setMsg('genMsg', LASTGEN.length + ' codes created ✓', 'ok');
+  loadCodes();
+};
+$('genCopy').onclick = function(){
+  copyText(LASTGEN.map(function(r){ return r.new_code; }).join('\n')).then(function(){ setMsg('genMsg', 'Copied ✓', 'ok'); });
+};
+$('genCsv').onclick = function(){
+  download('codes.csv', toCsv([['code','name']].concat(LASTGEN.map(function(r){ return [r.new_code, r.new_note || '']; }))));
+};
+
+// ---------- codes ----------
+async function loadCodes(){
+  const { data, error } = await sb.rpc('admin_list_codes');
+  if (error) { setMsg('codeMsg', error.message, 'no'); return; }
+  CODES = data || [];
+  renderCodes();
+}
+function renderCodes(){
+  var f = $('codeFilter').value, q = $('codeSearch').value.toLowerCase();
+  var rows = CODES.filter(function(c){
+    if (f === 'unused' && !(c.used_count === 0 && c.active)) return false;
+    if (f === 'used' && !(c.used_count > 0)) return false;
+    if (f === 'disabled' && c.active) return false;
+    if (q) {
+      var hay = (c.code + ' ' + (c.note || '') + ' ' + (c.used_by || '') + ' ' + (c.categories || []).join(' ')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  FILTERED = rows;
+  var shown = rows.slice(0, 500);
+  $('codeCount').textContent = rows.length + ' of ' + CODES.length + ' codes' + (rows.length > 500 ? ' (showing first 500)' : '');
+  var tb = $('codeBody'); tb.innerHTML = '';
+  shown.forEach(function(c){
+    var cats = c.categories || [];
+    var decks = el('span', { text: cats.length ? cats[0] + (cats.length > 1 ? '  +' + (cats.length - 1) : '') : '-', title: cats.join('\n') });
+    var toggle = el('button', { class: 'sm', text: c.active ? 'Disable' : 'Enable' });
+    toggle.onclick = async function(){
+      const r = await sb.rpc('admin_set_code_active', { p_codes: [c.code], p_active: !c.active });
+      if (r.error) setMsg('codeMsg', r.error.message, 'no'); else loadCodes();
+    };
+    var del = el('button', { class: 'sm danger', text: 'Delete' });
+    del.onclick = async function(){
+      if (!confirm('Delete code ' + c.code + '?')) return;
+      const r = await sb.rpc('admin_delete_codes', { p_codes: [c.code] });
+      if (r.error) setMsg('codeMsg', r.error.message, 'no'); else loadCodes();
+    };
+    var tr = el('tr', null, [
+      el('td', { class: 'mono', text: c.code + (c.active ? '' : '  (disabled)') }),
+      el('td', null, [decks]),
+      el('td', { text: c.used_count + '/' + c.max_uses }),
+      el('td', { text: c.used_by || '' }),
+      el('td', { text: c.note || '' }),
+      el('td', null, [toggle, document.createTextNode(' '), del])
+    ]);
+    tb.appendChild(tr);
+  });
+}
+$('codeFilter').onchange = renderCodes;
+$('codeSearch').oninput = renderCodes;
+$('codeReload').onclick = loadCodes;
+$('codeCopy').onclick = function(){
+  copyText(FILTERED.map(function(c){ return c.code; }).join('\n')).then(function(){ setMsg('codeMsg', 'Copied ' + FILTERED.length + ' codes ✓', 'ok'); });
+};
+$('codeCsv').onclick = function(){
+  download('codes.csv', toCsv([['code','decks','used','max_uses','used_by','name','active']].concat(
+    FILTERED.map(function(c){ return [c.code, (c.categories || []).join(' | '), c.used_count, c.max_uses, c.used_by || '', c.note || '', c.active]; })
+  )));
+};
+</script></main></body></html>
