@@ -3,6 +3,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Admin – Shany</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  .cc{border:2px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--card)}
+.cc.dirty{border-color:var(--acc)}
+.cc .g3{display:grid;grid-template-columns:2fr 2fr 90px;gap:8px;margin-bottom:8px}
+.cc .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cc textarea{min-height:90px;width:100%}
+.cc .act{display:flex;gap:8px;align-items:center;margin-top:8px}
+@media(max-width:640px){.cc .g3,.cc .g2{grid-template-columns:1fr}}
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
@@ -134,12 +141,8 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
       <div class="row">
         <span class="mut" id="cardCount"></span>
       </div>
-      <div class="wrap">
-        <table>
-          <thead><tr><th style="width:34px">#</th><th>Question</th><th>Answer</th><th>Deck</th><th>Crumb</th><th></th></tr></thead>
-          <tbody id="cardBody"></tbody>
-        </table>
-      </div>
+<div id="cardList"></div>
+<div class="row"><button id="cardMore" class="hidden">Show more</button></div>
     </div>
   </section>
 
@@ -418,44 +421,100 @@ $('deckSave').onclick = async function(){
 
 // ===== Cards (edit / CSV) =====
 async function loadCards(){
-  const { data, error } = await sb.from('flashcards')
-    .select('id,category,question,answer,crumb,card_order')
-    .order('category', { ascending: true })
-    .order('card_order', { ascending: true })
-    .limit(2000);
-  if (error) { setMsg('csvMsg', error.message, 'no'); return; }
-  CARDS = data || [];
+  var all = [], from = 0, step = 1000;
+  while (true){
+    const { data, error } = await sb.from('flashcards')
+      .select('id,category,question,answer,crumb,card_order')
+      .order('category', { ascending: true })
+      .order('card_order', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + step - 1);
+    if (error) { setMsg('csvMsg', error.message, 'no'); return; }
+    all = all.concat(data || []);
+    if (!data || data.length < step) break;
+    from += step;
+  }
+  CARDS = all;
   renderCards();
 }
 
+var CARD_PAGE = 100, CARD_SHOWN = 0;
+
 function renderCards(){
-  var deckF = $('cardDeckFilter').value;
-  var q = $('cardSearch').value.toLowerCase();
-  var rows = CARDS.filter(function(c){
+  var deckF = $('cardDeckFilter').value, q = $('cardSearch').value.toLowerCase();
+  FILTERED_CARDS = CARDS.filter(function(c){
     if (deckF && c.category !== deckF) return false;
-    if (q){
-      var hay = ((c.question||'') + ' ' + (c.answer||'')).toLowerCase();
-      if (hay.indexOf(q) < 0) return false;
-    }
+    if (q && ((c.question || '') + ' ' + (c.answer || '')).toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
-  FILTERED_CARDS = rows;
-  var shown = rows.slice(0, 300);
-  $('cardCount').textContent = rows.length + ' card(s)' + (rows.length > 300 ? ' (showing first 300)' : '');
-  var tb = $('cardBody'); tb.innerHTML = '';
-  shown.forEach(function(c, i){
-    var edit = el('button', { class: 'sm', text: 'Edit' });
-    edit.onclick = function(){ openCardEdit(c); };
-    var tr = el('tr', null, [
-      el('td', { text: String(i + 1) }),
-      el('td', { text: (c.question || '').replace(/<[^>]+>/g, '').slice(0, 80) }),
-      el('td', { text: (c.answer || '').replace(/<[^>]+>/g, '').slice(0, 80) }),
-      el('td', { text: c.category || '' }),
-      el('td', { text: c.crumb || '' }),
-      el('td', null, [edit])
-    ]);
-    tb.appendChild(tr);
-  });
+  $('cardList').innerHTML = '';
+  CARD_SHOWN = 0;
+  showMoreCards();
+}
+
+function showMoreCards(){
+  var box = $('cardList');
+  var end = Math.min(CARD_SHOWN + CARD_PAGE, FILTERED_CARDS.length);
+  for (var i = CARD_SHOWN; i < end; i++) box.appendChild(cardEditor(FILTERED_CARDS[i], i));
+  CARD_SHOWN = end;
+  $('cardCount').textContent = 'Showing ' + CARD_SHOWN + ' of ' + FILTERED_CARDS.length + ' card(s)';
+  $('cardMore').classList.toggle('hidden', CARD_SHOWN >= FILTERED_CARDS.length);
+}
+$('cardMore').onclick = showMoreCards;
+
+function cardEditor(c, i){
+  var wrap = el('div', { class: 'cc' });
+  var cat = el('input', { type: 'text', list: 'deckListDL', placeholder: 'Deck' }); cat.value = c.category || '';
+  var crumb = el('input', { type: 'text', placeholder: 'Crumb (optional)' }); crumb.value = c.crumb || '';
+  var order = el('input', { type: 'number', placeholder: 'Order' }); order.value = c.card_order != null ? c.card_order : '';
+  var qa = el('textarea'); qa.value = c.question || '';
+  var aa = el('textarea'); aa.value = c.answer || '';
+  var msg = el('span', { class: 'mut' });
+  var save = el('button', { class: 'sm primary', text: 'Save', 'data-tip': 'Save this card' });
+  var del = el('button', { class: 'sm danger', text: 'Delete', 'data-tip': 'Delete this card' });
+
+  function dirty(){ wrap.classList.add('dirty'); msg.textContent = 'Unsaved changes'; }
+  [cat, crumb, order, qa, aa].forEach(function(x){ x.oninput = dirty; });
+
+  save.onclick = async function(){
+    var catV = cat.value.trim(), qV = qa.value.trim(), aV = aa.value.trim();
+    if (!catV || !qV || !aV){ msg.textContent = 'Deck, question and answer are required.'; return; }
+    var ord = parseInt(order.value, 10);
+    var upd = { category: catV, question: qV, answer: aV, crumb: crumb.value.trim() || null, card_order: isNaN(ord) ? null : ord };
+    save.disabled = true; msg.textContent = 'Saving...';
+    if (!CATS.some(function(x){ return x.name === catV; })){
+      var maxSort = CATS.reduce(function(m, x){ return Math.max(m, x.sort_order || 0); }, 0);
+      var rc = await sb.from('categories').insert({ name: catV, is_free: false, sort_order: maxSort + 1 });
+      if (rc.error){ save.disabled = false; msg.textContent = rc.error.message; return; }
+      await loadCats();
+    }
+    const r = await sb.from('flashcards').update(upd).eq('id', c.id);
+    save.disabled = false;
+    if (r.error){ msg.textContent = r.error.message; return; }
+    Object.assign(c, upd);
+    wrap.classList.remove('dirty');
+    msg.textContent = 'Saved ✓';
+  };
+
+  del.onclick = async function(){
+    if (!confirm('Delete this card?')) return;
+    del.disabled = true;
+    const r = await sb.from('flashcards').delete().eq('id', c.id);
+    if (r.error){ del.disabled = false; msg.textContent = r.error.message; return; }
+    CARDS = CARDS.filter(function(x){ return x.id !== c.id; });
+    FILTERED_CARDS = FILTERED_CARDS.filter(function(x){ return x.id !== c.id; });
+    wrap.remove();
+    $('cardCount').textContent = 'Showing ' + $('cardList').children.length + ' of ' + FILTERED_CARDS.length + ' card(s)';
+  };
+
+  wrap.appendChild(el('div', { class: 'mut', text: '#' + (i + 1) + ' · ID ' + c.id }));
+  wrap.appendChild(el('div', { class: 'g3' }, [cat, crumb, order]));
+  wrap.appendChild(el('div', { class: 'g2' }, [
+    el('label', { class: 'f' }, [document.createTextNode('Question'), qa]),
+    el('label', { class: 'f' }, [document.createTextNode('Answer'), aa])
+  ]));
+  wrap.appendChild(el('div', { class: 'act' }, [save, del, msg]));
+  return wrap;
 }
 $('cardDeckFilter').onchange = renderCards;
 $('cardSearch').oninput = renderCards;
