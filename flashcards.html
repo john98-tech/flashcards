@@ -17,24 +17,26 @@ body, html, * {
     user-select: none;
     -webkit-touch-callout: none;
 }
-body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif;padding-bottom:160px}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif;padding-bottom:170px}
 main{max-width:640px;margin:0 auto;padding:16px}
 
-/* ===== اللوجو ===== */
 .logo{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0 14px}
 .logo svg{width:38px;height:38px;flex-shrink:0}
 .logo-text{font:700 1.6rem Georgia,serif;letter-spacing:.5px;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-text{background:linear-gradient(135deg,var(--acc),#67e8f9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}}
 
-h1{font-size:1.2rem;margin:.2em 0 .6em;text-align:center;color:var(--mut);font-family:system-ui,sans-serif;font-weight:400}
+h1{font-size:1.1rem;margin:.2em 0 .6em;text-align:center;color:var(--mut);font-family:system-ui,sans-serif;font-weight:400}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.85rem;margin:6px 0}
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
 select{max-width:100%}
 
-/* ===== الكارت ===== */
+/* ===== Dropdown الفلاش كاردس (مصغّر للموبايل) ===== */
+#deck{font-size:.9rem;padding:6px 10px;max-width:100%;width:100%}
+#deck optgroup{font-size:.85rem;font-weight:700;color:var(--acc);background:var(--bg)}
+#deck option{font-size:.9rem;padding:4px;background:var(--card);color:var(--fg);font-weight:400}
+
 .card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
 .card.back{border-color:var(--acc)}
 .tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
@@ -42,11 +44,10 @@ select{max-width:100%}
 .txt{font-size:1.25rem}
 .bl{display:inline-block;min-width:4em;font-weight:700;color:var(--fg);outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
 .ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
-mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weight:700;padding:0 3px;border-radius:3px}
+mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
 .hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
 .stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
 
-/* ===== شريط التحكم السفلي الثابت مع التغبيش ===== */
 .bottom-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:40;
   padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
@@ -64,7 +65,6 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 .ctl button{flex:1}
 .ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
 
-/* ===== Tooltips ===== */
 [data-tip]{position:relative}
 [data-tip]::after{
   content:attr(data-tip);
@@ -77,7 +77,6 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 }
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
 
-/* ===== نافذة إدخال الكود ===== */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .modal.hidden{display:none}
 .mbox{width:100%;max-width:380px;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:22px;font-family:system-ui,sans-serif}
@@ -86,12 +85,18 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 .mbox input:focus{outline:2px solid var(--acc)}
 .msg-ok{color:var(--ok)}.msg-no{color:var(--no)}
 
-/* ===== القائمة المنسدلة للكروت المرقّمة ===== */
-.jump-row{display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
-.jump-row select{flex:1;font-variant-numeric:tabular-nums}
+.jump-row{display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif;font-size:.85rem;margin:6px 0}
+.jump-row select{flex:1;font-variant-numeric:tabular-nums;font-size:.85rem;padding:6px 10px}
+
+/* موبايل */
+@media (max-width:520px){
+  #deck{font-size:.85rem;padding:5px 8px}
+  #deck optgroup{font-size:.8rem}
+  #deck option{font-size:.85rem}
+  .jump-row select{font-size:.8rem;padding:5px 8px}
+}
 </style></head><body>
 
-<!-- اللوجو -->
 <div class="logo">
   <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -120,21 +125,21 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 </div>
 
 <div class="row">
-<span data-tip="Choose a deck" style="display:inline-flex;max-width:100%"><select id="deck"></select></span>  <label><input type="checkbox" id="shuf"> Shuffle</label>
+  <select id="deck" data-tip="Choose a deck"></select>
+  <label style="font-size:.85rem"><input type="checkbox" id="shuf"> Shuffle</label>
   <button id="all" data-tip="Show all cards">All cards</button>
   <button id="miss" data-tip="Review missed cards only">Review missed</button>
 </div>
 
-<!-- القائمة المنسدلة المرقّمة -->
 <div class="jump-row" id="jumpWrap">
-  <label for="jump" style="color:var(--mut);font-size:.85rem">Go to card:</label>
-<span data-tip="Jump to a specific card" style="flex:1;display:flex"><select id="jump" style="flex:1;width:100%"></select></span></div>
+  <label for="jump" style="color:var(--mut);font-size:.8rem">Go to card:</label>
+  <select id="jump" data-tip="Jump to a specific card"></select>
+</div>
 
 <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
 <div class="stat" id="stat"></div>
 </main>
 
-<!-- شريط التحكم السفلي الثابت -->
 <div class="bottom-bar">
   <div class="bottom-inner">
     <div class="ctl">
@@ -149,7 +154,6 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
   </div>
 </div>
 
-<!-- نافذة إدخال كود التفعيل -->
 <div class="modal hidden" id="modal">
   <div class="mbox">
     <h2>Unlock content</h2>
@@ -168,10 +172,12 @@ const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-var CATS = [];
-var unlocked = {};
-var D = [];
-var st = {};
+var CATS = [];        // كل الديكس
+var GROUPS = [];      // كل الجروبات
+var GMAP = {};        // { deck_name: group_id }
+var unlocked = {};    // الديكس المدفوعة المفتوحة
+var D = [];           // الديكس المتاحة للطالب
+var st = {};          // تقدم الطالب
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)}, sel = $('deck'), jumpSel = $('jump');
 var currentUserId = null;
@@ -249,14 +255,20 @@ function getDeck(name){ return D.find(function(d){ return d.n === name; }); }
 async function loadAll(preferName) {
     const res = await Promise.all([
         supabaseClient.from('categories').select('name,is_free,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
-        supabaseClient.from('user_unlocks').select('category')
+        supabaseClient.from('user_unlocks').select('category'),
+        supabaseClient.from('deck_groups').select('id,name,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
+        supabaseClient.from('deck_group_map').select('deck_name,group_id')
     ]);
-    var cr = res[0], ur = res[1];
+    var cr = res[0], ur = res[1], gr = res[2], mr = res[3];
     if (cr.error) {
         $('card').innerHTML = '<div class="txt">Error loading decks: ' + esc(cr.error.message) + '</div>';
         return;
     }
     CATS = cr.data || [];
+    GROUPS = gr.error ? [] : (gr.data || []);
+    GMAP = {};
+    (mr.error ? [] : (mr.data || [])).forEach(function(r){ GMAP[r.deck_name] = r.group_id; });
+
     unlocked = {};
     ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
 
@@ -292,23 +304,59 @@ async function loadAll(preferName) {
     start(false);
 }
 
+// ============================================================
+// بناء القائمة المنسدلة بالجروبات
+// ============================================================
 function buildSelect() {
     sel.innerHTML = '';
-    addGroup('Free', CATS.filter(function(c){ return c.is_free; }));
-    addGroup('Premium', CATS.filter(function(c){ return !c.is_free; }));
-}
-function addGroup(label, arr) {
-    if (!arr.length) return;
-    var g = document.createElement('optgroup');
-    g.label = label;
-    arr.forEach(function(c){
-        var open = isOpen(c), deck = getDeck(c.name);
-        var o = document.createElement('option');
-        o.value = c.name;
-        o.textContent = (open ? '' : '🔒 ') + c.name + (open && deck ? ' (' + deck.cards.length + ')' : '');
-        g.appendChild(o);
+
+    // قسّم الديكس حسب الجروب
+    var byGroup = {};
+    var ungrouped = [];
+    CATS.forEach(function(c){
+        var gid = GMAP[c.name];
+        if (gid == null) ungrouped.push(c);
+        else {
+            if (!byGroup[gid]) byGroup[gid] = [];
+            byGroup[gid].push(c);
+        }
     });
-    sel.appendChild(g);
+
+    // 1) كل جروب فيه ديكس (متاح للطالب)
+    GROUPS.forEach(function(g){
+        var decks = byGroup[g.id] || [];
+        if (!decks.length) return;
+        var g2 = document.createElement('optgroup');
+        g2.label = g.name;
+        decks.forEach(function(c){ addDeckOption(g2, c); });
+        if (g2.children.length) sel.appendChild(g2);
+    });
+
+    // 2) Free بدون جروب
+    var freeUng = ungrouped.filter(function(c){ return c.is_free; });
+    if (freeUng.length){
+        var fg = document.createElement('optgroup');
+        fg.label = 'Free';
+        freeUng.forEach(function(c){ addDeckOption(fg, c); });
+        if (fg.children.length) sel.appendChild(fg);
+    }
+
+    // 3) Premium بدون جروب
+    var premUng = ungrouped.filter(function(c){ return !c.is_free; });
+    if (premUng.length){
+        var pg = document.createElement('optgroup');
+        pg.label = 'Premium';
+        premUng.forEach(function(c){ addDeckOption(pg, c); });
+        if (pg.children.length) sel.appendChild(pg);
+    }
+}
+
+function addDeckOption(parent, c) {
+    var open = isOpen(c), deck = getDeck(c.name);
+    var o = document.createElement('option');
+    o.value = c.name;
+    o.textContent = (open ? '' : '🔒 ') + c.name + (open && deck ? ' (' + deck.cards.length + ')' : '');
+    parent.appendChild(o);
 }
 
 sel.onchange = function(){
@@ -322,7 +370,9 @@ sel.onchange = function(){
     start(false);
 };
 
-// ===== القائمة المرقّمة للتنقل السريع =====
+// ============================================================
+// قائمة التنقل بين الكروت
+// ============================================================
 function buildJump() {
     jumpSel.innerHTML = '';
     if (!list.length) {
@@ -333,7 +383,6 @@ function buildJump() {
     list.forEach(function(realIdx, i) {
         var o = document.createElement('option');
         o.value = i;
-        var d = getDeck(curName);
         var stv = st[curName][realIdx];
         var mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
         o.textContent = 'Card ' + (i + 1) + mark;
@@ -419,7 +468,6 @@ function go(d){
 function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
-
     st[curName][realCardIdx] = v;
     buildJump();
 
@@ -480,8 +528,12 @@ $('modal').onclick = function(e){ if (e.target === this) closeModal(); };
 $('all').onclick = function(){ start(false); };
 $('miss').onclick = function(){ start(true); };
 $('shuf').onchange = function(){ start(false); };
-$('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
-$('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
+$('card').onclick = flip;
+$('flip').onclick = flip;
+$('prev').onclick = function(){ go(-1); };
+$('next').onclick = function(){ go(1); };
+$('good').onclick = function(){ mark('ok'); };
+$('bad').onclick = function(){ mark('no'); };
 
 document.addEventListener('selectstart', function(e) {
     if (e.target && e.target.tagName === 'INPUT') return;
