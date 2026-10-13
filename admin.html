@@ -55,6 +55,25 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .tag-deck{display:inline-block;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-size:.78rem;font-weight:600}
 .tag-crumb{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--bg);color:var(--mut);font-size:.78rem;border:1px solid var(--line)}
 
+/* ===== Deck Manager ===== */
+.grp{border:2px solid var(--line);border-radius:12px;margin:10px 0;background:var(--card);overflow:hidden}
+.grp-hd{display:flex;gap:8px;align-items:center;padding:10px 12px;background:color-mix(in srgb,var(--acc) 8%,var(--card));border-bottom:1px solid var(--line);flex-wrap:wrap}
+.grp-hd .nm{font-weight:700;font-size:1rem;flex:1;min-width:120px}
+.grp-hd .nm input{font:inherit;padding:4px 8px;width:100%;max-width:320px;border:1px solid transparent;background:transparent;font-weight:700}
+.grp-hd .nm input:hover{border-color:var(--line)}
+.grp-hd .nm input:focus{border-color:var(--acc);background:var(--card)}
+.grp-bd{padding:8px 12px}
+.dk{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.dk:last-child{border-bottom:none}
+.dk .nm{flex:1;min-width:140px;font-weight:600}
+.dk .nm input{font:inherit;padding:3px 8px;width:100%;border:1px solid transparent;background:transparent}
+.dk .nm input:hover{border-color:var(--line)}
+.dk .nm input:focus{border-color:var(--acc);background:var(--card)}
+.dk .badge{font-size:.72rem;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-weight:600}
+.dk .badge.prem{background:color-mix(in srgb,#f59e0b 20%,transparent);color:#b45309}
+.dk select{font-size:.82rem;padding:4px 8px}
+.empty{color:var(--mut);font-size:.9rem;padding:6px 0;font-style:italic}
+
 /* ===== Word-blanking editor ===== */
 .wb{font:1.15rem/2.3 Georgia,serif;padding:12px;border:1px dashed var(--line);border-radius:10px;background:var(--bg);min-height:60px}
 .wb .w{cursor:pointer;padding:2px 4px;border-radius:5px;border:1px solid transparent;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:inline}
@@ -93,32 +112,30 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 
 <div id="app" class="hidden">
   <div class="row tabs">
-    <button class="active" data-tab="decks" data-tip="Free vs premium decks">Free / Premium</button>
+    <button class="active" data-tab="decks" data-tip="Deck manager + groups">Decks & Groups</button>
     <button data-tab="cards" data-tip="All cards database">Cards</button>
     <button data-tab="gen" data-tip="Generate unlock codes">Generate codes</button>
     <button data-tab="codes" data-tip="Manage all codes">All codes</button>
   </div>
 
+  <!-- ============ DECKS & GROUPS ============ -->
   <section id="tab-decks">
     <div class="box">
-      <h2>Which decks are free?</h2>
-      <div class="mut">Checked = free for everyone. Unchecked = premium (needs a code).</div>
+      <h2>Decks & Groups</h2>
+      <div class="mut">Organize your decks into groups. The student will see this structure in the deck dropdown.</div>
       <div class="row">
-        <input type="text" id="deckSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
-        <button id="deckAllFree" data-tip="Mark visible as free">Check visible</button>
-        <button id="deckAllPaid" data-tip="Mark visible as premium">Uncheck visible</button>
+        <button class="primary" id="dkNewGroup" data-tip="Create a new group">➕ New group</button>
+        <button class="primary" id="dkNewDeck" data-tip="Create a new deck">➕ New deck</button>
+        <button id="dkReload" data-tip="Reload from server">↻ Refresh</button>
+        <span class="mut" id="dkStats"></span>
       </div>
-      <div class="list" id="deckList"></div>
-      <div class="row">
-        <button class="primary" id="deckSave" data-tip="Save deck changes">Save changes</button>
-        <span class="mut" id="deckCount"></span>
-      </div>
-      <div class="msg" id="deckMsg"></div>
+      <div class="msg" id="dkMsg"></div>
     </div>
+    <div id="dkTree"></div>
   </section>
 
+  <!-- ============ CARDS ============ -->
   <section id="tab-cards" class="hidden">
-
     <div class="box">
       <h2>Card database</h2>
       <div class="row">
@@ -182,9 +199,9 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
         <button id="cardMore" class="hidden">Show more</button>
       </div>
     </div>
-
   </section>
 
+  <!-- ============ GENERATE ============ -->
   <section id="tab-gen" class="hidden">
     <div class="box">
       <h2>1. Pick the decks the codes will unlock</h2>
@@ -222,6 +239,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
+  <!-- ============ ALL CODES ============ -->
   <section id="tab-codes" class="hidden">
     <div class="box">
       <div class="row">
@@ -250,6 +268,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </section>
 </div>
 
+<!-- Edit code modal -->
 <div class="modal hidden" id="editModal">
   <div class="mbox">
     <h2 id="editTitle">Edit code</h2>
@@ -278,6 +297,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </div>
 </div>
 
+<!-- Edit card modal -->
 <div class="modal hidden" id="cardEditModal">
   <div class="mbox" style="max-width:780px">
     <h2 id="ceTitle">Edit card</h2>
@@ -336,7 +356,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var $ = function(i){ return document.getElementById(i); };
-var CATS = [], CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
+var CATS = [], GROUPS = [], GMAP = {}; // GMAP: { deck_name: group_id }
+var CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
 var CARDS = [], FILTERED_CARDS = [];
 var CARD_PAGE = 100, CARD_SHOWN = 0;
 var EDIT = null, EDITSEL = new Set();
@@ -433,7 +454,7 @@ async function init(){
         if (b) b.onclick = function(){
           $('gate').classList.add('hidden');
           $('app').classList.remove('hidden');
-          loadCats(); loadCodes();
+          loadAll();
         };
       }, 0);
       return;
@@ -441,14 +462,18 @@ async function init(){
 
     $('gate').classList.add('hidden');
     $('app').classList.remove('hidden');
-    await loadCats();
-    await loadCodes();
+    await loadAll();
   } catch (e) {
     gm.textContent = 'Unexpected error: ' + (e && e.message ? e.message : String(e));
     console.error(e);
   }
 }
 window.addEventListener('DOMContentLoaded', init);
+
+async function loadAll(){
+  await loadCats();
+  await loadCodes();
+}
 
 // ============================================================
 // TABS
@@ -462,19 +487,31 @@ document.querySelectorAll('.tabs button').forEach(function(b){
     });
     if (b.dataset.tab === 'codes') loadCodes();
     if (b.dataset.tab === 'cards') loadCards();
+    if (b.dataset.tab === 'decks') loadCats();
   };
 });
 
 // ============================================================
-// DECKS
+// DECKS + GROUPS
 // ============================================================
 async function loadCats(){
-  const { data, error } = await sb.from('categories').select('name,is_free,sort_order')
-    .order('sort_order', { ascending: true }).order('name', { ascending: true });
-  if (error) { setMsg('deckMsg', error.message, 'no'); return; }
-  CATS = data || [];
+  const [cr, gr, mr] = await Promise.all([
+    sb.from('categories').select('name,is_free,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
+    sb.from('deck_groups').select('id,name,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
+    sb.from('deck_group_map').select('deck_name,group_id')
+  ]);
+
+  if (cr.error) { setMsg('dkMsg', cr.error.message, 'no'); return; }
+  if (gr.error) { setMsg('dkMsg', 'deck_groups error: ' + gr.error.message, 'no'); return; }
+
+  CATS = cr.data || [];
+  GROUPS = gr.data || [];
+  GMAP = {};
+  (mr.data || []).forEach(function(r){ GMAP[r.deck_name] = r.group_id; });
+
   GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; }));
-  renderDecks(); renderGen();
+  renderDecks();
+  renderGen();
   populateDeckFilters();
 }
 
@@ -498,42 +535,198 @@ function populateDeckFilters(){
   });
 }
 
-function updDeckCount(){
-  var f = CATS.filter(function(c){ return c.is_free; }).length;
-  $('deckCount').textContent = f + ' free · ' + (CATS.length - f) + ' premium';
-}
-
 function renderDecks(){
-  var q = $('deckSearch').value.toLowerCase(), box = $('deckList');
-  box.innerHTML = '';
+  var tree = $('dkTree');
+  tree.innerHTML = '';
+
+  // بني خريطة: group_id -> [decks]
+  var byGroup = {};
+  var ungrouped = [];
   CATS.forEach(function(c){
-    if (q && c.name.toLowerCase().indexOf(q) < 0) return;
-    var cb = el('input', { type: 'checkbox' });
-    cb.checked = !!c.is_free;
-    cb.onchange = function(){ c.is_free = cb.checked; updDeckCount(); };
-    box.appendChild(el('label', { class: 'item' }, [cb, el('span', { text: c.name })]));
+    var gid = GMAP[c.name];
+    if (gid == null) ungrouped.push(c);
+    else {
+      if (!byGroup[gid]) byGroup[gid] = [];
+      byGroup[gid].push(c);
+    }
   });
-  updDeckCount();
+
+  // رتب الجروبات
+  GROUPS.forEach(function(g){
+    var decks = byGroup[g.id] || [];
+    tree.appendChild(renderGroupBlock(g.id, g.name, decks));
+  });
+
+  // (No group)
+  tree.appendChild(renderGroupBlock(null, '(No group)', ungrouped));
+
+  // إحصائيات
+  $('dkStats').textContent = GROUPS.length + ' group(s) · ' + CATS.length + ' deck(s)';
 }
 
-function setVisible(val){
-  var q = $('deckSearch').value.toLowerCase();
-  CATS.forEach(function(c){ if (!q || c.name.toLowerCase().indexOf(q) >= 0) c.is_free = val; });
-  renderDecks();
+function renderGroupBlock(groupId, groupName, decks){
+  var block = el('div', { class: 'grp' });
+  var hd = el('div', { class: 'grp-hd' });
+
+  var nm = el('div', { class: 'nm' });
+  if (groupId === null){
+    nm.textContent = groupName;
+  } else {
+    var nameInput = el('input', { type: 'text', value: groupName });
+    nameInput.onchange = async function(){
+      var v = nameInput.value.trim();
+      if (!v) { nameInput.value = groupName; return; }
+      const r = await sb.from('deck_groups').update({ name: v }).eq('id', groupId);
+      if (r.error){ alert(r.error.message); nameInput.value = groupName; return; }
+      var g = GROUPS.find(function(x){ return x.id === groupId; });
+      if (g) g.name = v;
+      setMsg('dkMsg', 'Group renamed ✓', 'ok');
+      await loadCats();
+    };
+    nm.appendChild(nameInput);
+  }
+  hd.appendChild(nm);
+
+  if (groupId !== null){
+    var del = el('button', { class: 'sm danger', text: 'Delete group', 'data-tip': 'Decks inside will become ungrouped' });
+    del.onclick = async function(){
+      if (!confirm('Delete group "' + groupName + '"? Decks inside will become ungrouped.')) return;
+      const r = await sb.from('deck_groups').delete().eq('id', groupId);
+      if (r.error){ alert(r.error.message); return; }
+      setMsg('dkMsg', 'Group deleted ✓', 'ok');
+      await loadCats();
+    };
+    hd.appendChild(del);
+  }
+  block.appendChild(hd);
+
+  var bd = el('div', { class: 'grp-bd' });
+  if (!decks.length){
+    bd.appendChild(el('div', { class: 'empty', text: 'No decks here yet.' }));
+  } else {
+    decks.forEach(function(c){
+      bd.appendChild(renderDeckRow(c, groupId));
+    });
+  }
+  block.appendChild(bd);
+  return block;
 }
-$('deckSearch').oninput = renderDecks;
-$('deckAllFree').onclick = function(){ setVisible(true); };
-$('deckAllPaid').onclick = function(){ setVisible(false); };
-$('deckSave').onclick = async function(){
-  var btn = $('deckSave'); btn.disabled = true; setMsg('deckMsg', 'Saving...');
-  var free = CATS.filter(function(c){ return c.is_free; }).map(function(c){ return c.name; });
-  var paid = CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; });
-  var r1 = await sb.rpc('admin_set_free', { p_names: free, p_free: true });
-  var r2 = r1.error ? r1 : await sb.rpc('admin_set_free', { p_names: paid, p_free: false });
-  btn.disabled = false;
-  if (r2.error) { setMsg('deckMsg', r2.error.message, 'no'); return; }
-  setMsg('deckMsg', 'Saved ✓', 'ok');
+
+function renderDeckRow(c, currentGroupId){
+  var row = el('div', { class: 'dk' });
+
+  // الاسم (قابل للتعديل)
+  var nm = el('div', { class: 'nm' });
+  var nameInput = el('input', { type: 'text', value: c.name });
+  nameInput.onchange = async function(){
+    var v = nameInput.value.trim();
+    if (!v){ nameInput.value = c.name; return; }
+    if (v === c.name) return;
+    if (CATS.some(function(x){ return x.name === v; })){
+      alert('A deck with this name already exists.');
+      nameInput.value = c.name;
+      return;
+    }
+    const r = await sb.from('categories').update({ name: v }).eq('name', c.name);
+    if (r.error){ alert(r.error.message); nameInput.value = c.name; return; }
+    setMsg('dkMsg', 'Deck renamed (cards unchanged) ✓', 'ok');
+    await loadCats();
+  };
+  nm.appendChild(nameInput);
+  row.appendChild(nm);
+
+  // badge free/premium
+  var badge = el('span', { class: 'badge' + (c.is_free ? '' : ' prem'), text: c.is_free ? 'Free' : 'Premium' });
+  row.appendChild(badge);
+
+  // free checkbox
+  var freeWrap = el('label', { class: 'mut', style: 'display:flex;gap:4px;align-items:center' });
+  var cb = el('input', { type: 'checkbox' });
+  cb.checked = !!c.is_free;
+  cb.onchange = async function(){
+    var newVal = cb.checked;
+    const r = await sb.rpc('admin_set_free', { p_names: [c.name], p_free: newVal });
+    if (r.error){ alert(r.error.message); cb.checked = !newVal; return; }
+    c.is_free = newVal;
+    badge.textContent = newVal ? 'Free' : 'Premium';
+    badge.className = 'badge' + (newVal ? '' : ' prem');
+    setMsg('dkMsg', 'Saved ✓', 'ok');
+  };
+  freeWrap.appendChild(cb);
+  freeWrap.appendChild(document.createTextNode('Free'));
+  row.appendChild(freeWrap);
+
+  // group dropdown
+  var gsel = el('select');
+  gsel.appendChild(el('option', { value: '', text: '— No group —' }));
+  GROUPS.forEach(function(g){
+    gsel.appendChild(el('option', { value: String(g.id), text: g.name }));
+  });
+  gsel.value = currentGroupId == null ? '' : String(currentGroupId);
+  gsel.onchange = async function(){
+    var newGid = gsel.value === '' ? null : parseInt(gsel.value, 10);
+    // upsert
+    const r = await sb.from('deck_group_map').upsert(
+      { deck_name: c.name, group_id: newGid },
+      { onConflict: 'deck_name' }
+    );
+    if (r.error){ alert(r.error.message); gsel.value = currentGroupId == null ? '' : String(currentGroupId); return; }
+    GMAP[c.name] = newGid;
+    setMsg('dkMsg', 'Moved ✓', 'ok');
+    await loadCats();
+  };
+  row.appendChild(gsel);
+
+  // delete deck (منع لو فيه كروت)
+  var del = el('button', { class: 'sm danger', text: 'Delete', 'data-tip': 'Only if it has no cards' });
+  del.onclick = async function(){
+    del.disabled = true;
+    const { count, error: cErr } = await sb.from('flashcards').select('id', { count: 'exact', head: true }).eq('category', c.name);
+    if (cErr){ del.disabled = false; alert(cErr.message); return; }
+    if (count && count > 0){
+      del.disabled = false;
+      alert('This deck has ' + count + ' card(s). Delete or move the cards first.');
+      return;
+    }
+    if (!confirm('Delete deck "' + c.name + '"?')){ del.disabled = false; return; }
+    const r = await sb.from('categories').delete().eq('name', c.name);
+    del.disabled = false;
+    if (r.error){ alert(r.error.message); return; }
+    setMsg('dkMsg', 'Deck deleted ✓', 'ok');
+    await loadCats();
+  };
+  row.appendChild(del);
+
+  return row;
+}
+
+// أزرار الإضافة
+$('dkNewGroup').onclick = async function(){
+  var name = prompt('New group name:');
+  if (!name) return;
+  name = name.trim();
+  if (!name) return;
+  var maxSort = GROUPS.reduce(function(m, g){ return Math.max(m, g.sort_order || 0); }, 0);
+  const r = await sb.from('deck_groups').insert({ name: name, sort_order: maxSort + 1 });
+  if (r.error){ alert(r.error.message); return; }
+  setMsg('dkMsg', 'Group created ✓', 'ok');
+  await loadCats();
 };
+
+$('dkNewDeck').onclick = async function(){
+  var name = prompt('New deck name:');
+  if (!name) return;
+  name = name.trim();
+  if (!name) return;
+  if (CATS.some(function(x){ return x.name === name; })){ alert('Deck already exists.'); return; }
+  var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
+  const r = await sb.from('categories').insert({ name: name, is_free: false, sort_order: maxSort + 1 });
+  if (r.error){ alert(r.error.message); return; }
+  setMsg('dkMsg', 'Deck created (Premium) ✓', 'ok');
+  await loadCats();
+};
+
+$('dkReload').onclick = loadCats;
 
 // ============================================================
 // CARDS DATABASE
@@ -661,7 +854,7 @@ function cardRow(c, i){
 }
 
 // ============================================================
-// SELECT ALL + BULK BAR
+// SELECT ALL + BULK
 // ============================================================
 function syncSelectAll(){
   var sa = $('selectAll');
@@ -672,25 +865,20 @@ function syncSelectAll(){
   sa.checked = (sel === total);
   sa.indeterminate = (sel > 0 && sel < total);
 }
-
 $('selectAll').onchange = function(){
   var val = $('selectAll').checked;
-  FILTERED_CARDS.forEach(function(c){
-    if (val) SELECTED.add(c.id); else SELECTED.delete(c.id);
-  });
+  FILTERED_CARDS.forEach(function(c){ if (val) SELECTED.add(c.id); else SELECTED.delete(c.id); });
   document.querySelectorAll('#cardBody tr').forEach(function(tr){
     var cb = tr.querySelector('input[type=checkbox]');
     if (cb){ cb.checked = val; tr.classList.toggle('sel', val); }
   });
   updateBulkBar();
 };
-
 function updateBulkBar(){
   var n = SELECTED.size;
   $('bulkBar').classList.toggle('hidden', n === 0);
   $('bulkCount').textContent = n + ' selected';
 }
-
 $('bulkClearBtn').onclick = function(){
   SELECTED.clear();
   document.querySelectorAll('#cardBody tr').forEach(function(tr){
@@ -701,7 +889,6 @@ $('bulkClearBtn').onclick = function(){
   updateBulkBar();
   syncSelectAll();
 };
-
 $('bulkDeleteBtn').onclick = async function(){
   var n = SELECTED.size;
   if (!n) return;
@@ -715,7 +902,6 @@ $('bulkDeleteBtn').onclick = async function(){
   SELECTED.clear();
   renderCards();
 };
-
 $('bulkMoveBtn').onclick = async function(){
   var n = SELECTED.size;
   if (!n){ alert('Select cards first.'); return; }
@@ -734,7 +920,7 @@ $('bulkMoveBtn').onclick = async function(){
 };
 
 // ============================================================
-// CARD EDITOR (word-blanking style)
+// CARD EDITOR (word-blanking)
 // ============================================================
 var CE = { qTokens: [], aTokens: [] };
 
@@ -768,7 +954,6 @@ function tokensFromHtml(html){
   });
   return out;
 }
-
 function tokensToHtml(tokens){
   var out = '';
   tokens.forEach(function(t, i){
@@ -777,7 +962,6 @@ function tokensToHtml(tokens){
   });
   return out;
 }
-
 function tokensFromText(text){
   var out = [];
   var re = /[\p{L}\p{N}_]+(?:[-'’\/.][\p{L}\p{N}_]+)*/gu, m, last = 0;
@@ -790,17 +974,13 @@ function tokensFromText(text){
   if (last < text.length) out.push({ before: text.slice(last), word: '', blank: false });
   return out;
 }
-
-function tokensToText(tokens){
-  return tokens.map(function(t){ return t.before + t.word; }).join('');
-}
+function tokensToText(tokens){ return tokens.map(function(t){ return t.before + t.word; }).join(''); }
 
 function renderCE(){
   $('ceQ').innerHTML = tokensToHtml(CE.qTokens);
   $('ceA').innerHTML = tokensToHtml(CE.aTokens);
   renderCEPreview();
 }
-
 function renderCEPreview(){
   var box = $('cePreview');
   var mode = document.querySelector('input[name=cemode]:checked').value;
@@ -811,20 +991,18 @@ function renderCEPreview(){
     var cards = [];
     var qWords = CE.qTokens.filter(function(t){ return t.word; });
     var aWords = CE.aTokens.filter(function(t){ return t.word; });
-    var blankIdx = -1;
     qWords.forEach(function(t, i){
       if (!t.blank) return;
-      blankIdx++;
       var thisBlank = i;
       var qq = '', aa = '';
-      CE.qTokens.forEach(function(tt, j){
+      CE.qTokens.forEach(function(tt){
         qq += esc(tt.before).replace(/\n/g,'<br>');
         if (!tt.word) return;
         var wi = qWords.indexOf(tt);
         if (wi === thisBlank) qq += '<span class="bl">&nbsp;</span>';
         else qq += esc(tt.word);
       });
-      CE.aTokens.forEach(function(tt, j){
+      CE.aTokens.forEach(function(tt){
         aa += esc(tt.before).replace(/\n/g,'<br>');
         if (!tt.word) return;
         var wi = aWords.indexOf(tt);
@@ -858,7 +1036,6 @@ function renderCEPreview(){
   box.innerHTML = '<div class="ce-pv" dir="auto"><small>Question</small>' + qHtml + '</div>' +
                   '<div class="ce-pv b" dir="auto"><small>Answer</small>' + aHtml + '</div>';
 }
-
 function ceBuildHtml(tokens){
   var out = '';
   tokens.forEach(function(t){
@@ -911,7 +1088,6 @@ $('ceA').onclick = function(e){
   syncBlankFromAnswer();
   renderCE();
 };
-
 function syncBlankToAnswer(){
   var qWords = CE.qTokens.filter(function(t){ return t.word; });
   var aWords = CE.aTokens.filter(function(t){ return t.word; });
@@ -924,7 +1100,6 @@ function syncBlankFromAnswer(){
   var n = Math.min(qWords.length, aWords.length);
   for (var i = 0; i < n; i++) qWords[i].blank = aWords[i].blank;
 }
-
 document.querySelectorAll('input[name=cemode]').forEach(function(r){
   r.onchange = renderCEPreview;
 });
@@ -945,11 +1120,9 @@ $('ceSave').onclick = async function(){
   if (!EDIT_CARD) return;
   var deckV = $('ceDeck').value.trim();
   if (!deckV){ setMsg('ceMsg', 'Deck is required.', 'no'); return; }
-
   var qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
   var aHtml = ceBuildHtml(CE.aTokens).trim();
   if (!qHtml || !aHtml){ setMsg('ceMsg', 'Question and answer cannot be empty.', 'no'); return; }
-
   var ord = parseInt($('ceOrder').value, 10);
   var btn = $('ceSave'); btn.disabled = true; setMsg('ceMsg', 'Saving...');
 
@@ -961,9 +1134,7 @@ $('ceSave').onclick = async function(){
   }
 
   var upd = {
-    category: deckV,
-    question: qHtml,
-    answer: aHtml,
+    category: deckV, question: qHtml, answer: aHtml,
     crumb: $('ceCrumb').value.trim() || null,
     card_order: isNaN(ord) ? null : ord
   };
@@ -971,7 +1142,6 @@ $('ceSave').onclick = async function(){
   btn.disabled = false;
   if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
 
-  // لو وضع "each" — أنشئ كروت جديدة إضافية لكل فراغ
   var mode = document.querySelector('input[name=cemode]:checked').value;
   if (mode === 'each'){
     var qWords = CE.qTokens.filter(function(t){ return t.word; });
@@ -981,14 +1151,8 @@ $('ceSave').onclick = async function(){
     if (blanks.length > 1){
       var toInsert = [];
       blanks.forEach(function(bi){
-        var qq = CE.qTokens.map(function(t){
-          var wi = qWords.indexOf(t);
-          return { before: t.before, word: t.word, blank: (t.word && wi === bi) };
-        });
-        var aa = CE.aTokens.map(function(t){
-          var wi = aWords.indexOf(t);
-          return { before: t.before, word: t.word, blank: (t.word && wi === bi) };
-        });
+        var qq = CE.qTokens.map(function(t){ var wi = qWords.indexOf(t); return { before: t.before, word: t.word, blank: (t.word && wi === bi) }; });
+        var aa = CE.aTokens.map(function(t){ var wi = aWords.indexOf(t); return { before: t.before, word: t.word, blank: (t.word && wi === bi) }; });
         toInsert.push({
           category: deckV,
           question: ceBuildQuestionHtml(qq),
@@ -997,9 +1161,7 @@ $('ceSave').onclick = async function(){
           card_order: isNaN(ord) ? null : (ord + toInsert.length + 1)
         });
       });
-      if (toInsert.length){
-        await sb.from('flashcards').insert(toInsert);
-      }
+      if (toInsert.length) await sb.from('flashcards').insert(toInsert);
     }
   }
 
@@ -1023,9 +1185,6 @@ $('ceDelete').onclick = async function(){
   renderCards();
 };
 
-// ============================================================
-// FILTERS / TOOLBAR
-// ============================================================
 $('cardDeckFilter').onchange = renderCards;
 $('cardCrumbFilter').onchange = renderCards;
 $('cardSearch').oninput = renderCards;
@@ -1033,7 +1192,7 @@ $('cardReload').onclick = loadCards;
 $('btnAddCards').onclick = function(){ window.location.href = 'add-cards.html'; };
 
 // ============================================================
-// CSV IMPORT / EXPORT
+// CSV
 // ============================================================
 $('csvExport').onclick = function(){
   var rows = [['category','question','answer','crumb','card_order']];
@@ -1043,7 +1202,7 @@ $('csvExport').onclick = function(){
 };
 $('csvExportDeck').onclick = function(){
   var deckF = $('cardDeckFilter').value;
-  if (!deckF){ setMsg('csvMsg', 'Pick a deck first (in the filter above).', 'no'); return; }
+  if (!deckF){ setMsg('csvMsg', 'Pick a deck first.', 'no'); return; }
   var rows = [['category','question','answer','crumb','card_order']];
   CARDS.filter(function(c){ return c.category === deckF; }).forEach(function(c){
     rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]);
@@ -1051,7 +1210,6 @@ $('csvExportDeck').onclick = function(){
   download('shany-' + deckF.replace(/[^\w\-]+/g,'_') + '.csv', toCsv(rows));
   setMsg('csvMsg', 'Exported deck "' + deckF + '" ✓', 'ok');
 };
-
 $('csvImportBtn').onclick = function(){ $('csvFile').click(); };
 $('csvFile').onchange = async function(){
   var f = $('csvFile').files[0];
@@ -1083,7 +1241,6 @@ $('csvFile').onchange = async function(){
   }
 
   if (!toInsert.length){ setMsg('csvMsg', 'No valid rows found.', 'no'); $('csvFile').value=''; return; }
-
   var btn = $('csvImportBtn'); btn.disabled = true;
   setMsg('csvMsg', 'Importing ' + toInsert.length + ' card(s)...');
 
@@ -1113,8 +1270,7 @@ $('csvFile').onchange = async function(){
   $('csvFile').value = '';
   if (ri.error){ setMsg('csvMsg', 'Import failed: ' + ri.error.message, 'no'); return; }
   setMsg('csvMsg', 'Imported ' + toInsert.length + ' card(s) ✓' + (newDecks.size ? ' · New decks: ' + Array.from(newDecks).join(', ') : ''), 'ok');
-  await loadCats();
-  await loadCards();
+  await loadAll();
 };
 
 // ============================================================
@@ -1137,7 +1293,6 @@ $('genSearch').oninput = renderGen;
 $('genPrem').onclick = function(){ GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; })); renderGen(); };
 $('genAll').onclick  = function(){ GEN = new Set(CATS.map(function(c){ return c.name; })); renderGen(); };
 $('genNone').onclick = function(){ GEN = new Set(); renderGen(); };
-
 $('genGo').onclick = async function(){
   var cats = Array.from(GEN);
   if (!cats.length) { setMsg('genMsg', 'Pick at least one deck.', 'no'); return; }
@@ -1281,7 +1436,6 @@ $('editSave').onclick = async function(){
   setMsg('codeMsg', 'Code updated ✓', 'ok');
   loadCodes();
 }
-
 $('codeFilter').onchange = renderCodes;
 $('codeSearch').oninput = renderCodes;
 $('codeReload').onclick = loadCodes;
