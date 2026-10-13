@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Admin – Flash Cards</title>
+<title>Admin – Shany</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -10,10 +10,16 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
-main{max-width:920px;margin:0 auto;padding:16px}
+main{max-width:1000px;margin:0 auto;padding:16px}
 h1{font:1.4rem Georgia,serif;margin:.2em 0}
 h2{font:1.1rem Georgia,serif;margin:0 0 8px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* اللوجو */
+.logo{display:flex;align-items:center;gap:8px}
+.logo svg{width:30px;height:30px}
+.logo-text{font:700 1.3rem Georgia,serif;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
 button,select,input,textarea{font:inherit;padding:7px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px}
 button{border-color:var(--acc);cursor:pointer}
@@ -39,50 +45,113 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .mbox{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:18px}
 .hidden{display:none !important}
+
+/* Tooltips */
+[data-tip]{position:relative}
+[data-tip]::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);
+  background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;
+  padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;z-index:60;
+}
+[data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
 </style></head><body><main>
 
 <div class="top">
-  <h1>⚙ Admin panel</h1>
-  <div class="row" style="margin:0"><button onclick="location.href='add-cards.html'">➕ Add cards</button><button onclick="location.href='flashcards.html'">← Back to cards</button></div>
+  <div class="logo">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#0ea5e9"/></linearGradient></defs>
+      <rect x="10" y="14" width="36" height="44" rx="6" fill="url(#g1)" opacity=".25"/>
+      <rect x="16" y="8" width="36" height="44" rx="6" fill="url(#g1)"/>
+      <path d="M24 22h20M24 30h20M24 38h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="46" cy="46" r="10" fill="#fff" stroke="url(#g1)" stroke-width="3"/>
+      <path d="M42 46l3 3 6-6" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="logo-text">Shany</span>
+    <span class="mut" style="margin-left:6px">Admin</span>
+  </div>
+  <div class="row" style="margin:0">
+    <button onclick="location.href='add-cards.html'" data-tip="Add new cards">➕ Add cards</button>
+    <button onclick="location.href='flashcards.html'" data-tip="Back to cards">← Back</button>
+  </div>
 </div>
 
 <div id="gate" class="box"><div id="gateMsg">Checking access...</div></div>
 
 <div id="app" class="hidden">
   <div class="row tabs">
-    <button class="active" data-tab="decks">Free / Premium</button>
-    <button data-tab="gen">Generate codes</button>
-    <button data-tab="codes">All codes</button>
+    <button class="active" data-tab="decks" data-tip="Free vs premium decks">Free / Premium</button>
+    <button data-tab="cards" data-tip="Edit existing cards">Cards</button>
+    <button data-tab="gen" data-tip="Generate unlock codes">Generate codes</button>
+    <button data-tab="codes" data-tip="Manage all codes">All codes</button>
   </div>
 
-  <!-- ====== 1) Free / Premium ====== -->
+  <!-- ====== Decks ====== -->
   <section id="tab-decks">
     <div class="box">
       <h2>Which decks are free?</h2>
       <div class="mut">Checked = free for everyone. Unchecked = premium (needs a code).</div>
       <div class="row">
         <input type="text" id="deckSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
-        <button id="deckAllFree">Check visible</button>
-        <button id="deckAllPaid">Uncheck visible</button>
+        <button id="deckAllFree" data-tip="Mark visible as free">Check visible</button>
+        <button id="deckAllPaid" data-tip="Mark visible as premium">Uncheck visible</button>
       </div>
       <div class="list" id="deckList"></div>
       <div class="row">
-        <button class="primary" id="deckSave">Save changes</button>
+        <button class="primary" id="deckSave" data-tip="Save deck changes">Save changes</button>
         <span class="mut" id="deckCount"></span>
       </div>
       <div class="msg" id="deckMsg"></div>
     </div>
   </section>
 
-  <!-- ====== 2) Generate ====== -->
+  <!-- ====== Cards (NEW) ====== -->
+  <section id="tab-cards" class="hidden">
+    <div class="box">
+      <h2>Import / Export CSV</h2>
+      <div class="mut">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span> (card_order optional).</div>
+      <div class="row">
+        <button class="primary" id="csvExport" data-tip="Download all cards as CSV">⬇ Export all cards (CSV)</button>
+        <button id="csvExportDeck" data-tip="Export only the selected deck">⬇ Export selected deck</button>
+      </div>
+      <div class="row">
+        <label class="f" style="flex:1;min-width:200px">Import CSV file
+          <input type="file" id="csvFile" accept=".csv,text/csv">
+        </label>
+        <button class="primary" id="csvImport" data-tip="Upload cards from CSV">⬆ Import from CSV</button>
+      </div>
+      <div class="mut">On import: if a category doesn't exist, it will be created as Premium. Existing rows are NOT deleted.</div>
+      <div class="msg" id="csvMsg"></div>
+    </div>
+
+    <div class="box">
+      <h2>Edit existing cards</h2>
+      <div class="row">
+        <select id="cardDeckFilter" style="flex:1;min-width:160px"></select>
+        <input type="text" id="cardSearch" placeholder="Search question/answer..." style="flex:1;min-width:160px">
+        <button id="cardReload" data-tip="Reload cards">Refresh</button>
+      </div>
+      <div class="row">
+        <span class="mut" id="cardCount"></span>
+      </div>
+      <div class="wrap">
+        <table>
+          <thead><tr><th style="width:34px">#</th><th>Question</th><th>Answer</th><th>Deck</th><th>Crumb</th><th></th></tr></thead>
+          <tbody id="cardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Generate ====== -->
   <section id="tab-gen" class="hidden">
     <div class="box">
       <h2>1. Pick the decks the codes will unlock</h2>
       <div class="row">
         <input type="text" id="genSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
-        <button id="genPrem">All premium</button>
-        <button id="genAll">All</button>
-        <button id="genNone">None</button>
+        <button id="genPrem" data-tip="Select all premium decks">All premium</button>
+        <button id="genAll" data-tip="Select all decks">All</button>
+        <button id="genNone" data-tip="Clear selection">None</button>
       </div>
       <div class="list" id="genList"></div>
       <div class="mut" id="genSelCount"></div>
@@ -98,21 +167,21 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
       <label class="f" style="margin-top:10px">Or: one code per name (one name per line, overrides the number above)
         <textarea id="genNames" placeholder="Ahmed&#10;Mona&#10;Omar"></textarea>
       </label>
-      <div class="row"><button class="primary" id="genGo">Generate</button></div>
+      <div class="row"><button class="primary" id="genGo" data-tip="Generate codes">Generate</button></div>
       <div class="msg" id="genMsg"></div>
     </div>
 
     <div class="box hidden" id="genResult">
       <h2>New codes</h2>
       <div class="row">
-        <button id="genCopy">Copy all</button>
-        <button id="genCsv">Download CSV</button>
+        <button id="genCopy" data-tip="Copy codes">Copy all</button>
+        <button id="genCsv" data-tip="Download as CSV">Download CSV</button>
       </div>
       <div class="wrap"><table><thead><tr><th>Code</th><th>Name</th></tr></thead><tbody id="genBody"></tbody></table></div>
     </div>
   </section>
 
-  <!-- ====== 3) Codes ====== -->
+  <!-- ====== Codes ====== -->
   <section id="tab-codes" class="hidden">
     <div class="box">
       <div class="row">
@@ -123,11 +192,11 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
           <option value="disabled">Disabled</option>
         </select>
         <input type="text" id="codeSearch" placeholder="Search code, name, email, deck..." style="flex:1;min-width:160px">
-        <button id="codeReload">Refresh</button>
+        <button id="codeReload" data-tip="Refresh codes">Refresh</button>
       </div>
       <div class="row">
-        <button id="codeCopy">Copy listed codes</button>
-        <button id="codeCsv">Download CSV</button>
+        <button id="codeCopy" data-tip="Copy listed codes">Copy listed codes</button>
+        <button id="codeCsv" data-tip="Download as CSV">Download CSV</button>
         <span class="mut" id="codeCount"></span>
       </div>
       <div class="msg" id="codeMsg"></div>
@@ -141,16 +210,16 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </section>
 </div>
 
-<!-- ====== نافذة تعديل كود ====== -->
+<!-- Edit code modal -->
 <div class="modal hidden" id="editModal">
   <div class="mbox">
     <h2 id="editTitle">Edit code</h2>
     <div class="mut">Decks this code unlocks:</div>
     <div class="row">
       <input type="text" id="editSearch" placeholder="Search decks..." style="flex:1;min-width:140px">
-      <button id="editPrem">All premium</button>
-      <button id="editAll">All</button>
-      <button id="editNone">None</button>
+      <button id="editPrem" data-tip="All premium">All premium</button>
+      <button id="editAll" data-tip="All decks">All</button>
+      <button id="editNone" data-tip="None">None</button>
     </div>
     <div class="list" id="editList"></div>
     <div class="mut" id="editCount"></div>
@@ -163,10 +232,40 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
       <span>Also give the decks to people who already used this code</span>
     </label>
     <div class="row">
-      <button class="primary" id="editSave">Save</button>
-      <button id="editCancel">Cancel</button>
+      <button class="primary" id="editSave" data-tip="Save">Save</button>
+      <button id="editCancel" data-tip="Cancel">Cancel</button>
     </div>
     <div class="msg" id="editMsg"></div>
+  </div>
+</div>
+
+<!-- Edit card modal -->
+<div class="modal hidden" id="cardModal">
+  <div class="mbox">
+    <h2>Edit card</h2>
+    <div class="mut" id="cardMeta"></div>
+    <label class="f" style="margin-top:10px">Deck
+      <input type="text" id="ecCategory" list="deckListDL">
+      <datalist id="deckListDL"></datalist>
+    </label>
+    <label class="f" style="margin-top:8px">Crumb (small heading, optional)
+      <input type="text" id="ecCrumb">
+    </label>
+    <label class="f" style="margin-top:8px">Question
+      <textarea id="ecQuestion" style="min-height:90px"></textarea>
+    </label>
+    <label class="f" style="margin-top:8px">Answer
+      <textarea id="ecAnswer" style="min-height:90px"></textarea>
+    </label>
+    <label class="f" style="margin-top:8px">Card order
+      <input type="number" id="ecOrder">
+    </label>
+    <div class="row">
+      <button class="primary" id="ecSave" data-tip="Save changes">Save</button>
+      <button class="danger" id="ecDelete" data-tip="Delete this card">Delete</button>
+      <button id="ecCancel" data-tip="Cancel">Cancel</button>
+    </div>
+    <div class="msg" id="ecMsg"></div>
   </div>
 </div>
 
@@ -177,8 +276,8 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var $ = function(i){ return document.getElementById(i); };
 var CATS = [], CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
+var CARDS = [], FILTERED_CARDS = [], EDIT_CARD = null;
 
-// ---------- helpers ----------
 function el(tag, props, kids){
   var e = document.createElement(tag);
   if (props) Object.keys(props).forEach(function(k){
@@ -209,7 +308,27 @@ function download(name, text){
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 
-// ---------- start ----------
+// CSV parser يدعم علامات التنصيص
+function parseCsv(text){
+  var rows = [], row = [], cur = '', inQ = false, i = 0;
+  text = text.replace(/^\ufeff/, '');
+  while (i < text.length){
+    var ch = text[i];
+    if (inQ){
+      if (ch === '"' && text[i+1] === '"'){ cur += '"'; i += 2; continue; }
+      if (ch === '"'){ inQ = false; i++; continue; }
+      cur += ch; i++; continue;
+    }
+    if (ch === '"'){ inQ = true; i++; continue; }
+    if (ch === ','){ row.push(cur); cur = ''; i++; continue; }
+    if (ch === '\r'){ i++; continue; }
+    if (ch === '\n'){ row.push(cur); rows.push(row); row = []; cur = ''; i++; continue; }
+    cur += ch; i++;
+  }
+  if (cur.length || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(function(r){ return r.some(function(c){ return String(c).trim() !== ''; }); });
+}
+
 async function init(){
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
@@ -233,17 +352,17 @@ async function init(){
 }
 window.addEventListener('DOMContentLoaded', init);
 
-// ---------- tabs ----------
 document.querySelectorAll('.tabs button').forEach(function(b){
   b.onclick = function(){
     document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active'); });
     b.classList.add('active');
-    ['decks','gen','codes'].forEach(function(t){ $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab); });
+    ['decks','cards','gen','codes'].forEach(function(t){ $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab); });
     if (b.dataset.tab === 'codes') loadCodes();
+    if (b.dataset.tab === 'cards') loadCards();
   };
 });
 
-// ---------- decks ----------
+// ===== Decks =====
 async function loadCats(){
   const { data, error } = await sb.from('categories').select('name,is_free,sort_order')
     .order('sort_order', { ascending: true }).order('name', { ascending: true });
@@ -251,6 +370,16 @@ async function loadCats(){
   CATS = data || [];
   GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; }));
   renderDecks(); renderGen();
+  // املأ قوائم الفلترة و datalist
+  var selF = $('cardDeckFilter');
+  selF.innerHTML = '<option value="">All decks</option>';
+  var dl = $('deckListDL'); dl.innerHTML = '';
+  CATS.forEach(function(c){
+    var o = document.createElement('option'); o.value = c.name;
+    o.textContent = c.name + (c.is_free ? ' (free)' : '');
+    selF.appendChild(o);
+    var dlo = document.createElement('option'); dlo.value = c.name; dl.appendChild(dlo);
+  });
 }
 function updDeckCount(){
   var f = CATS.filter(function(c){ return c.is_free; }).length;
@@ -287,7 +416,185 @@ $('deckSave').onclick = async function(){
   setMsg('deckMsg', 'Saved ✓', 'ok');
 };
 
-// ---------- generate ----------
+// ===== Cards (edit / CSV) =====
+async function loadCards(){
+  const { data, error } = await sb.from('flashcards')
+    .select('id,category,question,answer,crumb,card_order')
+    .order('category', { ascending: true })
+    .order('card_order', { ascending: true })
+    .limit(2000);
+  if (error) { setMsg('csvMsg', error.message, 'no'); return; }
+  CARDS = data || [];
+  renderCards();
+}
+
+function renderCards(){
+  var deckF = $('cardDeckFilter').value;
+  var q = $('cardSearch').value.toLowerCase();
+  var rows = CARDS.filter(function(c){
+    if (deckF && c.category !== deckF) return false;
+    if (q){
+      var hay = ((c.question||'') + ' ' + (c.answer||'')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  FILTERED_CARDS = rows;
+  var shown = rows.slice(0, 300);
+  $('cardCount').textContent = rows.length + ' card(s)' + (rows.length > 300 ? ' (showing first 300)' : '');
+  var tb = $('cardBody'); tb.innerHTML = '';
+  shown.forEach(function(c, i){
+    var edit = el('button', { class: 'sm', text: 'Edit' });
+    edit.onclick = function(){ openCardEdit(c); };
+    var tr = el('tr', null, [
+      el('td', { text: String(i + 1) }),
+      el('td', { text: (c.question || '').replace(/<[^>]+>/g, '').slice(0, 80) }),
+      el('td', { text: (c.answer || '').replace(/<[^>]+>/g, '').slice(0, 80) }),
+      el('td', { text: c.category || '' }),
+      el('td', { text: c.crumb || '' }),
+      el('td', null, [edit])
+    ]);
+    tb.appendChild(tr);
+  });
+}
+$('cardDeckFilter').onchange = renderCards;
+$('cardSearch').oninput = renderCards;
+$('cardReload').onclick = loadCards;
+
+// تصدير CSV
+$('csvExport').onclick = function(){
+  var rows = [['category','question','answer','crumb','card_order']];
+  CARDS.forEach(function(c){ rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]); });
+  download('shany-cards-all.csv', toCsv(rows));
+  setMsg('csvMsg', 'Exported ' + CARDS.length + ' card(s) ✓', 'ok');
+};
+$('csvExportDeck').onclick = function(){
+  var deckF = $('cardDeckFilter').value;
+  if (!deckF){ setMsg('csvMsg', 'Pick a deck first in the filter below.', 'no'); return; }
+  var rows = [['category','question','answer','crumb','card_order']];
+  CARDS.filter(function(c){ return c.category === deckF; }).forEach(function(c){
+    rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]);
+  });
+  download('shany-' + deckF.replace(/[^\w\-]+/g,'_') + '.csv', toCsv(rows));
+  setMsg('csvMsg', 'Exported deck "' + deckF + '" ✓', 'ok');
+};
+
+// استيراد CSV
+$('csvImport').onclick = async function(){
+  var f = $('csvFile').files[0];
+  if (!f){ setMsg('csvMsg', 'Choose a CSV file first.', 'no'); return; }
+  var text = await f.text();
+  var rows = parseCsv(text);
+  if (!rows.length){ setMsg('csvMsg', 'CSV is empty.', 'no'); return; }
+  // headers?
+  var start = 0;
+  var head = rows[0].map(function(s){ return String(s).trim().toLowerCase(); });
+  var idx = { category: head.indexOf('category'), question: head.indexOf('question'), answer: head.indexOf('answer'), crumb: head.indexOf('crumb'), card_order: head.indexOf('card_order') };
+  if (idx.category >= 0 || idx.question >= 0 || idx.answer >= 0) start = 1;
+  else { idx = { category: 0, question: 1, answer: 2, crumb: 3, card_order: 4 }; }
+
+  var toInsert = [];
+  var newDecks = new Set();
+  var knownDecks = {};
+  CATS.forEach(function(c){ knownDecks[c.name] = true; });
+
+  for (var i = start; i < rows.length; i++){
+    var r = rows[i];
+    var cat = idx.category >= 0 ? String(r[idx.category] || '').trim() : '';
+    var q = idx.question >= 0 ? String(r[idx.question] || '').trim() : '';
+    var a = idx.answer   >= 0 ? String(r[idx.answer]   || '').trim() : '';
+    var crumb = idx.crumb >= 0 ? String(r[idx.crumb] || '').trim() : '';
+    var order = idx.card_order >= 0 ? parseInt(r[idx.card_order], 10) : NaN;
+    if (!cat || !q || !a) continue;
+    if (!knownDecks[cat]) newDecks.add(cat);
+    toInsert.push({ category: cat, question: q, answer: a, crumb: crumb || null, card_order: isNaN(order) ? null : order });
+  }
+
+  if (!toInsert.length){ setMsg('csvMsg', 'No valid rows found.', 'no'); return; }
+
+  var btn = $('csvImport'); btn.disabled = true;
+  setMsg('csvMsg', 'Importing ' + toInsert.length + ' card(s)...');
+
+  // أنشئ الديكس الجديدة كـ Premium
+  if (newDecks.size){
+    var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
+    var arr = Array.from(newDecks).map(function(n, i){ return { name: n, is_free: false, sort_order: maxSort + 1 + i }; });
+    var rc = await sb.from('categories').insert(arr);
+    if (rc.error){ btn.disabled = false; setMsg('csvMsg', 'Deck creation failed: ' + rc.error.message, 'no'); return; }
+  }
+
+  // احسب card_order تلقائياً لو مش موجود
+  var byDeck = {};
+  toInsert.forEach(function(c){
+    if (c.card_order == null){
+      if (!byDeck[c.category]) byDeck[c.category] = [];
+      byDeck[c.category].push(c);
+    }
+  });
+  for (var deckName in byDeck){
+    const r1 = await sb.from('flashcards').select('card_order').eq('category', deckName)
+      .order('card_order', { ascending: false }).limit(1);
+    var startN = (r1.data && r1.data.length && r1.data[0].card_order != null) ? r1.data[0].card_order : 0;
+    byDeck[deckName].forEach(function(c, i){ c.card_order = startN + i + 1; });
+  }
+
+  var ri = await sb.from('flashcards').insert(toInsert);
+  btn.disabled = false;
+  if (ri.error){ setMsg('csvMsg', 'Import failed: ' + ri.error.message, 'no'); return; }
+  setMsg('csvMsg', 'Imported ' + toInsert.length + ' card(s) ✓' + (newDecks.size ? ' · New decks: ' + Array.from(newDecks).join(', ') : ''), 'ok');
+  $('csvFile').value = '';
+  await loadCats();
+  await loadCards();
+};
+
+// تعديل كارت
+function openCardEdit(c){
+  EDIT_CARD = c;
+  $('cardMeta').textContent = 'ID: ' + c.id;
+  $('ecCategory').value = c.category || '';
+  $('ecCrumb').value = c.crumb || '';
+  $('ecQuestion').value = c.question || '';
+  $('ecAnswer').value = c.answer || '';
+  $('ecOrder').value = c.card_order != null ? c.card_order : '';
+  setMsg('ecMsg','');
+  $('cardModal').classList.remove('hidden');
+}
+function closeCardEdit(){ $('cardModal').classList.add('hidden'); EDIT_CARD = null; }
+$('ecCancel').onclick = closeCardEdit;
+$('cardModal').onclick = function(e){ if (e.target === this) closeCardEdit(); };
+$('ecSave').onclick = async function(){
+  if (!EDIT_CARD) return;
+  var cat = $('ecCategory').value.trim();
+  var q = $('ecQuestion').value.trim();
+  var a = $('ecAnswer').value.trim();
+  if (!cat || !q || !a){ setMsg('ecMsg', 'Deck, question and answer are required.', 'no'); return; }
+  var order = parseInt($('ecOrder').value, 10);
+  var btn = $('ecSave'); btn.disabled = true; setMsg('ecMsg', 'Saving...');
+  var upd = {
+    category: cat, question: q, answer: a,
+    crumb: $('ecCrumb').value.trim() || null,
+    card_order: isNaN(order) ? null : order
+  };
+  const r = await sb.from('flashcards').update(upd).eq('id', EDIT_CARD.id);
+  btn.disabled = false;
+  if (r.error){ setMsg('ecMsg', r.error.message, 'no'); return; }
+  closeCardEdit();
+  setMsg('csvMsg', 'Card updated ✓', 'ok');
+  await loadCards();
+};
+$('ecDelete').onclick = async function(){
+  if (!EDIT_CARD) return;
+  if (!confirm('Delete this card?')) return;
+  var btn = $('ecDelete'); btn.disabled = true;
+  const r = await sb.from('flashcards').delete().eq('id', EDIT_CARD.id);
+  btn.disabled = false;
+  if (r.error){ setMsg('ecMsg', r.error.message, 'no'); return; }
+  closeCardEdit();
+  setMsg('csvMsg', 'Card deleted ✓', 'ok');
+  await loadCards();
+};
+
+// ===== Generate =====
 function updGenCount(){ $('genSelCount').textContent = GEN.size + ' deck(s) selected'; }
 function renderGen(){
   var q = $('genSearch').value.toLowerCase(), box = $('genList');
@@ -344,7 +651,7 @@ $('genCsv').onclick = function(){
   download('codes.csv', toCsv([['code','name']].concat(LASTGEN.map(function(r){ return [r.new_code, r.new_note || '']; }))));
 };
 
-// ---------- codes ----------
+// ===== Codes =====
 async function loadCodes(){
   const { data, error } = await sb.rpc('admin_list_codes');
   if (error) { setMsg('codeMsg', error.message, 'no'); return; }
@@ -394,7 +701,6 @@ function renderCodes(){
     tb.appendChild(tr);
   });
 }
-// ---------- edit a code ----------
 var EDIT = null, EDITSEL = new Set();
 function updEditCount(){ $('editCount').textContent = EDITSEL.size + ' deck(s) selected'; }
 function renderEditList(){
