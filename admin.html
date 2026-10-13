@@ -55,6 +55,17 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .tag-deck{display:inline-block;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-size:.78rem;font-weight:600}
 .tag-crumb{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--bg);color:var(--mut);font-size:.78rem;border:1px solid var(--line)}
 
+/* ===== Word-blanking editor ===== */
+.wb{font:1.15rem/2.3 Georgia,serif;padding:12px;border:1px dashed var(--line);border-radius:10px;background:var(--bg);min-height:60px}
+.wb .w{cursor:pointer;padding:2px 4px;border-radius:5px;border:1px solid transparent;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:inline}
+.wb .w:hover{border-color:var(--acc)}
+.wb .w.sel{background:var(--bl);border-bottom:2px solid var(--fg);font-weight:700}
+.wb .bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
+.wb mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
+.ce-pv{padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--card);font:1rem/1.7 Georgia,serif;margin:6px 0}
+.ce-pv.b{border-color:var(--acc)}
+.ce-pv small{display:block;font:.72rem system-ui,sans-serif;color:var(--mut);margin-bottom:4px}
+
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60}
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
@@ -88,7 +99,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <button data-tab="codes" data-tip="Manage all codes">All codes</button>
   </div>
 
-  <!-- ============ Decks ============ -->
   <section id="tab-decks">
     <div class="box">
       <h2>Which decks are free?</h2>
@@ -107,7 +117,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
-  <!-- ============ Cards (Database) ============ -->
   <section id="tab-cards" class="hidden">
 
     <div class="box">
@@ -176,7 +185,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 
   </section>
 
-  <!-- ============ Generate ============ -->
   <section id="tab-gen" class="hidden">
     <div class="box">
       <h2>1. Pick the decks the codes will unlock</h2>
@@ -214,7 +222,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
-  <!-- ============ All codes ============ -->
   <section id="tab-codes" class="hidden">
     <div class="box">
       <div class="row">
@@ -272,26 +279,42 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 </div>
 
 <div class="modal hidden" id="cardEditModal">
-  <div class="mbox">
+  <div class="mbox" style="max-width:780px">
     <h2 id="ceTitle">Edit card</h2>
     <div class="mut" id="ceMeta"></div>
-    <label class="f" style="margin-top:10px">Deck
-      <input type="text" id="ceDeck" list="deckListDL">
-      <datalist id="deckListDL"></datalist>
-    </label>
-    <label class="f" style="margin-top:8px">Crumb (optional)
-      <input type="text" id="ceCrumb" placeholder="e.g. Chapter 3">
-    </label>
-    <label class="f" style="margin-top:8px">Question
-      <textarea id="ceQuestion" style="min-height:90px"></textarea>
-    </label>
-    <label class="f" style="margin-top:8px">Answer
-      <textarea id="ceAnswer" style="min-height:90px"></textarea>
-    </label>
-    <label class="f" style="margin-top:8px">Card order
-      <input type="number" id="ceOrder">
-    </label>
+
+    <div class="grid" style="margin-top:10px">
+      <label class="f">Deck
+        <input type="text" id="ceDeck" list="deckListDL">
+      </label>
+      <label class="f">Crumb (optional)
+        <input type="text" id="ceCrumb" placeholder="e.g. Chapter 3">
+      </label>
+      <label class="f">Card order
+        <input type="number" id="ceOrder">
+      </label>
+    </div>
+
+    <div class="mut" style="margin-top:14px;font-weight:700">Question — click any word to blank it (click again to unblank)</div>
+    <div class="wb" id="ceQ" dir="auto"></div>
+
+    <div class="mut" style="margin-top:10px;font-weight:700">Answer — highlighted words are the revealed answers</div>
+    <div class="wb" id="ceA" dir="auto"></div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="sm" id="ceSyncFromQA" data-tip="Rebuild tokens from question/answer text">↻ Reload tokens</button>
+      <button class="sm" id="ceClearSel" data-tip="Clear all blanks">Clear blanks</button>
+    </div>
+
     <div class="row">
+      <label><input type="radio" name="cemode" value="one" checked> One card with all blanks</label>
+      <label><input type="radio" name="cemode" value="each"> Separate card for each blank</label>
+    </div>
+
+    <div class="mut" style="margin-top:8px">Preview:</div>
+    <div id="cePreview"></div>
+
+    <div class="row" style="margin-top:14px">
       <button class="primary" id="ceSave">Save</button>
       <button class="danger" id="ceDelete">Delete</button>
       <button id="ceCancel">Cancel</button>
@@ -299,6 +322,8 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <div class="msg" id="ceMsg"></div>
   </div>
 </div>
+
+<datalist id="deckListDL"></datalist>
 
 </main>
 
@@ -356,6 +381,7 @@ function download(name, text){
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function parseCsv(text){
   var rows = [], row = [], cur = '', inQ = false, i = 0;
@@ -708,30 +734,222 @@ $('bulkMoveBtn').onclick = async function(){
 };
 
 // ============================================================
-// EDIT CARD MODAL
+// CARD EDITOR (word-blanking style)
 // ============================================================
+var CE = { qTokens: [], aTokens: [] };
+
+function tokensFromHtml(html){
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  var raw = [];
+  function walk(node, isBlank){
+    if (node.nodeType === 3){
+      raw.push({ text: node.nodeValue, blank: isBlank });
+    } else if (node.nodeType === 1){
+      var tag = node.tagName.toLowerCase();
+      var isB = isBlank || tag === 'mark' || (node.classList && node.classList.contains('bl'));
+      for (var i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i], isB);
+    }
+  }
+  walk(tmp, false);
+
+  var out = [];
+  var re = /[\p{L}\p{N}_]+(?:[-'’\/.][\p{L}\p{N}_]+)*/gu;
+  raw.forEach(function(seg){
+    var t = seg.text;
+    var last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(t))){
+      if (m.index > last) out.push({ before: t.slice(last, m.index), word: '', blank: false });
+      out.push({ before: '', word: m[0], blank: !!seg.blank });
+      last = m.index + m[0].length;
+    }
+    if (last < t.length) out.push({ before: t.slice(last), word: '', blank: false });
+  });
+  return out;
+}
+
+function tokensToHtml(tokens){
+  var out = '';
+  tokens.forEach(function(t, i){
+    if (!t.word) out += esc(t.before).replace(/\n/g,'<br>');
+    else out += esc(t.before) + '<span class="w' + (t.blank ? ' sel' : '') + '" data-ti="' + i + '">' + esc(t.word) + '</span>';
+  });
+  return out;
+}
+
+function tokensFromText(text){
+  var out = [];
+  var re = /[\p{L}\p{N}_]+(?:[-'’\/.][\p{L}\p{N}_]+)*/gu, m, last = 0;
+  re.lastIndex = 0;
+  while ((m = re.exec(text))){
+    if (m.index > last) out.push({ before: text.slice(last, m.index), word: '', blank: false });
+    out.push({ before: '', word: m[0], blank: false });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ before: text.slice(last), word: '', blank: false });
+  return out;
+}
+
+function tokensToText(tokens){
+  return tokens.map(function(t){ return t.before + t.word; }).join('');
+}
+
+function renderCE(){
+  $('ceQ').innerHTML = tokensToHtml(CE.qTokens);
+  $('ceA').innerHTML = tokensToHtml(CE.aTokens);
+  renderCEPreview();
+}
+
+function renderCEPreview(){
+  var box = $('cePreview');
+  var mode = document.querySelector('input[name=cemode]:checked').value;
+  var activeQ = 0;
+  CE.qTokens.forEach(function(t){ if (t.word && t.blank) activeQ++; });
+
+  if (mode === 'each'){
+    var cards = [];
+    var qWords = CE.qTokens.filter(function(t){ return t.word; });
+    var aWords = CE.aTokens.filter(function(t){ return t.word; });
+    var blankIdx = -1;
+    qWords.forEach(function(t, i){
+      if (!t.blank) return;
+      blankIdx++;
+      var thisBlank = i;
+      var qq = '', aa = '';
+      CE.qTokens.forEach(function(tt, j){
+        qq += esc(tt.before).replace(/\n/g,'<br>');
+        if (!tt.word) return;
+        var wi = qWords.indexOf(tt);
+        if (wi === thisBlank) qq += '<span class="bl">&nbsp;</span>';
+        else qq += esc(tt.word);
+      });
+      CE.aTokens.forEach(function(tt, j){
+        aa += esc(tt.before).replace(/\n/g,'<br>');
+        if (!tt.word) return;
+        var wi = aWords.indexOf(tt);
+        if (wi === thisBlank) aa += '<mark>' + esc(tt.word) + '</mark>';
+        else aa += esc(tt.word);
+      });
+      cards.push({ q: qq, a: aa });
+    });
+    if (!cards.length){ box.innerHTML = '<div class="mut">Select at least one word in the question...</div>'; return; }
+    box.innerHTML = cards.map(function(c, i){
+      return '<div class="ce-pv" dir="auto"><small>Question ' + (i+1) + '</small>' + c.q + '</div>' +
+             '<div class="ce-pv b" dir="auto"><small>Answer</small>' + c.a + '</div>';
+    }).join('');
+    return;
+  }
+
+  if (!activeQ){ box.innerHTML = '<div class="mut">Select at least one word in the question...</div>'; return; }
+  var qHtml = '', aHtml = '';
+  CE.qTokens.forEach(function(t){
+    qHtml += esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) return;
+    if (t.blank) qHtml += '<span class="bl">&nbsp;</span>';
+    else qHtml += esc(t.word);
+  });
+  CE.aTokens.forEach(function(t){
+    aHtml += esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) return;
+    if (t.blank) aHtml += '<mark>' + esc(t.word) + '</mark>';
+    else aHtml += esc(t.word);
+  });
+  box.innerHTML = '<div class="ce-pv" dir="auto"><small>Question</small>' + qHtml + '</div>' +
+                  '<div class="ce-pv b" dir="auto"><small>Answer</small>' + aHtml + '</div>';
+}
+
+function ceBuildHtml(tokens){
+  var out = '';
+  tokens.forEach(function(t){
+    var b = esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) { out += b; return; }
+    if (t.blank) out += b + '<mark>' + esc(t.word) + '</mark>';
+    else out += b + esc(t.word);
+  });
+  return out;
+}
+function ceBuildQuestionHtml(tokens){
+  var out = '';
+  tokens.forEach(function(t){
+    var b = esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) { out += b; return; }
+    if (t.blank) out += b + '<span class="bl">&nbsp;</span>';
+    else out += b + esc(t.word);
+  });
+  return out;
+}
+
 function openCardEdit(c){
   EDIT_CARD = c;
   $('ceTitle').textContent = 'Edit card';
   $('ceMeta').textContent = 'ID: ' + c.id;
   $('ceDeck').value = c.category || '';
   $('ceCrumb').value = c.crumb || '';
-  $('ceQuestion').value = c.question || '';
-  $('ceAnswer').value = c.answer || '';
   $('ceOrder').value = c.card_order != null ? c.card_order : '';
+  CE.qTokens = tokensFromHtml(c.question || '');
+  CE.aTokens = tokensFromHtml(c.answer || '');
   setMsg('ceMsg', '');
+  renderCE();
   $('cardEditModal').classList.remove('hidden');
 }
 function closeCardEdit(){ $('cardEditModal').classList.add('hidden'); EDIT_CARD = null; }
+
+$('ceQ').onclick = function(e){
+  var t = e.target.closest('.w'); if (!t) return;
+  var idx = parseInt(t.getAttribute('data-ti'), 10);
+  var tok = CE.qTokens[idx]; if (!tok) return;
+  tok.blank = !tok.blank;
+  syncBlankToAnswer();
+  renderCE();
+};
+$('ceA').onclick = function(e){
+  var t = e.target.closest('.w'); if (!t) return;
+  var idx = parseInt(t.getAttribute('data-ti'), 10);
+  var tok = CE.aTokens[idx]; if (!tok) return;
+  tok.blank = !tok.blank;
+  syncBlankFromAnswer();
+  renderCE();
+};
+
+function syncBlankToAnswer(){
+  var qWords = CE.qTokens.filter(function(t){ return t.word; });
+  var aWords = CE.aTokens.filter(function(t){ return t.word; });
+  var n = Math.min(qWords.length, aWords.length);
+  for (var i = 0; i < n; i++) aWords[i].blank = qWords[i].blank;
+}
+function syncBlankFromAnswer(){
+  var qWords = CE.qTokens.filter(function(t){ return t.word; });
+  var aWords = CE.aTokens.filter(function(t){ return t.word; });
+  var n = Math.min(qWords.length, aWords.length);
+  for (var i = 0; i < n; i++) qWords[i].blank = aWords[i].blank;
+}
+
+document.querySelectorAll('input[name=cemode]').forEach(function(r){
+  r.onchange = renderCEPreview;
+});
+$('ceSyncFromQA').onclick = function(){
+  CE.qTokens = tokensFromText(tokensToText(CE.qTokens));
+  CE.aTokens = tokensFromText(tokensToText(CE.aTokens));
+  renderCE();
+};
+$('ceClearSel').onclick = function(){
+  CE.qTokens.forEach(function(t){ if (t.word) t.blank = false; });
+  CE.aTokens.forEach(function(t){ if (t.word) t.blank = false; });
+  renderCE();
+};
 $('ceCancel').onclick = closeCardEdit;
 $('cardEditModal').onclick = function(e){ if (e.target === this) closeCardEdit(); };
 
 $('ceSave').onclick = async function(){
   if (!EDIT_CARD) return;
   var deckV = $('ceDeck').value.trim();
-  var qV = $('ceQuestion').value.trim();
-  var aV = $('ceAnswer').value.trim();
-  if (!deckV || !qV || !aV){ setMsg('ceMsg', 'Deck, question and answer are required.', 'no'); return; }
+  if (!deckV){ setMsg('ceMsg', 'Deck is required.', 'no'); return; }
+
+  var qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
+  var aHtml = ceBuildHtml(CE.aTokens).trim();
+  if (!qHtml || !aHtml){ setMsg('ceMsg', 'Question and answer cannot be empty.', 'no'); return; }
+
   var ord = parseInt($('ceOrder').value, 10);
   var btn = $('ceSave'); btn.disabled = true; setMsg('ceMsg', 'Saving...');
 
@@ -743,17 +961,52 @@ $('ceSave').onclick = async function(){
   }
 
   var upd = {
-    category: deckV, question: qV, answer: aV,
+    category: deckV,
+    question: qHtml,
+    answer: aHtml,
     crumb: $('ceCrumb').value.trim() || null,
     card_order: isNaN(ord) ? null : ord
   };
   const r = await sb.from('flashcards').update(upd).eq('id', EDIT_CARD.id);
   btn.disabled = false;
   if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
+
+  // لو وضع "each" — أنشئ كروت جديدة إضافية لكل فراغ
+  var mode = document.querySelector('input[name=cemode]:checked').value;
+  if (mode === 'each'){
+    var qWords = CE.qTokens.filter(function(t){ return t.word; });
+    var aWords = CE.aTokens.filter(function(t){ return t.word; });
+    var blanks = [];
+    qWords.forEach(function(t, i){ if (t.blank) blanks.push(i); });
+    if (blanks.length > 1){
+      var toInsert = [];
+      blanks.forEach(function(bi){
+        var qq = CE.qTokens.map(function(t){
+          var wi = qWords.indexOf(t);
+          return { before: t.before, word: t.word, blank: (t.word && wi === bi) };
+        });
+        var aa = CE.aTokens.map(function(t){
+          var wi = aWords.indexOf(t);
+          return { before: t.before, word: t.word, blank: (t.word && wi === bi) };
+        });
+        toInsert.push({
+          category: deckV,
+          question: ceBuildQuestionHtml(qq),
+          answer: ceBuildHtml(aa),
+          crumb: $('ceCrumb').value.trim() || null,
+          card_order: isNaN(ord) ? null : (ord + toInsert.length + 1)
+        });
+      });
+      if (toInsert.length){
+        await sb.from('flashcards').insert(toInsert);
+      }
+    }
+  }
+
   Object.assign(EDIT_CARD, upd);
   closeCardEdit();
   setMsg('csvMsg', 'Card updated ✓', 'ok');
-  renderCards();
+  await loadCards();
 };
 
 $('ceDelete').onclick = async function(){
