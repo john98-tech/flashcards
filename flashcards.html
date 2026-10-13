@@ -422,6 +422,7 @@ function mark(v){
     var realCardIdx = list[pos];
 
     st[curName][realCardIdx] = v;
+    buildJump();
 
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
