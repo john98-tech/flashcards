@@ -30,13 +30,56 @@ h1{font-size:1.1rem;margin:.2em 0 .6em;text-align:center;color:var(--mut);font-f
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
-select{max-width:100%}
 
-/* ===== Dropdown الفلاش كاردس (مصغّر للموبايل) ===== */
-#deck{font-size:.9rem;padding:6px 10px;max-width:100%;width:100%}
-#deck optgroup{font-size:.85rem;font-weight:700;color:var(--acc);background:var(--bg)}
-#deck option{font-size:.9rem;padding:4px;background:var(--card);color:var(--fg);font-weight:400}
+/* ===== Custom Deck Picker ===== */
+.dp{position:relative;width:100%;font-family:system-ui,sans-serif;z-index:20}
+.dp-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 14px;border:1px solid var(--acc);background:var(--card);color:var(--fg);
+  border-radius:10px;cursor:pointer;font:600 .9rem system-ui,sans-serif;
+  text-align:left;
+}
+.dp-btn:hover{background:color-mix(in srgb,var(--acc) 6%,var(--card))}
+.dp-btn .dp-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.dp-btn .dp-label .ic{opacity:.6}
+.dp-btn .dp-lock{font-size:.85rem}
+.dp-btn .dp-caret{transition:transform .2s;opacity:.7;font-size:.75rem}
+.dp.open .dp-btn .dp-caret{transform:rotate(180deg)}
+.dp-menu{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:60vh;overflow-y:auto;
+  background:var(--card);border:2px solid var(--acc);border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+  padding:6px;z-index:30;
+}
+.dp-menu.hidden{display:none}
+.dp-group{margin:4px 0}
+.dp-group-hd{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  font-weight:700;font-size:.85rem;color:var(--acc);cursor:pointer;border-radius:8px;
+  background:color-mix(in srgb,var(--acc) 8%,transparent);
+  -webkit-user-select:none;user-select:none;
+}
+.dp-group-hd:hover{background:color-mix(in srgb,var(--acc) 14%,transparent)}
+.dp-group-hd .chev{transition:transform .18s;font-size:.7rem;opacity:.7}
+.dp-group.open .dp-group-hd .chev{transform:rotate(90deg)}
+.dp-group-hd .gname{flex:1}
+.dp-group-hd .gcount{font-size:.72rem;opacity:.7;font-weight:500}
+.dp-group-items{display:none;margin-top:2px;padding-left:4px}
+.dp-group.open .dp-group-items{display:block}
+.dp-item{
+  display:flex;align-items:center;gap:8px;padding:7px 10px 7px 26px;
+  font-size:.85rem;color:var(--fg);cursor:pointer;border-radius:6px;
+  -webkit-user-select:none;user-select:none;
+}
+.dp-item:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.dp-item.cur{background:color-mix(in srgb,var(--acc) 15%,transparent);font-weight:700;color:var(--acc)}
+.dp-item.locked{opacity:.6}
+.dp-item .ic{font-size:.8rem;width:1em;text-align:center}
+.dp-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-item .cnt{font-size:.72rem;opacity:.65;font-weight:500}
+.dp-empty{padding:14px;text-align:center;color:var(--mut);font-size:.85rem}
 
+/* ===== Card ===== */
 .card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
 .card.back{border-color:var(--acc)}
 .tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
@@ -90,9 +133,9 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 
 /* موبايل */
 @media (max-width:520px){
-  #deck{font-size:.85rem;padding:5px 8px}
-  #deck optgroup{font-size:.8rem}
-  #deck option{font-size:.85rem}
+  .dp-btn{font-size:.85rem;padding:9px 12px}
+  .dp-group-hd{font-size:.8rem;padding:7px 9px}
+  .dp-item{font-size:.8rem;padding:6px 9px 6px 22px}
   .jump-row select{font-size:.8rem;padding:5px 8px}
 }
 </style></head><body>
@@ -124,8 +167,16 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   </div>
 </div>
 
-<div class="row">
-  <select id="deck" data-tip="Choose a deck"></select>
+<!-- Custom Deck Picker -->
+<div class="dp" id="deckPicker">
+  <button class="dp-btn" id="dpBtn" type="button">
+    <span class="dp-label"><span class="ic">📖</span><span id="dpCurrent">Loading...</span></span>
+    <span class="dp-caret">▼</span>
+  </button>
+  <div class="dp-menu hidden" id="dpMenu"></div>
+</div>
+
+<div class="row" style="margin-top:10px">
   <label style="font-size:.85rem"><input type="checkbox" id="shuf"> Shuffle</label>
   <button id="all" data-tip="Show all cards">All cards</button>
   <button id="miss" data-tip="Review missed cards only">Review missed</button>
@@ -172,14 +223,15 @@ const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-var CATS = [];        // كل الديكس
-var GROUPS = [];      // كل الجروبات
-var GMAP = {};        // { deck_name: group_id }
-var unlocked = {};    // الديكس المدفوعة المفتوحة
-var D = [];           // الديكس المتاحة للطالب
-var st = {};          // تقدم الطالب
+var CATS = [];
+var GROUPS = [];
+var GMAP = {};
+var unlocked = {};
+var D = [];
+var st = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
-var $ = function(i){return document.getElementById(i)}, sel = $('deck'), jumpSel = $('jump');
+var $ = function(i){return document.getElementById(i)};
+var jumpSel = $('jump');
 var currentUserId = null;
 var kicked = false;
 
@@ -197,16 +249,13 @@ async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) return false;
     currentUserId = session.user.id;
-
     const localToken = localStorage.getItem('session_token');
     if (!localToken) return false;
-
     const { data, error } = await supabaseClient
         .from('active_sessions')
         .select('session_token')
         .eq('user_id', currentUserId)
         .maybeSingle();
-
     if (error) return true;
     return !!data && data.session_token === localToken;
 }
@@ -299,18 +348,18 @@ async function loadAll(preferName) {
             : (curName && getDeck(curName)) ? curName
             : firstOpen;
 
-    buildSelect();
-    sel.value = curName || '';
+    buildPicker();
+    updatePickerCurrent();
     start(false);
 }
 
 // ============================================================
-// بناء القائمة المنسدلة بالجروبات
+// Custom Deck Picker
 // ============================================================
-function buildSelect() {
-    sel.innerHTML = '';
+function buildPicker(){
+    var menu = $('dpMenu');
+    menu.innerHTML = '';
 
-    // قسّم الديكس حسب الجروب
     var byGroup = {};
     var ungrouped = [];
     CATS.forEach(function(c){
@@ -322,56 +371,122 @@ function buildSelect() {
         }
     });
 
-    // 1) كل جروب فيه ديكس (متاح للطالب)
+    var anyDeck = false;
+
+    // 1) الجروبات اللي فيها ديكس
     GROUPS.forEach(function(g){
         var decks = byGroup[g.id] || [];
         if (!decks.length) return;
-        var g2 = document.createElement('optgroup');
-        g2.label = g.name;
-        decks.forEach(function(c){ addDeckOption(g2, c); });
-        if (g2.children.length) sel.appendChild(g2);
+        anyDeck = true;
+        menu.appendChild(buildGroupEl(g.name, decks));
     });
 
     // 2) Free بدون جروب
     var freeUng = ungrouped.filter(function(c){ return c.is_free; });
     if (freeUng.length){
-        var fg = document.createElement('optgroup');
-        fg.label = 'Free';
-        freeUng.forEach(function(c){ addDeckOption(fg, c); });
-        if (fg.children.length) sel.appendChild(fg);
+        anyDeck = true;
+        menu.appendChild(buildGroupEl('Free', freeUng));
     }
 
     // 3) Premium بدون جروب
     var premUng = ungrouped.filter(function(c){ return !c.is_free; });
     if (premUng.length){
-        var pg = document.createElement('optgroup');
-        pg.label = 'Premium';
-        premUng.forEach(function(c){ addDeckOption(pg, c); });
-        if (pg.children.length) sel.appendChild(pg);
+        anyDeck = true;
+        menu.appendChild(buildGroupEl('Premium', premUng));
+    }
+
+    if (!anyDeck){
+        menu.innerHTML = '<div class="dp-empty">No decks available yet.</div>';
     }
 }
 
-function addDeckOption(parent, c) {
-    var open = isOpen(c), deck = getDeck(c.name);
-    var o = document.createElement('option');
-    o.value = c.name;
-    o.textContent = (open ? '' : '🔒 ') + c.name + (open && deck ? ' (' + deck.cards.length + ')' : '');
-    parent.appendChild(o);
+function buildGroupEl(groupName, decks){
+    var box = document.createElement('div');
+    box.className = 'dp-group';
+
+    var hd = document.createElement('div');
+    hd.className = 'dp-group-hd';
+    hd.innerHTML = '<span class="chev">▶</span><span class="gname">📁 ' + esc(groupName) + '</span><span class="gcount">' + decks.length + '</span>';
+    hd.onclick = function(){
+        box.classList.toggle('open');
+    };
+    box.appendChild(hd);
+
+    var items = document.createElement('div');
+    items.className = 'dp-group-items';
+    decks.forEach(function(c){
+        var it = document.createElement('div');
+        var open = isOpen(c);
+        var dk = getDeck(c.name);
+        it.className = 'dp-item' + (curName === c.name ? ' cur' : '') + (open ? '' : ' locked');
+        var icon = open ? '📄' : '🔒';
+        var cnt = (open && dk) ? '<span class="cnt">' + dk.cards.length + '</span>' : '';
+        it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + '</span>' + cnt;
+        it.onclick = function(){
+            var cc = CATS.find(function(x){ return x.name === c.name; });
+            if (!cc || !isOpen(cc)){
+                closePicker();
+                openModal();
+                return;
+            }
+            curName = cc.name;
+            closePicker();
+            updatePickerCurrent();
+            buildPicker();
+            start(false);
+        };
+        items.appendChild(it);
+    });
+    box.appendChild(items);
+
+    // افتح الجروب الحالي تلقائيًا
+    var cur = decks.find(function(c){ return c.name === curName; });
+    if (cur) box.classList.add('open');
+
+    return box;
 }
 
-sel.onchange = function(){
-    var c = CATS.find(function(x){ return x.name === sel.value; });
-    if (!c || !isOpen(c)) {
-        sel.value = curName || '';
-        openModal();
+function updatePickerCurrent(){
+    var label = $('dpCurrent');
+    if (!curName){
+        label.innerHTML = '<span class="ic">📖</span>No deck selected';
         return;
     }
-    curName = c.name;
-    start(false);
+    var c = CATS.find(function(x){ return x.name === curName; });
+    if (!c){ label.textContent = curName; return; }
+    var open = isOpen(c);
+    var icon = open ? '📖' : '🔒';
+    var dk = getDeck(curName);
+    var cnt = (open && dk) ? ' · ' + dk.cards.length + ' cards' : '';
+    label.innerHTML = '<span class="ic">' + icon + '</span>' + esc(curName) + cnt;
+}
+
+function openPicker(){
+    $('deckPicker').classList.add('open');
+    $('dpMenu').classList.remove('hidden');
+}
+function closePicker(){
+    $('deckPicker').classList.remove('open');
+    $('dpMenu').classList.add('hidden');
+}
+function togglePicker(){
+    if ($('dpMenu').classList.contains('hidden')) openPicker();
+    else closePicker();
+}
+
+$('dpBtn').onclick = function(e){
+    e.stopPropagation();
+    togglePicker();
 };
+document.addEventListener('click', function(e){
+    if (!e.target.closest('.dp')) closePicker();
+});
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closePicker();
+});
 
 // ============================================================
-// قائمة التنقل بين الكروت
+// القائمة المرقّمة للتنقل
 // ============================================================
 function buildJump() {
     jumpSel.innerHTML = '';
@@ -479,7 +594,6 @@ function mark(v){
         render();
         return;
     }
-
     if(!back){
         back = true;
         render();
@@ -490,6 +604,9 @@ function mark(v){
 
 function flip(){if(list.length){back=!back;render()}}
 
+// ============================================================
+// Redeem code
+// ============================================================
 function codeMsg(text, kind){
     var m = $('codeMsg');
     m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : '');
@@ -508,12 +625,9 @@ async function redeem(){
     if (!code) { codeMsg('Please enter a code.', false); return; }
     $('codeGo').disabled = true;
     codeMsg('Checking...', null);
-
     const { data, error } = await supabaseClient.rpc('redeem_code', { p_code: code });
     $('codeGo').disabled = false;
-
     if (error) { codeMsg(error.message, false); return; }
-
     var names = Array.isArray(data) ? data : [];
     codeMsg('Unlocked: ' + names.join(', '), true);
     await loadAll(names[0]);
@@ -545,32 +659,19 @@ document.onkeydown = function(e){
     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
         return false;
     }
-
     if (!$('modal').classList.contains('hidden')) {
         if (e.key === 'Enter') { e.preventDefault(); redeem(); }
         else if (e.key === 'Escape') { closeModal(); }
         return;
     }
-
+    if (e.key === 'Escape') { closePicker(); return; }
     if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
         e.preventDefault();
         flip();
     }
-    else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){
-        e.preventDefault();
-        go(1);
-    }
-    else if(e.key === 'ArrowLeft' || e.code === 'ArrowLeft'){
-        e.preventDefault();
-        go(-1);
-    }
-    else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){
-        e.preventDefault();
-        mark('ok');
-    }
-    else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){
-        e.preventDefault();
-        mark('no');
-    }
+    else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){ e.preventDefault(); go(1); }
+    else if(e.key === 'ArrowLeft' || e.code === 'ArrowLeft'){ e.preventDefault(); go(-1); }
+    else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){ e.preventDefault(); mark('ok'); }
+    else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){ e.preventDefault(); mark('no'); }
 };
 </script></body></html>
