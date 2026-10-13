@@ -10,7 +10,7 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
-main{max-width:1000px;margin:0 auto;padding:16px}
+main{max-width:1100px;margin:0 auto;padding:16px}
 h1{font:1.4rem Georgia,serif;margin:.2em 0}
 h2{font:1.1rem Georgia,serif;margin:0 0 8px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -24,7 +24,7 @@ button.primary{background:var(--acc);color:var(--bg);font-weight:700}
 button.danger{border-color:var(--no);color:var(--no)}
 button.sm{padding:3px 8px;font-size:.8rem}
 button:disabled{opacity:.6;cursor:wait}
-input[type=checkbox]{padding:0;width:auto}
+input[type=checkbox]{padding:0;width:auto;cursor:pointer}
 textarea{width:100%;min-height:80px;resize:vertical}
 .tabs button.active{background:var(--acc);color:var(--bg);font-weight:700}
 .box{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
@@ -33,22 +33,28 @@ textarea{width:100%;min-height:80px;resize:vertical}
 .mut{color:var(--mut);font-size:.85rem}
 .msg{min-height:1.3em;font-weight:600;margin-top:8px}
 .msg.ok{color:var(--ok)}.msg.no{color:var(--no)}
-.wrap{overflow-x:auto}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--bg);position:sticky;top:0;z-index:2;font-weight:700}
+tr.sel td{background:color-mix(in srgb,var(--acc) 12%,transparent)}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--mut)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
-.mbox{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:18px}
+.mbox{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:18px}
 .hidden{display:none !important}
-.cc{border:2px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--card)}
-.cc.dirty{border-color:var(--acc)}
-.cc .g3{display:grid;grid-template-columns:2fr 2fr 90px;gap:8px;margin-bottom:8px}
-.cc .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cc textarea{min-height:90px;width:100%}
-.cc .act{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-@media(max-width:640px){.cc .g3,.cc .g2{grid-template-columns:1fr}}
+
+.bulk-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin:8px 0;background:color-mix(in srgb,var(--acc) 10%,var(--card));border:2px solid var(--acc);border-radius:10px;font-size:.9rem}
+.bulk-bar .count{font-weight:700;color:var(--acc)}
+
+.q-cell{max-width:340px;word-break:break-word}
+.q-cell .qi{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.a-cell{max-width:340px;word-break:break-word;color:var(--mut)}
+.a-cell .ai{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tag-deck{display:inline-block;padding:1px 7px;border-radius:10px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-size:.78rem;font-weight:600}
+.tag-crumb{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--bg);color:var(--mut);font-size:.78rem;border:1px solid var(--line)}
+
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60}
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
@@ -68,7 +74,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <span class="mut" style="margin-left:6px">Admin</span>
   </div>
   <div class="row" style="margin:0">
-    <button onclick="location.href='add-cards.html'" data-tip="Add new cards">➕ Add cards</button>
     <button onclick="location.href='flashcards.html'" data-tip="Back to cards">← Back</button>
   </div>
 </div>
@@ -78,11 +83,12 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 <div id="app" class="hidden">
   <div class="row tabs">
     <button class="active" data-tab="decks" data-tip="Free vs premium decks">Free / Premium</button>
-    <button data-tab="cards" data-tip="Edit existing cards">Cards</button>
+    <button data-tab="cards" data-tip="All cards database">Cards</button>
     <button data-tab="gen" data-tip="Generate unlock codes">Generate codes</button>
     <button data-tab="codes" data-tip="Manage all codes">All codes</button>
   </div>
 
+  <!-- ============ Decks ============ -->
   <section id="tab-decks">
     <div class="box">
       <h2>Which decks are free?</h2>
@@ -101,36 +107,76 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
+  <!-- ============ Cards (Database) ============ -->
   <section id="tab-cards" class="hidden">
+
     <div class="box">
-      <h2>Import / Export CSV</h2>
+      <h2>Card database</h2>
+      <div class="row">
+        <button class="primary" id="btnAddCards" data-tip="Add new cards">➕ Add cards</button>
+        <button id="csvExport" data-tip="Download all cards">⬇ Export all (CSV)</button>
+        <button id="csvExportDeck" data-tip="Export selected deck">⬇ Export selected deck</button>
+        <button id="csvImportBtn" data-tip="Upload cards from CSV">⬆ Import CSV</button>
+        <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+      </div>
       <div class="mut">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span></div>
-      <div class="row">
-        <button class="primary" id="csvExport">⬇ Export all cards (CSV)</button>
-        <button id="csvExportDeck">⬇ Export selected deck</button>
-      </div>
-      <div class="row">
-        <label class="f" style="flex:1;min-width:200px">Import CSV file
-          <input type="file" id="csvFile" accept=".csv,text/csv">
-        </label>
-        <button class="primary" id="csvImport">⬆ Import from CSV</button>
-      </div>
       <div class="msg" id="csvMsg"></div>
     </div>
 
     <div class="box">
-      <h2>Edit existing cards</h2>
-      <div class="row">
-        <select id="cardDeckFilter" style="flex:1;min-width:160px"></select>
-        <input type="text" id="cardSearch" placeholder="Search question/answer..." style="flex:1;min-width:160px">
-        <button id="cardReload">Refresh</button>
+      <div class="grid">
+        <label class="f">Search
+          <input type="text" id="cardSearch" placeholder="Question or answer...">
+        </label>
+        <label class="f">Deck
+          <select id="cardDeckFilter"></select>
+        </label>
+        <label class="f">Crumb
+          <select id="cardCrumbFilter"></select>
+        </label>
       </div>
-      <div class="row"><span class="mut" id="cardCount"></span></div>
-      <div id="cardList"></div>
-      <div class="row"><button id="cardMore" class="hidden">Show more</button></div>
+      <div class="row">
+        <button id="cardReload" data-tip="Reload cards">Refresh</button>
+        <span class="mut" id="cardCount">—</span>
+      </div>
     </div>
+
+    <div class="bulk-bar hidden" id="bulkBar">
+      <span class="count" id="bulkCount">0 selected</span>
+      <span style="flex:1"></span>
+      <select id="bulkMoveDeck" style="min-width:150px">
+        <option value="">— Move to deck —</option>
+      </select>
+      <button class="primary" id="bulkMoveBtn" data-tip="Move selected">Move</button>
+      <button class="danger" id="bulkDeleteBtn" data-tip="Delete selected">Delete</button>
+      <button id="bulkClearBtn" data-tip="Clear selection">Clear</button>
+    </div>
+
+    <div class="box" style="padding:0">
+      <div class="wrap" style="max-height:60vh;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="selectAll"></th>
+              <th style="width:40px">#</th>
+              <th>Question</th>
+              <th>Answer</th>
+              <th style="width:130px">Deck</th>
+              <th style="width:120px">Crumb</th>
+              <th style="width:120px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="cardBody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="padding:10px 12px;margin:0;border-top:1px solid var(--line)">
+        <button id="cardMore" class="hidden">Show more</button>
+      </div>
+    </div>
+
   </section>
 
+  <!-- ============ Generate ============ -->
   <section id="tab-gen" class="hidden">
     <div class="box">
       <h2>1. Pick the decks the codes will unlock</h2>
@@ -168,6 +214,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
+  <!-- ============ All codes ============ -->
   <section id="tab-codes" class="hidden">
     <div class="box">
       <div class="row">
@@ -224,9 +271,41 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </div>
 </div>
 
-<datalist id="deckListDL"></datalist>
+<div class="modal hidden" id="cardEditModal">
+  <div class="mbox">
+    <h2 id="ceTitle">Edit card</h2>
+    <div class="mut" id="ceMeta"></div>
+    <label class="f" style="margin-top:10px">Deck
+      <input type="text" id="ceDeck" list="deckListDL">
+      <datalist id="deckListDL"></datalist>
+    </label>
+    <label class="f" style="margin-top:8px">Crumb (optional)
+      <input type="text" id="ceCrumb" placeholder="e.g. Chapter 3">
+    </label>
+    <label class="f" style="margin-top:8px">Question
+      <textarea id="ceQuestion" style="min-height:90px"></textarea>
+    </label>
+    <label class="f" style="margin-top:8px">Answer
+      <textarea id="ceAnswer" style="min-height:90px"></textarea>
+    </label>
+    <label class="f" style="margin-top:8px">Card order
+      <input type="number" id="ceOrder">
+    </label>
+    <div class="row">
+      <button class="primary" id="ceSave">Save</button>
+      <button class="danger" id="ceDelete">Delete</button>
+      <button id="ceCancel">Cancel</button>
+    </div>
+    <div class="msg" id="ceMsg"></div>
+  </div>
+</div>
+
+</main>
 
 <script>
+// ============================================================
+// CONFIG + STATE
+// ============================================================
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -236,11 +315,17 @@ var CATS = [], CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
 var CARDS = [], FILTERED_CARDS = [];
 var CARD_PAGE = 100, CARD_SHOWN = 0;
 var EDIT = null, EDITSEL = new Set();
+var EDIT_CARD = null;
+var SELECTED = new Set();
 
+// ============================================================
+// HELPERS
+// ============================================================
 function el(tag, props, kids){
   var e = document.createElement(tag);
   if (props) Object.keys(props).forEach(function(k){
     if (k === 'text') e.textContent = props[k];
+    else if (k === 'html') e.innerHTML = props[k];
     else if (k === 'class') e.className = props[k];
     else if (k.slice(0,2) === 'on') e[k] = props[k];
     else e.setAttribute(k, props[k]);
@@ -248,7 +333,11 @@ function el(tag, props, kids){
   (kids || []).forEach(function(c){ e.appendChild(c); });
   return e;
 }
-function setMsg(id, text, kind){ var m = $(id); m.className = 'msg ' + (kind || ''); m.textContent = text || ''; }
+function setMsg(id, text, kind){
+  var m = $(id); if (!m) return;
+  m.className = 'msg ' + (kind || '');
+  m.textContent = text || '';
+}
 function copyText(t){
   if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
   return new Promise(function(res){
@@ -266,6 +355,8 @@ function download(name, text){
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
+function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
+
 function parseCsv(text){
   var rows = [], row = [], cur = '', inQ = false, i = 0;
   text = text.replace(/^\ufeff/, '');
@@ -286,7 +377,9 @@ function parseCsv(text){
   return rows.filter(function(r){ return r.some(function(c){ return String(c).trim() !== ''; }); });
 }
 
-// ===== INIT =====
+// ============================================================
+// INIT
+// ============================================================
 async function init(){
   var gm = $('gateMsg');
   gm.textContent = 'Checking access...';
@@ -298,7 +391,6 @@ async function init(){
       return;
     }
 
-    // جرّب is_admin، لو فشلت اكمل برضه بس حذّر
     var isAdmin = false;
     try {
       const { data: ok, error } = await sb.rpc('is_admin');
@@ -332,18 +424,24 @@ async function init(){
 }
 window.addEventListener('DOMContentLoaded', init);
 
-// ===== Tabs =====
+// ============================================================
+// TABS
+// ============================================================
 document.querySelectorAll('.tabs button').forEach(function(b){
   b.onclick = function(){
     document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active'); });
     b.classList.add('active');
-    ['decks','cards','gen','codes'].forEach(function(t){ $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab); });
+    ['decks','cards','gen','codes'].forEach(function(t){
+      $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab);
+    });
     if (b.dataset.tab === 'codes') loadCodes();
     if (b.dataset.tab === 'cards') loadCards();
   };
 });
 
-// ===== Decks =====
+// ============================================================
+// DECKS
+// ============================================================
 async function loadCats(){
   const { data, error } = await sb.from('categories').select('name,is_free,sort_order')
     .order('sort_order', { ascending: true }).order('name', { ascending: true });
@@ -351,20 +449,34 @@ async function loadCats(){
   CATS = data || [];
   GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; }));
   renderDecks(); renderGen();
+  populateDeckFilters();
+}
+
+function populateDeckFilters(){
   var selF = $('cardDeckFilter');
   selF.innerHTML = '<option value="">All decks</option>';
+  var bm = $('bulkMoveDeck');
+  bm.innerHTML = '<option value="">— Move to deck —</option>';
   var dl = $('deckListDL'); if (dl) dl.innerHTML = '';
+
   CATS.forEach(function(c){
     var o = document.createElement('option'); o.value = c.name;
     o.textContent = c.name + (c.is_free ? ' (free)' : '');
     selF.appendChild(o);
+
+    var o2 = document.createElement('option'); o2.value = c.name;
+    o2.textContent = c.name + (c.is_free ? ' (free)' : '');
+    bm.appendChild(o2);
+
     if (dl){ var dlo = document.createElement('option'); dlo.value = c.name; dl.appendChild(dlo); }
   });
 }
+
 function updDeckCount(){
   var f = CATS.filter(function(c){ return c.is_free; }).length;
   $('deckCount').textContent = f + ' free · ' + (CATS.length - f) + ' premium';
 }
+
 function renderDecks(){
   var q = $('deckSearch').value.toLowerCase(), box = $('deckList');
   box.innerHTML = '';
@@ -377,6 +489,7 @@ function renderDecks(){
   });
   updDeckCount();
 }
+
 function setVisible(val){
   var q = $('deckSearch').value.toLowerCase();
   CATS.forEach(function(c){ if (!q || c.name.toLowerCase().indexOf(q) >= 0) c.is_free = val; });
@@ -396,7 +509,9 @@ $('deckSave').onclick = async function(){
   setMsg('deckMsg', 'Saved ✓', 'ok');
 };
 
-// ===== Cards =====
+// ============================================================
+// CARDS DATABASE
+// ============================================================
 async function loadCards(){
   var all = [], from = 0, step = 1000;
   while (true){
@@ -412,90 +527,261 @@ async function loadCards(){
     from += step;
   }
   CARDS = all;
+  buildCrumbFilter();
   renderCards();
 }
 
+function buildCrumbFilter(){
+  var s = $('cardCrumbFilter');
+  var prev = s.value;
+  var set = {};
+  CARDS.forEach(function(c){ if (c.crumb) set[c.crumb] = true; });
+  var arr = Object.keys(set).sort();
+  s.innerHTML = '<option value="">All crumbs</option>';
+  arr.forEach(function(x){
+    var o = document.createElement('option'); o.value = x; o.textContent = x;
+    s.appendChild(o);
+  });
+  if (arr.indexOf(prev) >= 0) s.value = prev;
+}
+
 function renderCards(){
-  var deckF = $('cardDeckFilter').value, q = $('cardSearch').value.toLowerCase();
+  var deckF = $('cardDeckFilter').value;
+  var crumbF = $('cardCrumbFilter').value;
+  var q = $('cardSearch').value.toLowerCase().trim();
+
   FILTERED_CARDS = CARDS.filter(function(c){
     if (deckF && c.category !== deckF) return false;
-    if (q && ((c.question || '') + ' ' + (c.answer || '')).toLowerCase().indexOf(q) < 0) return false;
+    if (crumbF && (c.crumb || '') !== crumbF) return false;
+    if (q){
+      var hay = stripHtml(c.question) + ' ' + stripHtml(c.answer);
+      if (hay.toLowerCase().indexOf(q) < 0) return false;
+    }
     return true;
   });
-  $('cardList').innerHTML = '';
+
+  var visibleIds = {};
+  FILTERED_CARDS.forEach(function(c){ visibleIds[c.id] = true; });
+  Array.from(SELECTED).forEach(function(id){ if (!visibleIds[id]) SELECTED.delete(id); });
+
+  $('cardBody').innerHTML = '';
   CARD_SHOWN = 0;
   showMoreCards();
+  updateBulkBar();
 }
 
 function showMoreCards(){
-  var box = $('cardList');
+  var tb = $('cardBody');
   var end = Math.min(CARD_SHOWN + CARD_PAGE, FILTERED_CARDS.length);
-  for (var i = CARD_SHOWN; i < end; i++) box.appendChild(cardEditor(FILTERED_CARDS[i], i));
+  for (var i = CARD_SHOWN; i < end; i++) tb.appendChild(cardRow(FILTERED_CARDS[i], i));
   CARD_SHOWN = end;
   $('cardCount').textContent = 'Showing ' + CARD_SHOWN + ' of ' + FILTERED_CARDS.length + ' card(s)';
   $('cardMore').classList.toggle('hidden', CARD_SHOWN >= FILTERED_CARDS.length);
+  syncSelectAll();
 }
 $('cardMore').onclick = showMoreCards;
 
-function cardEditor(c, i){
-  var wrap = el('div', { class: 'cc' });
-  var cat = el('input', { type: 'text', list: 'deckListDL', placeholder: 'Deck' }); cat.value = c.category || '';
-  var crumb = el('input', { type: 'text', placeholder: 'Crumb (optional)' }); crumb.value = c.crumb || '';
-  var order = el('input', { type: 'number', placeholder: 'Order' }); order.value = c.card_order != null ? c.card_order : '';
-  var qa = el('textarea'); qa.value = c.question || '';
-  var aa = el('textarea'); aa.value = c.answer || '';
-  var msg = el('span', { class: 'mut' });
-  var save = el('button', { class: 'sm primary', text: 'Save' });
-  var del = el('button', { class: 'sm danger', text: 'Delete' });
+function cardRow(c, i){
+  var tr = el('tr', { 'data-id': c.id });
 
-  function dirty(){ wrap.classList.add('dirty'); msg.textContent = 'Unsaved changes'; }
-  [cat, crumb, order, qa, aa].forEach(function(x){ x.oninput = dirty; });
-
-  save.onclick = async function(){
-    var catV = cat.value.trim(), qV = qa.value.trim(), aV = aa.value.trim();
-    if (!catV || !qV || !aV){ msg.textContent = 'Deck, question and answer are required.'; return; }
-    var ord = parseInt(order.value, 10);
-    var upd = { category: catV, question: qV, answer: aV, crumb: crumb.value.trim() || null, card_order: isNaN(ord) ? null : ord };
-    save.disabled = true; msg.textContent = 'Saving...';
-    if (!CATS.some(function(x){ return x.name === catV; })){
-      var maxSort = CATS.reduce(function(m, x){ return Math.max(m, x.sort_order || 0); }, 0);
-      var rc = await sb.from('categories').insert({ name: catV, is_free: false, sort_order: maxSort + 1 });
-      if (rc.error){ save.disabled = false; msg.textContent = rc.error.message; return; }
-      await loadCats();
-    }
-    const r = await sb.from('flashcards').update(upd).eq('id', c.id);
-    save.disabled = false;
-    if (r.error){ msg.textContent = r.error.message; return; }
-    Object.assign(c, upd);
-    wrap.classList.remove('dirty');
-    msg.textContent = 'Saved ✓';
+  var cb = el('input', { type: 'checkbox' });
+  cb.checked = SELECTED.has(c.id);
+  cb.onchange = function(){
+    if (cb.checked) SELECTED.add(c.id); else SELECTED.delete(c.id);
+    tr.classList.toggle('sel', cb.checked);
+    updateBulkBar();
+    syncSelectAll();
   };
 
+  var num = el('td', { text: String(i + 1) });
+
+  var qCell = el('td', { class: 'q-cell' });
+  qCell.appendChild(el('div', { class: 'qi', text: stripHtml(c.question).slice(0, 200) }));
+
+  var aCell = el('td', { class: 'a-cell' });
+  aCell.appendChild(el('div', { class: 'ai', text: stripHtml(c.answer).slice(0, 200) }));
+
+  var dCell = el('td');
+  dCell.appendChild(el('span', { class: 'tag-deck', text: c.category || '—' }));
+
+  var cCell = el('td');
+  if (c.crumb) cCell.appendChild(el('span', { class: 'tag-crumb', text: c.crumb }));
+
+  var aCell2 = el('td');
+  var edit = el('button', { class: 'sm', text: 'Edit' });
+  edit.onclick = function(){ openCardEdit(c); };
+  var del = el('button', { class: 'sm danger', text: 'Del' });
   del.onclick = async function(){
     if (!confirm('Delete this card?')) return;
     del.disabled = true;
     const r = await sb.from('flashcards').delete().eq('id', c.id);
-    if (r.error){ del.disabled = false; msg.textContent = r.error.message; return; }
+    if (r.error){ alert(r.error.message); del.disabled = false; return; }
     CARDS = CARDS.filter(function(x){ return x.id !== c.id; });
-    FILTERED_CARDS = FILTERED_CARDS.filter(function(x){ return x.id !== c.id; });
-    wrap.remove();
-    $('cardCount').textContent = 'Showing ' + $('cardList').children.length + ' of ' + FILTERED_CARDS.length + ' card(s)';
+    SELECTED.delete(c.id);
+    renderCards();
   };
+  aCell2.appendChild(edit);
+  aCell2.appendChild(document.createTextNode(' '));
+  aCell2.appendChild(del);
 
-  wrap.appendChild(el('div', { class: 'mut', text: '#' + (i + 1) + ' · ID ' + c.id }));
-  wrap.appendChild(el('div', { class: 'g3' }, [cat, crumb, order]));
-  wrap.appendChild(el('div', { class: 'g2' }, [
-    el('label', { class: 'f' }, [document.createTextNode('Question'), qa]),
-    el('label', { class: 'f' }, [document.createTextNode('Answer'), aa])
-  ]));
-  wrap.appendChild(el('div', { class: 'act' }, [save, del, msg]));
-  return wrap;
+  tr.appendChild(el('td', null, [cb]));
+  tr.appendChild(num);
+  tr.appendChild(qCell);
+  tr.appendChild(aCell);
+  tr.appendChild(dCell);
+  tr.appendChild(cCell);
+  tr.appendChild(aCell2);
+  return tr;
 }
+
+// ============================================================
+// SELECT ALL + BULK BAR
+// ============================================================
+function syncSelectAll(){
+  var sa = $('selectAll');
+  if (!FILTERED_CARDS.length){ sa.checked = false; sa.indeterminate = false; return; }
+  var total = FILTERED_CARDS.length;
+  var sel = 0;
+  FILTERED_CARDS.forEach(function(c){ if (SELECTED.has(c.id)) sel++; });
+  sa.checked = (sel === total);
+  sa.indeterminate = (sel > 0 && sel < total);
+}
+
+$('selectAll').onchange = function(){
+  var val = $('selectAll').checked;
+  FILTERED_CARDS.forEach(function(c){
+    if (val) SELECTED.add(c.id); else SELECTED.delete(c.id);
+  });
+  document.querySelectorAll('#cardBody tr').forEach(function(tr){
+    var cb = tr.querySelector('input[type=checkbox]');
+    if (cb){ cb.checked = val; tr.classList.toggle('sel', val); }
+  });
+  updateBulkBar();
+};
+
+function updateBulkBar(){
+  var n = SELECTED.size;
+  $('bulkBar').classList.toggle('hidden', n === 0);
+  $('bulkCount').textContent = n + ' selected';
+}
+
+$('bulkClearBtn').onclick = function(){
+  SELECTED.clear();
+  document.querySelectorAll('#cardBody tr').forEach(function(tr){
+    tr.classList.remove('sel');
+    var cb = tr.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = false;
+  });
+  updateBulkBar();
+  syncSelectAll();
+};
+
+$('bulkDeleteBtn').onclick = async function(){
+  var n = SELECTED.size;
+  if (!n) return;
+  if (!confirm('Delete ' + n + ' card(s)? This cannot be undone.')) return;
+  var btn = $('bulkDeleteBtn'); btn.disabled = true;
+  var ids = Array.from(SELECTED);
+  const r = await sb.from('flashcards').delete().in('id', ids);
+  btn.disabled = false;
+  if (r.error){ alert(r.error.message); return; }
+  CARDS = CARDS.filter(function(x){ return !SELECTED.has(x.id); });
+  SELECTED.clear();
+  renderCards();
+};
+
+$('bulkMoveBtn').onclick = async function(){
+  var n = SELECTED.size;
+  if (!n){ alert('Select cards first.'); return; }
+  var target = $('bulkMoveDeck').value;
+  if (!target){ alert('Pick a target deck.'); return; }
+  if (!confirm('Move ' + n + ' card(s) to "' + target + '"?')) return;
+  var btn = $('bulkMoveBtn'); btn.disabled = true;
+  var ids = Array.from(SELECTED);
+  const r = await sb.from('flashcards').update({ category: target }).in('id', ids);
+  btn.disabled = false;
+  if (r.error){ alert(r.error.message); return; }
+  CARDS.forEach(function(c){ if (SELECTED.has(c.id)) c.category = target; });
+  setMsg('csvMsg', 'Moved ' + n + ' card(s) to "' + target + '" ✓', 'ok');
+  SELECTED.clear();
+  renderCards();
+};
+
+// ============================================================
+// EDIT CARD MODAL
+// ============================================================
+function openCardEdit(c){
+  EDIT_CARD = c;
+  $('ceTitle').textContent = 'Edit card';
+  $('ceMeta').textContent = 'ID: ' + c.id;
+  $('ceDeck').value = c.category || '';
+  $('ceCrumb').value = c.crumb || '';
+  $('ceQuestion').value = c.question || '';
+  $('ceAnswer').value = c.answer || '';
+  $('ceOrder').value = c.card_order != null ? c.card_order : '';
+  setMsg('ceMsg', '');
+  $('cardEditModal').classList.remove('hidden');
+}
+function closeCardEdit(){ $('cardEditModal').classList.add('hidden'); EDIT_CARD = null; }
+$('ceCancel').onclick = closeCardEdit;
+$('cardEditModal').onclick = function(e){ if (e.target === this) closeCardEdit(); };
+
+$('ceSave').onclick = async function(){
+  if (!EDIT_CARD) return;
+  var deckV = $('ceDeck').value.trim();
+  var qV = $('ceQuestion').value.trim();
+  var aV = $('ceAnswer').value.trim();
+  if (!deckV || !qV || !aV){ setMsg('ceMsg', 'Deck, question and answer are required.', 'no'); return; }
+  var ord = parseInt($('ceOrder').value, 10);
+  var btn = $('ceSave'); btn.disabled = true; setMsg('ceMsg', 'Saving...');
+
+  if (!CATS.some(function(x){ return x.name === deckV; })){
+    var maxSort = CATS.reduce(function(m, x){ return Math.max(m, x.sort_order || 0); }, 0);
+    var rc = await sb.from('categories').insert({ name: deckV, is_free: false, sort_order: maxSort + 1 });
+    if (rc.error){ btn.disabled = false; setMsg('ceMsg', rc.error.message, 'no'); return; }
+    await loadCats();
+  }
+
+  var upd = {
+    category: deckV, question: qV, answer: aV,
+    crumb: $('ceCrumb').value.trim() || null,
+    card_order: isNaN(ord) ? null : ord
+  };
+  const r = await sb.from('flashcards').update(upd).eq('id', EDIT_CARD.id);
+  btn.disabled = false;
+  if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
+  Object.assign(EDIT_CARD, upd);
+  closeCardEdit();
+  setMsg('csvMsg', 'Card updated ✓', 'ok');
+  renderCards();
+};
+
+$('ceDelete').onclick = async function(){
+  if (!EDIT_CARD) return;
+  if (!confirm('Delete this card?')) return;
+  var btn = $('ceDelete'); btn.disabled = true;
+  const r = await sb.from('flashcards').delete().eq('id', EDIT_CARD.id);
+  btn.disabled = false;
+  if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
+  CARDS = CARDS.filter(function(x){ return x.id !== EDIT_CARD.id; });
+  SELECTED.delete(EDIT_CARD.id);
+  closeCardEdit();
+  setMsg('csvMsg', 'Card deleted ✓', 'ok');
+  renderCards();
+};
+
+// ============================================================
+// FILTERS / TOOLBAR
+// ============================================================
 $('cardDeckFilter').onchange = renderCards;
+$('cardCrumbFilter').onchange = renderCards;
 $('cardSearch').oninput = renderCards;
 $('cardReload').onclick = loadCards;
+$('btnAddCards').onclick = function(){ window.location.href = 'add-cards.html'; };
 
-// CSV
+// ============================================================
+// CSV IMPORT / EXPORT
+// ============================================================
 $('csvExport').onclick = function(){
   var rows = [['category','question','answer','crumb','card_order']];
   CARDS.forEach(function(c){ rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]); });
@@ -504,7 +790,7 @@ $('csvExport').onclick = function(){
 };
 $('csvExportDeck').onclick = function(){
   var deckF = $('cardDeckFilter').value;
-  if (!deckF){ setMsg('csvMsg', 'Pick a deck first.', 'no'); return; }
+  if (!deckF){ setMsg('csvMsg', 'Pick a deck first (in the filter above).', 'no'); return; }
   var rows = [['category','question','answer','crumb','card_order']];
   CARDS.filter(function(c){ return c.category === deckF; }).forEach(function(c){
     rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]);
@@ -512,12 +798,14 @@ $('csvExportDeck').onclick = function(){
   download('shany-' + deckF.replace(/[^\w\-]+/g,'_') + '.csv', toCsv(rows));
   setMsg('csvMsg', 'Exported deck "' + deckF + '" ✓', 'ok');
 };
-$('csvImport').onclick = async function(){
+
+$('csvImportBtn').onclick = function(){ $('csvFile').click(); };
+$('csvFile').onchange = async function(){
   var f = $('csvFile').files[0];
-  if (!f){ setMsg('csvMsg', 'Choose a CSV file first.', 'no'); return; }
+  if (!f){ return; }
   var text = await f.text();
   var rows = parseCsv(text);
-  if (!rows.length){ setMsg('csvMsg', 'CSV is empty.', 'no'); return; }
+  if (!rows.length){ setMsg('csvMsg', 'CSV is empty.', 'no'); $('csvFile').value=''; return; }
   var start = 0;
   var head = rows[0].map(function(s){ return String(s).trim().toLowerCase(); });
   var idx = { category: head.indexOf('category'), question: head.indexOf('question'), answer: head.indexOf('answer'), crumb: head.indexOf('crumb'), card_order: head.indexOf('card_order') };
@@ -541,15 +829,16 @@ $('csvImport').onclick = async function(){
     toInsert.push({ category: cat, question: q, answer: a, crumb: crumb || null, card_order: isNaN(order) ? null : order });
   }
 
-  if (!toInsert.length){ setMsg('csvMsg', 'No valid rows found.', 'no'); return; }
-  var btn = $('csvImport'); btn.disabled = true;
+  if (!toInsert.length){ setMsg('csvMsg', 'No valid rows found.', 'no'); $('csvFile').value=''; return; }
+
+  var btn = $('csvImportBtn'); btn.disabled = true;
   setMsg('csvMsg', 'Importing ' + toInsert.length + ' card(s)...');
 
   if (newDecks.size){
     var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
     var arr = Array.from(newDecks).map(function(n, i){ return { name: n, is_free: false, sort_order: maxSort + 1 + i }; });
     var rc = await sb.from('categories').insert(arr);
-    if (rc.error){ btn.disabled = false; setMsg('csvMsg', 'Deck creation failed: ' + rc.error.message, 'no'); return; }
+    if (rc.error){ btn.disabled = false; setMsg('csvMsg', 'Deck creation failed: ' + rc.error.message, 'no'); $('csvFile').value=''; return; }
   }
 
   var byDeck = {};
@@ -568,14 +857,16 @@ $('csvImport').onclick = async function(){
 
   var ri = await sb.from('flashcards').insert(toInsert);
   btn.disabled = false;
+  $('csvFile').value = '';
   if (ri.error){ setMsg('csvMsg', 'Import failed: ' + ri.error.message, 'no'); return; }
   setMsg('csvMsg', 'Imported ' + toInsert.length + ' card(s) ✓' + (newDecks.size ? ' · New decks: ' + Array.from(newDecks).join(', ') : ''), 'ok');
-  $('csvFile').value = '';
   await loadCats();
   await loadCards();
 };
 
-// ===== Generate =====
+// ============================================================
+// GENERATE
+// ============================================================
 function updGenCount(){ $('genSelCount').textContent = GEN.size + ' deck(s) selected'; }
 function renderGen(){
   var q = $('genSearch').value.toLowerCase(), box = $('genList');
@@ -632,7 +923,9 @@ $('genCsv').onclick = function(){
   download('codes.csv', toCsv([['code','name']].concat(LASTGEN.map(function(r){ return [r.new_code, r.new_note || '']; }))));
 };
 
-// ===== Codes =====
+// ============================================================
+// CODES
+// ============================================================
 async function loadCodes(){
   const { data, error } = await sb.rpc('admin_list_codes');
   if (error) { setMsg('codeMsg', error.message, 'no'); return; }
