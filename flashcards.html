@@ -31,7 +31,7 @@ select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);backgrou
 button{cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
 
-/* ===== Custom Deck Picker ===== */
+/* ===== Custom Dropdown (مشترك بين Deck Picker و Jump Picker) ===== */
 .dp{position:relative;width:100%;font-family:system-ui,sans-serif;z-index:20}
 .dp-btn{
   width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -78,6 +78,20 @@ button:disabled{opacity:.6;cursor:wait}
 .dp-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dp-item .cnt{font-size:.72rem;opacity:.65;font-weight:500}
 .dp-empty{padding:14px;text-align:center;color:var(--mut);font-size:.85rem}
+
+/* ===== Jump Picker items (كروت) ===== */
+.jp-item{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  font-size:.85rem;cursor:pointer;border-radius:6px;
+  -webkit-user-select:none;user-select:none;
+}
+.jp-item:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.jp-item.cur{background:color-mix(in srgb,var(--acc) 15%,transparent);font-weight:700;color:var(--acc)}
+.jp-item .jp-icon{width:1.1em;text-align:center;font-size:.9rem;flex-shrink:0}
+.jp-item .jp-num{font-variant-numeric:tabular-nums;font-weight:600;min-width:4em}
+.jp-item .jp-preview{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);font-size:.78rem;font-family:Georgia,serif}
+.jp-item.cur .jp-preview{color:var(--acc);opacity:.8}
+.jp-item .jp-status{font-size:.75rem;opacity:.7;flex-shrink:0}
 
 /* ===== Card ===== */
 .card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
@@ -128,15 +142,13 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 .mbox input:focus{outline:2px solid var(--acc)}
 .msg-ok{color:var(--ok)}.msg-no{color:var(--no)}
 
-.jump-row{display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif;font-size:.85rem;margin:6px 0}
-.jump-row select{flex:1;font-variant-numeric:tabular-nums;font-size:.85rem;padding:6px 10px}
-
 /* موبايل */
 @media (max-width:520px){
   .dp-btn{font-size:.85rem;padding:9px 12px}
   .dp-group-hd{font-size:.8rem;padding:7px 9px}
   .dp-item{font-size:.8rem;padding:6px 9px 6px 22px}
-  .jump-row select{font-size:.8rem;padding:5px 8px}
+  .jp-item{font-size:.8rem;padding:7px 10px}
+  .jp-item .jp-preview{font-size:.72rem}
 }
 </style></head><body>
 
@@ -176,15 +188,19 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   <div class="dp-menu hidden" id="dpMenu"></div>
 </div>
 
+<!-- Custom Jump Picker (Card picker) -->
+<div class="dp" id="jumpPicker" style="margin-top:10px;display:none">
+  <button class="dp-btn" id="jpBtn" type="button">
+    <span class="dp-label"><span class="ic">🎴</span><span id="jpCurrent">Card 1</span></span>
+    <span class="dp-caret">▼</span>
+  </button>
+  <div class="dp-menu hidden" id="jpMenu"></div>
+</div>
+
 <div class="row" style="margin-top:10px">
   <label style="font-size:.85rem"><input type="checkbox" id="shuf"> Shuffle</label>
   <button id="all" data-tip="Show all cards">All cards</button>
   <button id="miss" data-tip="Review missed cards only">Review missed</button>
-</div>
-
-<div class="jump-row" id="jumpWrap">
-  <label for="jump" style="color:var(--mut);font-size:.8rem">Go to card:</label>
-  <select id="jump" data-tip="Jump to a specific card"></select>
 </div>
 
 <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
@@ -231,11 +247,11 @@ var D = [];
 var st = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)};
-var jumpSel = $('jump');
 var currentUserId = null;
 var kicked = false;
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
 
 async function kickOut() {
     if (kicked) return;
@@ -354,7 +370,7 @@ async function loadAll(preferName) {
 }
 
 // ============================================================
-// Custom Deck Picker
+// Deck Picker
 // ============================================================
 function buildPicker(){
     var menu = $('dpMenu');
@@ -373,7 +389,6 @@ function buildPicker(){
 
     var anyDeck = false;
 
-    // 1) الجروبات اللي فيها ديكس
     GROUPS.forEach(function(g){
         var decks = byGroup[g.id] || [];
         if (!decks.length) return;
@@ -381,14 +396,12 @@ function buildPicker(){
         menu.appendChild(buildGroupEl(g.name, decks));
     });
 
-    // 2) Free بدون جروب
     var freeUng = ungrouped.filter(function(c){ return c.is_free; });
     if (freeUng.length){
         anyDeck = true;
         menu.appendChild(buildGroupEl('Free', freeUng));
     }
 
-    // 3) Premium بدون جروب
     var premUng = ungrouped.filter(function(c){ return !c.is_free; });
     if (premUng.length){
         anyDeck = true;
@@ -439,7 +452,6 @@ function buildGroupEl(groupName, decks){
     });
     box.appendChild(items);
 
-    // افتح الجروب الحالي تلقائيًا
     var cur = decks.find(function(c){ return c.name === curName; });
     if (cur) box.classList.add('open');
 
@@ -462,6 +474,7 @@ function updatePickerCurrent(){
 }
 
 function openPicker(){
+    closeJumpPicker();
     $('deckPicker').classList.add('open');
     $('dpMenu').classList.remove('hidden');
 }
@@ -478,46 +491,103 @@ $('dpBtn').onclick = function(e){
     e.stopPropagation();
     togglePicker();
 };
-document.addEventListener('click', function(e){
-    if (!e.target.closest('.dp')) closePicker();
-});
-document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') closePicker();
-});
 
 // ============================================================
-// القائمة المرقّمة للتنقل
+// Jump Picker (Card picker)
 // ============================================================
-function buildJump() {
-    jumpSel.innerHTML = '';
-    if (!list.length) {
-        $('jumpWrap').style.display = 'none';
+function buildJumpPicker(){
+    var wrap = $('jumpPicker');
+    var menu = $('jpMenu');
+
+    // لو مفيش كروت، نخفي القائمة
+    if (!list.length){
+        wrap.style.display = 'none';
         return;
     }
-    $('jumpWrap').style.display = '';
-    list.forEach(function(realIdx, i) {
-        var o = document.createElement('option');
-        o.value = i;
+    wrap.style.display = '';
+
+    menu.innerHTML = '';
+
+    list.forEach(function(realIdx, i){
+        var x = getDeck(curName).cards[realIdx];
         var stv = st[curName][realIdx];
-        var mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
-        o.textContent = 'Card ' + (i + 1) + mark;
-        jumpSel.appendChild(o);
+
+        var it = document.createElement('div');
+        it.className = 'jp-item' + (i === pos ? ' cur' : '');
+
+        var icon = '';
+        var status = '';
+        if (stv === 'ok'){ icon = '✓'; status = 'known'; }
+        else if (stv === 'no'){ icon = '✗'; status = 'missed'; }
+        else { icon = '·'; }
+
+        var preview = stripHtml(x.f || '').slice(0, 60);
+        if (preview.length === 60) preview += '…';
+
+        it.innerHTML =
+          '<span class="jp-icon">' + icon + '</span>' +
+          '<span class="jp-num">Card ' + (i + 1) + '</span>' +
+          '<span class="jp-preview">' + esc(preview) + '</span>' +
+          (status ? '<span class="jp-status">' + status + '</span>' : '');
+
+        it.onclick = function(){
+            pos = i;
+            back = false;
+            closeJumpPicker();
+            updateJumpCurrent();
+            render();
+        };
+        menu.appendChild(it);
     });
-    jumpSel.value = String(pos);
+
+    updateJumpCurrent();
 }
 
-jumpSel.onchange = function() {
-    var i = parseInt(jumpSel.value, 10);
-    if (isNaN(i) || i < 0 || i >= list.length) return;
-    pos = i;
-    back = false;
-    render();
+function updateJumpCurrent(){
+    var label = $('jpCurrent');
+    if (!list.length){
+        label.textContent = 'No cards';
+        return;
+    }
+    var stv = st[curName][list[pos]];
+    var mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
+    label.innerHTML = '<span class="ic">🎴</span>Card ' + (pos + 1) + ' of ' + list.length + mark;
+}
+
+function openJumpPicker(){
+    closePicker();
+    $('jumpPicker').classList.add('open');
+    $('jpMenu').classList.remove('hidden');
+}
+function closeJumpPicker(){
+    $('jumpPicker').classList.remove('open');
+    $('jpMenu').classList.add('hidden');
+}
+function toggleJumpPicker(){
+    if ($('jpMenu').classList.contains('hidden')) openJumpPicker();
+    else closeJumpPicker();
+}
+
+$('jpBtn').onclick = function(e){
+    e.stopPropagation();
+    toggleJumpPicker();
 };
 
+document.addEventListener('click', function(e){
+    if (!e.target.closest('#deckPicker')) closePicker();
+    if (!e.target.closest('#jumpPicker')) closeJumpPicker();
+});
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); }
+});
+
+// ============================================================
+// Card logic
+// ============================================================
 function start(missed){
     isMissedMode = missed;
     var d = getDeck(curName);
-    if (!d) { list = []; pos = 0; back = false; buildJump(); render(); return; }
+    if (!d) { list = []; pos = 0; back = false; buildJumpPicker(); render(); return; }
     var n = d.cards.length, idx = [];
 
     for(var i = 0; i < n; i++){
@@ -529,7 +599,7 @@ function start(missed){
     list = idx;
     pos = 0;
     back = false;
-    buildJump();
+    buildJumpPicker();
     render();
 }
 
@@ -551,20 +621,20 @@ function render(){
         c.className = 'card';
         c.innerHTML = '<div class="txt">No decks available yet. Use 🔑 Unlock to enter an access code.</div>';
         stat();
-        buildJump();
+        buildJumpPicker();
         return;
     }
     if(!list.length){
         c.className = 'card';
         c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
         stat();
-        buildJump();
+        buildJumpPicker();
         return;
     }
     var x = d.cards[list[pos]];
     c.className = 'card' + (back ? ' back' : '');
     c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
-    jumpSel.value = String(pos);
+    updateJumpCurrent();
     stat();
 }
 
@@ -584,13 +654,12 @@ function mark(v){
     if(!list.length) return;
     var realCardIdx = list[pos];
     st[curName][realCardIdx] = v;
-    buildJump();
 
     if(isMissedMode && v === 'ok'){
         list.splice(pos, 1);
         if(pos >= list.length) pos = 0;
         back = false;
-        buildJump();
+        buildJumpPicker();
         render();
         return;
     }
@@ -664,7 +733,7 @@ document.onkeydown = function(e){
         else if (e.key === 'Escape') { closeModal(); }
         return;
     }
-    if (e.key === 'Escape') { closePicker(); return; }
+    if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); return; }
     if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
         e.preventDefault();
         flip();
