@@ -14,11 +14,9 @@ main{max-width:1000px;margin:0 auto;padding:16px}
 h1{font:1.4rem Georgia,serif;margin:.2em 0}
 h2{font:1.1rem Georgia,serif;margin:0 0 8px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-
 .logo{display:flex;align-items:center;gap:8px}
 .logo svg{width:30px;height:30px}
 .logo-text{font:700 1.3rem Georgia,serif;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
 button,select,input,textarea{font:inherit;padding:7px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px}
 button{border-color:var(--acc);cursor:pointer}
@@ -44,8 +42,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .mbox{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:18px}
 .hidden{display:none !important}
-
-/* ===== Card editor (inline) ===== */
 .cc{border:2px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--card)}
 .cc.dirty{border-color:var(--acc)}
 .cc .g3{display:grid;grid-template-columns:2fr 2fr 90px;gap:8px;margin-bottom:8px}
@@ -53,26 +49,8 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .cc textarea{min-height:90px;width:100%}
 .cc .act{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
 @media(max-width:640px){.cc .g3,.cc .g2{grid-template-columns:1fr}}
-
-/* ===== Word-blanking editor ===== */
-.wb{font:1.15rem/2.2 Georgia,serif;padding:12px;border:1px dashed var(--line);border-radius:10px;background:var(--bg);min-height:60px}
-.wb .w{cursor:pointer;padding:2px 4px;border-radius:5px;border:1px solid transparent;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-.wb .w:hover{border-color:var(--acc)}
-.wb .w.sel{background:var(--bl);border-bottom:2px solid var(--fg);font-weight:700}
-.wb .bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
-.wb mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
-.pv{padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--card);font:1rem/1.7 Georgia,serif;margin:6px 0}
-.pv.b{border-color:var(--acc)}
-.pv small{display:block;font:.72rem system-ui,sans-serif;color:var(--mut);margin-bottom:4px}
-
-/* Tooltips */
 [data-tip]{position:relative}
-[data-tip]::after{
-  content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);
-  background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;
-  padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;
-  transition:opacity .18s ease, transform .18s ease;z-index:60;
-}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60}
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
 </style></head><body><main>
 
@@ -105,7 +83,6 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <button data-tab="codes" data-tip="Manage all codes">All codes</button>
   </div>
 
-  <!-- ====== Decks ====== -->
   <section id="tab-decks">
     <div class="box">
       <h2>Which decks are free?</h2>
@@ -124,22 +101,20 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     </div>
   </section>
 
-  <!-- ====== Cards ====== -->
   <section id="tab-cards" class="hidden">
     <div class="box">
       <h2>Import / Export CSV</h2>
-      <div class="mut">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span> (card_order optional).</div>
+      <div class="mut">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span></div>
       <div class="row">
-        <button class="primary" id="csvExport" data-tip="Download all cards as CSV">⬇ Export all cards (CSV)</button>
-        <button id="csvExportDeck" data-tip="Export only the selected deck">⬇ Export selected deck</button>
+        <button class="primary" id="csvExport">⬇ Export all cards (CSV)</button>
+        <button id="csvExportDeck">⬇ Export selected deck</button>
       </div>
       <div class="row">
         <label class="f" style="flex:1;min-width:200px">Import CSV file
           <input type="file" id="csvFile" accept=".csv,text/csv">
         </label>
-        <button class="primary" id="csvImport" data-tip="Upload cards from CSV">⬆ Import from CSV</button>
+        <button class="primary" id="csvImport">⬆ Import from CSV</button>
       </div>
-      <div class="mut">On import: if a category doesn't exist, it will be created as Premium. Existing rows are NOT deleted.</div>
       <div class="msg" id="csvMsg"></div>
     </div>
 
@@ -148,25 +123,22 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
       <div class="row">
         <select id="cardDeckFilter" style="flex:1;min-width:160px"></select>
         <input type="text" id="cardSearch" placeholder="Search question/answer..." style="flex:1;min-width:160px">
-        <button id="cardReload" data-tip="Reload cards">Refresh</button>
+        <button id="cardReload">Refresh</button>
       </div>
-      <div class="row">
-        <span class="mut" id="cardCount"></span>
-      </div>
+      <div class="row"><span class="mut" id="cardCount"></span></div>
       <div id="cardList"></div>
       <div class="row"><button id="cardMore" class="hidden">Show more</button></div>
     </div>
   </section>
 
-  <!-- ====== Generate ====== -->
   <section id="tab-gen" class="hidden">
     <div class="box">
       <h2>1. Pick the decks the codes will unlock</h2>
       <div class="row">
         <input type="text" id="genSearch" placeholder="Search decks..." style="flex:1;min-width:160px">
-        <button id="genPrem" data-tip="Select all premium decks">All premium</button>
-        <button id="genAll" data-tip="Select all decks">All</button>
-        <button id="genNone" data-tip="Clear selection">None</button>
+        <button id="genPrem">All premium</button>
+        <button id="genAll">All</button>
+        <button id="genNone">None</button>
       </div>
       <div class="list" id="genList"></div>
       <div class="mut" id="genSelCount"></div>
@@ -179,24 +151,23 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
         <label class="f">Users per code<input type="number" id="genMax" min="1" value="1"></label>
         <label class="f">Prefix (optional)<input type="text" id="genPrefix" placeholder="MED-" maxlength="10"></label>
       </div>
-      <label class="f" style="margin-top:10px">Or: one code per name (one name per line, overrides the number above)
-        <textarea id="genNames" placeholder="Ahmed&#10;Mona&#10;Omar"></textarea>
+      <label class="f" style="margin-top:10px">Or: one code per name (one name per line)
+        <textarea id="genNames" placeholder="Ahmed&#10;Mona"></textarea>
       </label>
-      <div class="row"><button class="primary" id="genGo" data-tip="Generate codes">Generate</button></div>
+      <div class="row"><button class="primary" id="genGo">Generate</button></div>
       <div class="msg" id="genMsg"></div>
     </div>
 
     <div class="box hidden" id="genResult">
       <h2>New codes</h2>
       <div class="row">
-        <button id="genCopy" data-tip="Copy codes">Copy all</button>
-        <button id="genCsv" data-tip="Download as CSV">Download CSV</button>
+        <button id="genCopy">Copy all</button>
+        <button id="genCsv">Download CSV</button>
       </div>
       <div class="wrap"><table><thead><tr><th>Code</th><th>Name</th></tr></thead><tbody id="genBody"></tbody></table></div>
     </div>
   </section>
 
-  <!-- ====== Codes ====== -->
   <section id="tab-codes" class="hidden">
     <div class="box">
       <div class="row">
@@ -206,12 +177,12 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
           <option value="used">Used</option>
           <option value="disabled">Disabled</option>
         </select>
-        <input type="text" id="codeSearch" placeholder="Search code, name, email, deck..." style="flex:1;min-width:160px">
-        <button id="codeReload" data-tip="Refresh codes">Refresh</button>
+        <input type="text" id="codeSearch" placeholder="Search..." style="flex:1;min-width:160px">
+        <button id="codeReload">Refresh</button>
       </div>
       <div class="row">
-        <button id="codeCopy" data-tip="Copy listed codes">Copy listed codes</button>
-        <button id="codeCsv" data-tip="Download as CSV">Download CSV</button>
+        <button id="codeCopy">Copy listed codes</button>
+        <button id="codeCsv">Download CSV</button>
         <span class="mut" id="codeCount"></span>
       </div>
       <div class="msg" id="codeMsg"></div>
@@ -225,16 +196,15 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </section>
 </div>
 
-<!-- Edit code modal -->
 <div class="modal hidden" id="editModal">
   <div class="mbox">
     <h2 id="editTitle">Edit code</h2>
     <div class="mut">Decks this code unlocks:</div>
     <div class="row">
       <input type="text" id="editSearch" placeholder="Search decks..." style="flex:1;min-width:140px">
-      <button id="editPrem" data-tip="All premium">All premium</button>
-      <button id="editAll" data-tip="All decks">All</button>
-      <button id="editNone" data-tip="None">None</button>
+      <button id="editPrem">All premium</button>
+      <button id="editAll">All</button>
+      <button id="editNone">None</button>
     </div>
     <div class="list" id="editList"></div>
     <div class="mut" id="editCount"></div>
@@ -247,49 +217,10 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
       <span>Also give the decks to people who already used this code</span>
     </label>
     <div class="row">
-      <button class="primary" id="editSave" data-tip="Save">Save</button>
-      <button id="editCancel" data-tip="Cancel">Cancel</button>
+      <button class="primary" id="editSave">Save</button>
+      <button id="editCancel">Cancel</button>
     </div>
     <div class="msg" id="editMsg"></div>
-  </div>
-</div>
-
-<!-- Word-blanking modal -->
-<div class="modal hidden" id="wbModal">
-  <div class="mbox" style="max-width:760px">
-    <h2 id="wbTitle">Edit card – blank words</h2>
-    <div class="mut" id="wbMeta"></div>
-
-    <label class="f" style="margin-top:10px">Deck
-      <input type="text" id="wbCategory" list="deckListDL">
-    </label>
-    <label class="f" style="margin-top:8px">Crumb (small heading, optional)
-      <input type="text" id="wbCrumb">
-    </label>
-    <label class="f" style="margin-top:8px">Card order
-      <input type="number" id="wbOrder">
-    </label>
-
-    <div class="mut" style="margin-top:12px;font-weight:700">Question – click any word to blank it (click again to unblank)</div>
-    <div class="wb" id="wbQ" dir="auto"></div>
-
-    <div class="mut" style="margin-top:12px;font-weight:700">Answer – click any word to highlight it (this becomes the revealed answer)</div>
-    <div class="wb" id="wbA" dir="auto"></div>
-
-    <div class="row" style="margin-top:12px">
-      <label><input type="radio" name="wbmode" value="one" checked> One card with all blanks</label>
-      <label><input type="radio" name="wbmode" value="each"> Separate card for each blank</label>
-    </div>
-
-    <div class="mut" style="margin-top:8px">Preview:</div>
-    <div id="wbPreview"></div>
-
-    <div class="row" style="margin-top:12px">
-      <button class="primary" id="wbSave" data-tip="Save changes">Save changes</button>
-      <button id="wbReset" data-tip="Reset selection">Reset selection</button>
-      <button id="wbCancel" data-tip="Cancel">Cancel</button>
-    </div>
-    <div class="msg" id="wbMsg"></div>
   </div>
 </div>
 
@@ -304,6 +235,7 @@ var $ = function(i){ return document.getElementById(i); };
 var CATS = [], CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [];
 var CARDS = [], FILTERED_CARDS = [];
 var CARD_PAGE = 100, CARD_SHOWN = 0;
+var EDIT = null, EDITSEL = new Set();
 
 function el(tag, props, kids){
   var e = document.createElement(tag);
@@ -354,77 +286,53 @@ function parseCsv(text){
   return rows.filter(function(r){ return r.some(function(c){ return String(c).trim() !== ''; }); });
 }
 
-// ===== تحويل HTML لكلمات قابلة للضغط =====
-// نحوّل <span class="bl">...</span> و <mark>...</mark> لعناصر span.w مع علامة sel
-// وأي نص عادي كذلك. النتيجة: قائمة WORDS لليوزر يدوس عليها.
-function tokensFromHtml(html){
-  // نستخدم DOM مؤقت لتحليل
-  var tmp = document.createElement('div');
-  tmp.innerHTML = html || '';
-
-  var raw = []; // { text, blank }  blank = already was a blank/mark
-  function walk(node, isBlank){
-    if (node.nodeType === 3){
-      raw.push({ text: node.nodeValue, blank: isBlank });
-    } else if (node.nodeType === 1){
-      var tag = node.tagName.toLowerCase();
-      var isB = isBlank || (tag === 'mark') || (node.classList && node.classList.contains('bl'));
-      for (var i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i], isB);
-    }
-  }
-  walk(tmp, false);
-
-  // نحوّل النص لعناصر كلمات مع الحفاظ على علامة blank الموروثة
-  var out = []; // { before, word, after, blank }
-  var re = /[\p{L}\p{N}_]+(?:[-'’\/.][\p{L}\p{N}_]+)*/gu;
-  raw.forEach(function(seg){
-    var t = seg.text;
-    var last = 0, m;
-    re.lastIndex = 0;
-    while ((m = re.exec(t))){
-      if (m.index > last) out.push({ before: t.slice(last, m.index), word: '', blank: false });
-      out.push({ before: '', word: m[0], blank: !!seg.blank });
-      last = m.index + m[0].length;
-    }
-    if (last < t.length) out.push({ before: t.slice(last), word: '', blank: false });
-  });
-  return out;
-}
-
-// نحول tokens لـ HTML للعرض
-function tokensToHtml(tokens){
-  return tokens.map(function(t){
-    if (!t.word) return esc(t.before);
-    return esc(t.before) + '<span class="w' + (t.blank ? ' sel' : '') + '">' + esc(t.word) + '</span>';
-  }).join('');
-}
-
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ===== access =====
+// ===== INIT =====
 async function init(){
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    $('gateMsg').innerHTML = '';
-    $('gateMsg').appendChild(document.createTextNode('Please log in first from '));
-    $('gateMsg').appendChild(el('a', { href: 'index.html', text: 'the login page' }));
-    $('gateMsg').appendChild(document.createTextNode(', then open this page again.'));
-    return;
+  var gm = $('gateMsg');
+  gm.textContent = 'Checking access...';
+  try {
+    const { data: { session }, error: sErr } = await sb.auth.getSession();
+    if (sErr) { gm.textContent = 'Session error: ' + sErr.message; return; }
+    if (!session) {
+      gm.innerHTML = 'Please log in first from <a href="index.html">the login page</a>, then open this page again.';
+      return;
+    }
+
+    // جرّب is_admin، لو فشلت اكمل برضه بس حذّر
+    var isAdmin = false;
+    try {
+      const { data: ok, error } = await sb.rpc('is_admin');
+      if (!error && ok === true) isAdmin = true;
+      else if (error) console.warn('is_admin error:', error.message);
+    } catch(e) { console.warn('is_admin threw:', e); }
+
+    if (!isAdmin) {
+      gm.innerHTML = 'You are logged in as <b>' + (session.user.email || session.user.id) +
+        '</b> but not an admin.<br><span class="mut">Add your user to the <code>admins</code> table, or set the RPC <code>is_admin</code>.</span>' +
+        '<br><br><button class="primary" id="gateForceBtn">Continue anyway (dev mode)</button>';
+      setTimeout(function(){
+        var b = $('gateForceBtn');
+        if (b) b.onclick = function(){
+          $('gate').classList.add('hidden');
+          $('app').classList.remove('hidden');
+          loadCats(); loadCodes();
+        };
+      }, 0);
+      return;
+    }
+
+    $('gate').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    await loadCats();
+    await loadCodes();
+  } catch (e) {
+    gm.textContent = 'Unexpected error: ' + (e && e.message ? e.message : String(e));
+    console.error(e);
   }
-  const { data: ok, error } = await sb.rpc('is_admin');
-  if (error || ok !== true) {
-    $('gateMsg').textContent = error
-      ? 'Admin setup is not finished yet: ' + error.message
-      : 'This account is not an admin.';
-    return;
-  }
-  $('gate').classList.add('hidden');
-  $('app').classList.remove('hidden');
-  await loadCats();
-  await loadCodes();
 }
 window.addEventListener('DOMContentLoaded', init);
 
+// ===== Tabs =====
 document.querySelectorAll('.tabs button').forEach(function(b){
   b.onclick = function(){
     document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active'); });
@@ -445,12 +353,12 @@ async function loadCats(){
   renderDecks(); renderGen();
   var selF = $('cardDeckFilter');
   selF.innerHTML = '<option value="">All decks</option>';
-  var dl = $('deckListDL'); dl.innerHTML = '';
+  var dl = $('deckListDL'); if (dl) dl.innerHTML = '';
   CATS.forEach(function(c){
     var o = document.createElement('option'); o.value = c.name;
     o.textContent = c.name + (c.is_free ? ' (free)' : '');
     selF.appendChild(o);
-    var dlo = document.createElement('option'); dlo.value = c.name; dl.appendChild(dlo);
+    if (dl){ var dlo = document.createElement('option'); dlo.value = c.name; dl.appendChild(dlo); }
   });
 }
 function updDeckCount(){
@@ -532,4 +440,311 @@ $('cardMore').onclick = showMoreCards;
 function cardEditor(c, i){
   var wrap = el('div', { class: 'cc' });
   var cat = el('input', { type: 'text', list: 'deckListDL', placeholder: 'Deck' }); cat.value = c.category || '';
-  var crumb = el('input', { type: 'text', placeholder: 'Cr
+  var crumb = el('input', { type: 'text', placeholder: 'Crumb (optional)' }); crumb.value = c.crumb || '';
+  var order = el('input', { type: 'number', placeholder: 'Order' }); order.value = c.card_order != null ? c.card_order : '';
+  var qa = el('textarea'); qa.value = c.question || '';
+  var aa = el('textarea'); aa.value = c.answer || '';
+  var msg = el('span', { class: 'mut' });
+  var save = el('button', { class: 'sm primary', text: 'Save' });
+  var del = el('button', { class: 'sm danger', text: 'Delete' });
+
+  function dirty(){ wrap.classList.add('dirty'); msg.textContent = 'Unsaved changes'; }
+  [cat, crumb, order, qa, aa].forEach(function(x){ x.oninput = dirty; });
+
+  save.onclick = async function(){
+    var catV = cat.value.trim(), qV = qa.value.trim(), aV = aa.value.trim();
+    if (!catV || !qV || !aV){ msg.textContent = 'Deck, question and answer are required.'; return; }
+    var ord = parseInt(order.value, 10);
+    var upd = { category: catV, question: qV, answer: aV, crumb: crumb.value.trim() || null, card_order: isNaN(ord) ? null : ord };
+    save.disabled = true; msg.textContent = 'Saving...';
+    if (!CATS.some(function(x){ return x.name === catV; })){
+      var maxSort = CATS.reduce(function(m, x){ return Math.max(m, x.sort_order || 0); }, 0);
+      var rc = await sb.from('categories').insert({ name: catV, is_free: false, sort_order: maxSort + 1 });
+      if (rc.error){ save.disabled = false; msg.textContent = rc.error.message; return; }
+      await loadCats();
+    }
+    const r = await sb.from('flashcards').update(upd).eq('id', c.id);
+    save.disabled = false;
+    if (r.error){ msg.textContent = r.error.message; return; }
+    Object.assign(c, upd);
+    wrap.classList.remove('dirty');
+    msg.textContent = 'Saved ✓';
+  };
+
+  del.onclick = async function(){
+    if (!confirm('Delete this card?')) return;
+    del.disabled = true;
+    const r = await sb.from('flashcards').delete().eq('id', c.id);
+    if (r.error){ del.disabled = false; msg.textContent = r.error.message; return; }
+    CARDS = CARDS.filter(function(x){ return x.id !== c.id; });
+    FILTERED_CARDS = FILTERED_CARDS.filter(function(x){ return x.id !== c.id; });
+    wrap.remove();
+    $('cardCount').textContent = 'Showing ' + $('cardList').children.length + ' of ' + FILTERED_CARDS.length + ' card(s)';
+  };
+
+  wrap.appendChild(el('div', { class: 'mut', text: '#' + (i + 1) + ' · ID ' + c.id }));
+  wrap.appendChild(el('div', { class: 'g3' }, [cat, crumb, order]));
+  wrap.appendChild(el('div', { class: 'g2' }, [
+    el('label', { class: 'f' }, [document.createTextNode('Question'), qa]),
+    el('label', { class: 'f' }, [document.createTextNode('Answer'), aa])
+  ]));
+  wrap.appendChild(el('div', { class: 'act' }, [save, del, msg]));
+  return wrap;
+}
+$('cardDeckFilter').onchange = renderCards;
+$('cardSearch').oninput = renderCards;
+$('cardReload').onclick = loadCards;
+
+// CSV
+$('csvExport').onclick = function(){
+  var rows = [['category','question','answer','crumb','card_order']];
+  CARDS.forEach(function(c){ rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]); });
+  download('shany-cards-all.csv', toCsv(rows));
+  setMsg('csvMsg', 'Exported ' + CARDS.length + ' card(s) ✓', 'ok');
+};
+$('csvExportDeck').onclick = function(){
+  var deckF = $('cardDeckFilter').value;
+  if (!deckF){ setMsg('csvMsg', 'Pick a deck first.', 'no'); return; }
+  var rows = [['category','question','answer','crumb','card_order']];
+  CARDS.filter(function(c){ return c.category === deckF; }).forEach(function(c){
+    rows.push([c.category, c.question, c.answer, c.crumb || '', c.card_order]);
+  });
+  download('shany-' + deckF.replace(/[^\w\-]+/g,'_') + '.csv', toCsv(rows));
+  setMsg('csvMsg', 'Exported deck "' + deckF + '" ✓', 'ok');
+};
+$('csvImport').onclick = async function(){
+  var f = $('csvFile').files[0];
+  if (!f){ setMsg('csvMsg', 'Choose a CSV file first.', 'no'); return; }
+  var text = await f.text();
+  var rows = parseCsv(text);
+  if (!rows.length){ setMsg('csvMsg', 'CSV is empty.', 'no'); return; }
+  var start = 0;
+  var head = rows[0].map(function(s){ return String(s).trim().toLowerCase(); });
+  var idx = { category: head.indexOf('category'), question: head.indexOf('question'), answer: head.indexOf('answer'), crumb: head.indexOf('crumb'), card_order: head.indexOf('card_order') };
+  if (idx.category >= 0 || idx.question >= 0 || idx.answer >= 0) start = 1;
+  else { idx = { category: 0, question: 1, answer: 2, crumb: 3, card_order: 4 }; }
+
+  var toInsert = [];
+  var newDecks = new Set();
+  var knownDecks = {};
+  CATS.forEach(function(c){ knownDecks[c.name] = true; });
+
+  for (var i = start; i < rows.length; i++){
+    var r = rows[i];
+    var cat = idx.category >= 0 ? String(r[idx.category] || '').trim() : '';
+    var q = idx.question >= 0 ? String(r[idx.question] || '').trim() : '';
+    var a = idx.answer   >= 0 ? String(r[idx.answer]   || '').trim() : '';
+    var crumb = idx.crumb >= 0 ? String(r[idx.crumb] || '').trim() : '';
+    var order = idx.card_order >= 0 ? parseInt(r[idx.card_order], 10) : NaN;
+    if (!cat || !q || !a) continue;
+    if (!knownDecks[cat]) newDecks.add(cat);
+    toInsert.push({ category: cat, question: q, answer: a, crumb: crumb || null, card_order: isNaN(order) ? null : order });
+  }
+
+  if (!toInsert.length){ setMsg('csvMsg', 'No valid rows found.', 'no'); return; }
+  var btn = $('csvImport'); btn.disabled = true;
+  setMsg('csvMsg', 'Importing ' + toInsert.length + ' card(s)...');
+
+  if (newDecks.size){
+    var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
+    var arr = Array.from(newDecks).map(function(n, i){ return { name: n, is_free: false, sort_order: maxSort + 1 + i }; });
+    var rc = await sb.from('categories').insert(arr);
+    if (rc.error){ btn.disabled = false; setMsg('csvMsg', 'Deck creation failed: ' + rc.error.message, 'no'); return; }
+  }
+
+  var byDeck = {};
+  toInsert.forEach(function(c){
+    if (c.card_order == null){
+      if (!byDeck[c.category]) byDeck[c.category] = [];
+      byDeck[c.category].push(c);
+    }
+  });
+  for (var deckName in byDeck){
+    const r1 = await sb.from('flashcards').select('card_order').eq('category', deckName)
+      .order('card_order', { ascending: false }).limit(1);
+    var startN = (r1.data && r1.data.length && r1.data[0].card_order != null) ? r1.data[0].card_order : 0;
+    byDeck[deckName].forEach(function(c, i){ c.card_order = startN + i + 1; });
+  }
+
+  var ri = await sb.from('flashcards').insert(toInsert);
+  btn.disabled = false;
+  if (ri.error){ setMsg('csvMsg', 'Import failed: ' + ri.error.message, 'no'); return; }
+  setMsg('csvMsg', 'Imported ' + toInsert.length + ' card(s) ✓' + (newDecks.size ? ' · New decks: ' + Array.from(newDecks).join(', ') : ''), 'ok');
+  $('csvFile').value = '';
+  await loadCats();
+  await loadCards();
+};
+
+// ===== Generate =====
+function updGenCount(){ $('genSelCount').textContent = GEN.size + ' deck(s) selected'; }
+function renderGen(){
+  var q = $('genSearch').value.toLowerCase(), box = $('genList');
+  box.innerHTML = '';
+  CATS.forEach(function(c){
+    if (q && c.name.toLowerCase().indexOf(q) < 0) return;
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = GEN.has(c.name);
+    cb.onchange = function(){ if (cb.checked) GEN.add(c.name); else GEN.delete(c.name); updGenCount(); };
+    box.appendChild(el('label', { class: 'item' }, [cb, el('span', { text: c.name + (c.is_free ? '  (free)' : '') })]));
+  });
+  updGenCount();
+}
+$('genSearch').oninput = renderGen;
+$('genPrem').onclick = function(){ GEN = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; })); renderGen(); };
+$('genAll').onclick  = function(){ GEN = new Set(CATS.map(function(c){ return c.name; })); renderGen(); };
+$('genNone').onclick = function(){ GEN = new Set(); renderGen(); };
+
+$('genGo').onclick = async function(){
+  var cats = Array.from(GEN);
+  if (!cats.length) { setMsg('genMsg', 'Pick at least one deck.', 'no'); return; }
+  var names = $('genNames').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+  var args = {
+    p_categories: cats,
+    p_max_uses: Math.max(1, parseInt($('genMax').value, 10) || 1),
+    p_prefix: $('genPrefix').value.trim().toUpperCase()
+  };
+  if (names.length) args.p_notes = names;
+  else {
+    var n = parseInt($('genCount').value, 10);
+    if (!n || n < 1 || n > 5000) { setMsg('genMsg', 'Number must be between 1 and 5000.', 'no'); return; }
+    args.p_count = n;
+  }
+  var btn = $('genGo'); btn.disabled = true; setMsg('genMsg', 'Generating...');
+  const { data, error } = await sb.rpc('admin_generate_codes', args);
+  btn.disabled = false;
+  if (error) { setMsg('genMsg', error.message, 'no'); return; }
+  LASTGEN = data || [];
+  var tb = $('genBody'); tb.innerHTML = '';
+  LASTGEN.forEach(function(r){
+    tb.appendChild(el('tr', null, [
+      el('td', { class: 'mono', text: r.new_code }),
+      el('td', { text: r.new_note || '' })
+    ]));
+  });
+  $('genResult').classList.remove('hidden');
+  setMsg('genMsg', LASTGEN.length + ' codes created ✓', 'ok');
+  loadCodes();
+};
+$('genCopy').onclick = function(){
+  copyText(LASTGEN.map(function(r){ return r.new_code; }).join('\n')).then(function(){ setMsg('genMsg', 'Copied ✓', 'ok'); });
+};
+$('genCsv').onclick = function(){
+  download('codes.csv', toCsv([['code','name']].concat(LASTGEN.map(function(r){ return [r.new_code, r.new_note || '']; }))));
+};
+
+// ===== Codes =====
+async function loadCodes(){
+  const { data, error } = await sb.rpc('admin_list_codes');
+  if (error) { setMsg('codeMsg', error.message, 'no'); return; }
+  CODES = data || [];
+  renderCodes();
+}
+function renderCodes(){
+  var f = $('codeFilter').value, q = $('codeSearch').value.toLowerCase();
+  var rows = CODES.filter(function(c){
+    if (f === 'unused' && !(c.used_count === 0 && c.active)) return false;
+    if (f === 'used' && !(c.used_count > 0)) return false;
+    if (f === 'disabled' && c.active) return false;
+    if (q) {
+      var hay = (c.code + ' ' + (c.note || '') + ' ' + (c.used_by || '') + ' ' + (c.categories || []).join(' ')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  FILTERED = rows;
+  var shown = rows.slice(0, 500);
+  $('codeCount').textContent = rows.length + ' of ' + CODES.length + ' codes';
+  var tb = $('codeBody'); tb.innerHTML = '';
+  shown.forEach(function(c){
+    var cats = c.categories || [];
+    var decks = el('span', { text: cats.length ? cats[0] + (cats.length > 1 ? '  +' + (cats.length - 1) : '') : '-', title: cats.join('\n') });
+    var toggle = el('button', { class: 'sm', text: c.active ? 'Disable' : 'Enable' });
+    toggle.onclick = async function(){
+      const r = await sb.rpc('admin_set_code_active', { p_codes: [c.code], p_active: !c.active });
+      if (r.error) setMsg('codeMsg', r.error.message, 'no'); else loadCodes();
+    };
+    var edit = el('button', { class: 'sm', text: 'Edit' });
+    edit.onclick = function(){ openEdit(c); };
+    var del = el('button', { class: 'sm danger', text: 'Delete' });
+    del.onclick = async function(){
+      if (!confirm('Delete code ' + c.code + '?')) return;
+      const r = await sb.rpc('admin_delete_codes', { p_codes: [c.code] });
+      if (r.error) setMsg('codeMsg', r.error.message, 'no'); else loadCodes();
+    };
+    var tr = el('tr', null, [
+      el('td', { class: 'mono', text: c.code + (c.active ? '' : '  (disabled)') }),
+      el('td', null, [decks]),
+      el('td', { text: c.used_count + '/' + c.max_uses }),
+      el('td', { text: c.used_by || '' }),
+      el('td', { text: c.note || '' }),
+      el('td', null, [edit, document.createTextNode(' '), toggle, document.createTextNode(' '), del])
+    ]);
+    tb.appendChild(tr);
+  });
+}
+function updEditCount(){ $('editCount').textContent = EDITSEL.size + ' deck(s) selected'; }
+function renderEditList(){
+  var q = $('editSearch').value.toLowerCase(), box = $('editList');
+  box.innerHTML = '';
+  CATS.forEach(function(c){
+    if (q && c.name.toLowerCase().indexOf(q) < 0) return;
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = EDITSEL.has(c.name);
+    cb.onchange = function(){ if (cb.checked) EDITSEL.add(c.name); else EDITSEL.delete(c.name); updEditCount(); };
+    box.appendChild(el('label', { class: 'item' }, [cb, el('span', { text: c.name + (c.is_free ? '  (free)' : '') })]));
+  });
+  updEditCount();
+}
+function openEdit(c){
+  EDIT = c;
+  EDITSEL = new Set(c.categories || []);
+  $('editTitle').textContent = 'Edit code ' + c.code;
+  $('editMax').value = c.max_uses;
+  $('editNote').value = c.note || '';
+  $('editSearch').value = '';
+  $('editApply').checked = false;
+  $('editApplyRow').classList.toggle('hidden', !(c.used_count > 0));
+  setMsg('editMsg', '');
+  renderEditList();
+  $('editModal').classList.remove('hidden');
+}
+function closeEdit(){ $('editModal').classList.add('hidden'); EDIT = null; }
+$('editSearch').oninput = renderEditList;
+$('editPrem').onclick = function(){ EDITSEL = new Set(CATS.filter(function(c){ return !c.is_free; }).map(function(c){ return c.name; })); renderEditList(); };
+$('editAll').onclick  = function(){ EDITSEL = new Set(CATS.map(function(c){ return c.name; })); renderEditList(); };
+$('editNone').onclick = function(){ EDITSEL = new Set(); renderEditList(); };
+$('editCancel').onclick = closeEdit;
+$('editModal').onclick = function(e){ if (e.target === this) closeEdit(); };
+$('editSave').onclick = async function(){
+  if (!EDIT) return;
+  var cats = Array.from(EDITSEL);
+  if (!cats.length) { setMsg('editMsg', 'Pick at least one deck.', 'no'); return; }
+  var max = parseInt($('editMax').value, 10);
+  if (!max || max < 1) { setMsg('editMsg', 'Users per code must be at least 1.', 'no'); return; }
+  var btn = $('editSave'); btn.disabled = true; setMsg('editMsg', 'Saving...');
+  const r = await sb.rpc('admin_update_code', {
+    p_code: EDIT.code,
+    p_categories: cats,
+    p_max_uses: max,
+    p_note: $('editNote').value.trim() || null,
+    p_apply_existing: $('editApply').checked
+  });
+  btn.disabled = false;
+  if (r.error) { setMsg('editMsg', r.error.message, 'no'); return; }
+  closeEdit();
+  setMsg('codeMsg', 'Code updated ✓', 'ok');
+  loadCodes();
+}
+
+$('codeFilter').onchange = renderCodes;
+$('codeSearch').oninput = renderCodes;
+$('codeReload').onclick = loadCodes;
+$('codeCopy').onclick = function(){
+  copyText(FILTERED.map(function(c){ return c.code; }).join('\n')).then(function(){ setMsg('codeMsg', 'Copied ' + FILTERED.length + ' codes ✓', 'ok'); });
+};
+$('codeCsv').onclick = function(){
+  download('codes.csv', toCsv([['code','decks','used','max_uses','used_by','name','active']].concat(
+    FILTERED.map(function(c){ return [c.code, (c.categories || []).join(' | '), c.used_count, c.max_uses, c.used_by || '', c.note || '', c.active]; })
+  )));
+};
+</script></main></body></html>
