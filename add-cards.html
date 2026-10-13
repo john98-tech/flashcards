@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Add Cards – Flash Cards</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
+:root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font:1.4rem Georgia,serif;margin:.2em 0}
+h2{font:1.1rem Georgia,serif;margin:0 0 8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button,select,input,textarea{font:inherit;padding:8px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px}
+button{border-color:var(--acc);cursor:pointer}
+button.primary{background:var(--acc);color:var(--bg);font-weight:700}
+button.danger{border-color:var(--no);color:var(--no)}
+button.sm{padding:3px 8px;font-size:.8rem}
+button:disabled{opacity:.6;cursor:wait}
+input[type=radio]{width:auto;padding:0}
+textarea{width:100%;min-height:110px;resize:vertical;font-size:1.05rem}
+.box{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.mut{color:var(--mut);font-size:.85rem}
+.msg{min-height:1.3em;font-weight:600;margin-top:8px}
+.msg.ok{color:var(--ok)}.msg.no{color:var(--no)}
+.hidden{display:none !important}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--mut)}
+label.f input{color:var(--fg)}
+#words{font:1.3rem/2.4 Georgia,serif;padding:14px;border:1px dashed var(--line);border-radius:10px;background:var(--bg)}
+.w{cursor:pointer;padding:3px 4px;border-radius:5px;border:1px solid transparent;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.w:hover{border-color:var(--acc)}
+.w.sel{background:var(--bl);border-bottom:2px solid var(--fg);font-weight:700}
+.pv{padding:14px 16px;border:2px solid var(--line);border-radius:12px;background:var(--card);font:1.15rem/1.8 Georgia,serif;margin:6px 0}
+.pv.b{border-color:var(--acc)}
+.pv small{display:block;font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:4px}
+.bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
+mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
+.q{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--line);padding:8px 0}
+.q .pv{flex:1;margin:0;font-size:1rem}
+</style></head><body><main>
+
+<div class="top">
+  <h1>➕ Add cards</h1>
+  <div class="row" style="margin:0"><button onclick="location.href='admin.html'">← Admin panel</button></div>
+</div>
+
+<div id="gate" class="box"><div id="gateMsg">Checking access...</div></div>
+
+<div id="app" class="hidden">
+
+  <div class="box">
+    <h2>1. Deck</h2>
+    <div class="grid">
+      <label class="f">Deck name (pick an existing one or type a new name)
+        <input type="text" id="cat" list="catList" autocomplete="off">
+        <datalist id="catList"></datalist>
+      </label>
+      <label class="f">Small heading above the question (optional)
+        <input type="text" id="crumb" autocomplete="off" placeholder="e.g. Chapter 3 › Anatomy">
+      </label>
+    </div>
+    <div class="mut" id="catInfo"></div>
+  </div>
+
+  <div class="box">
+    <h2>2. Full sentence, exactly as in the book</h2>
+    <textarea id="src" dir="auto" placeholder="Paste or type the sentence here..."></textarea>
+    <div class="row"><button class="primary" id="parse">Prepare sentence ↓</button></div>
+  </div>
+
+  <div class="box hidden" id="step3">
+    <h2>3. Click the word(s) you want to blank out</h2>
+    <div class="mut">Click again to undo. Selected words that sit next to each other become a single blank.</div>
+    <div id="words" dir="auto"></div>
+
+    <div class="row">
+      <label><input type="radio" name="mode" value="one" checked> One card with all blanks</label>
+      <label><input type="radio" name="mode" value="each"> Separate card for each blank</label>
+    </div>
+
+    <div class="mut">Preview:</div>
+    <div id="preview"></div>
+
+    <div class="row">
+      <button class="primary" id="stage">Add to list ＋</button>
+      <button id="clearSel">Clear selection</button>
+    </div>
+    <div class="msg" id="stageMsg"></div>
+  </div>
+
+  <div class="box hidden" id="queueBox">
+    <h2>Cards ready to save (<span id="qCount">0</span>)</h2>
+    <div id="queue"></div>
+    <div class="row">
+      <button class="primary" id="save">Save all to deck 💾</button>
+      <button class="danger" id="qClear">Clear list</button>
+    </div>
+  </div>
+  <div class="msg" id="saveMsg"></div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var $ = function(i){ return document.getElementById(i); };
+
+var CATS = [], TEXT = '', WORDS = [], QUEUE = [];
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function setMsg(id, text, kind){ var m = $(id); m.className = 'msg ' + (kind || ''); m.textContent = text || ''; }
+
+// ---------- access ----------
+async function init(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $('gateMsg').innerHTML = 'Please log in first from <a href="index.html">the login page</a>, then open this page again.'; return; }
+  const { data: ok, error } = await sb.rpc('is_admin');
+  if (error || ok !== true) { $('gateMsg').textContent = error ? 'Admin setup is not finished yet: ' + error.message : 'This account is not an admin.'; return; }
+  $('gate').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  await loadCats();
+}
+window.addEventListener('DOMContentLoaded', init);
+
+async function loadCats(){
+  const { data, error } = await sb.from('categories').select('name,is_free,sort_order')
+    .order('sort_order', { ascending: true }).order('name', { ascending: true });
+  if (error) { $('catInfo').textContent = error.message; return; }
+  CATS = data || [];
+  $('catList').innerHTML = CATS.map(function(c){ return '<option value="' + esc(c.name).replace(/"/g,'&quot;') + '">'; }).join('');
+  updCatInfo();
+}
+function updCatInfo(){
+  var n = $('cat').value.trim();
+  if (!n) { $('catInfo').textContent = ''; return; }
+  var ex = CATS.some(function(c){ return c.name === n; });
+  $('catInfo').textContent = ex ? 'Existing deck ✓' : 'New deck: it will be created when you save (as Premium; change it from the Admin panel).';
+}
+$('cat').oninput = updCatInfo;
+
+// ---------- split sentence into words ----------
+function parse(){
+  TEXT = $('src').value.replace(/\r/g,'').trim();
+  WORDS = [];
+  if (!TEXT) { $('step3').classList.add('hidden'); setMsg('stageMsg','',''); return; }
+  var re = /[\p{L}\p{N}_]+(?:[-'’\/.][\p{L}\p{N}_]+)*/gu, m;
+  while ((m = re.exec(TEXT))) WORDS.push({ s: m.index, e: m.index + m[0].length, sel: false });
+  $('step3').classList.remove('hidden');
+  setMsg('stageMsg','','');
+  drawWords();
+}
+$('parse').onclick = parse;
+
+function drawWords(){
+  var html = '', last = 0;
+  WORDS.forEach(function(w, i){
+    html += esc(TEXT.slice(last, w.s)).replace(/\n/g,'<br>');
+    html += '<span class="w' + (w.sel ? ' sel' : '') + '" data-i="' + i + '">' + esc(TEXT.slice(w.s, w.e)) + '</span>';
+    last = w.e;
+  });
+  html += esc(TEXT.slice(last)).replace(/\n/g,'<br>');
+  $('words').innerHTML = html;
+  drawPreview();
+}
+$('words').onclick = function(e){
+  var t = e.target.closest('.w'); if (!t) return;
+  var w = WORDS[+t.dataset.i]; w.sel = !w.sel;
+  t.classList.toggle('sel', w.sel);
+  drawPreview();
+};
+$('clearSel').onclick = function(){ WORDS.forEach(function(w){ w.sel = false; }); drawWords(); };
+
+function groups(){
+  var g = [], cur = null;
+  WORDS.forEach(function(w){
+    if (!w.sel) { cur = null; return; }
+    if (cur && /^[ \t]*$/.test(TEXT.slice(cur.e, w.s))) cur.e = w.e;
+    else { cur = { s: w.s, e: w.e }; g.push(cur); }
+  });
+  return g;
+}
+
+function cardFor(gs, active){
+  var q = '', a = '', last = 0;
+  gs.forEach(function(g, i){
+    var before = esc(TEXT.slice(last, g.s));
+    var word = esc(TEXT.slice(g.s, g.e));
+    q += before; a += before;
+    if (active.indexOf(i) >= 0) { q += '<span class="bl">&nbsp;</span>'; a += '<mark>' + word + '</mark>'; }
+    else { q += word; a += word; }
+    last = g.e;
+  });
+  var tail = esc(TEXT.slice(last));
+  return { q: (q + tail).replace(/\n/g,'<br>'), a: (a + tail).replace(/\n/g,'<br>') };
+}
+
+function buildCards(){
+  var gs = groups(), out = [];
+  if (!gs.length) return out;
+  var mode = document.querySelector('input[name=mode]:checked').value;
+  if (mode === 'each') gs.forEach(function(_, i){ out.push(cardFor(gs, [i])); });
+  else out.push(cardFor(gs, gs.map(function(_, i){ return i; })));
+  return out;
+}
+
+function drawPreview(){
+  var cards = buildCards(), box = $('preview');
+  if (!cards.length) { box.innerHTML = '<div class="mut">Select at least one word...</div>'; return; }
+  box.innerHTML = cards.map(function(c, i){
+    return '<div class="pv" dir="auto"><small>Question ' + (cards.length > 1 ? (i + 1) : '') + '</small>' + c.q + '</div>' +
+           '<div class="pv b" dir="auto"><small>Answer</small>' + c.a + '</div>';
+  }).join('');
+}
+document.querySelectorAll('input[name=mode]').forEach(function(r){ r.onchange = drawPreview; });
+
+// ---------- list ----------
+$('stage').onclick = function(){
+  var cards = buildCards();
+  if (!cards.length) { setMsg('stageMsg', 'Select at least one word first.', 'no'); return; }
+  cards.forEach(function(c){ QUEUE.push(c); });
+  setMsg('stageMsg', cards.length + ' card(s) added ✓', 'ok');
+  $('src').value = ''; TEXT = ''; WORDS = [];
+  $('step3').classList.add('hidden');
+  $('src').focus();
+  drawQueue();
+};
+function drawQueue(){
+  $('queueBox').classList.toggle('hidden', !QUEUE.length);
+  $('qCount').textContent = QUEUE.length;
+  var box = $('queue'); box.innerHTML = '';
+  QUEUE.forEach(function(c, i){
+    var d = document.createElement('div'); d.className = 'q';
+    var pv = document.createElement('div'); pv.className = 'pv'; pv.dir = 'auto'; pv.innerHTML = c.q;
+    var del = document.createElement('button'); del.className = 'sm danger'; del.textContent = 'Delete';
+    del.onclick = function(){ QUEUE.splice(i, 1); drawQueue(); };
+    d.appendChild(pv); d.appendChild(del); box.appendChild(d);
+  });
+}
+$('qClear').onclick = function(){ if (QUEUE.length && confirm('Clear the list?')) { QUEUE = []; drawQueue(); } };
+
+// ---------- save ----------
+$('save').onclick = async function(){
+  var cat = $('cat').value.trim(), crumb = $('crumb').value.trim();
+  if (!cat) { setMsg('saveMsg', 'Enter or pick a deck name first (at the top).', 'no'); return; }
+  if (!QUEUE.length) return;
+  var btn = $('save'); btn.disabled = true; setMsg('saveMsg', 'Saving...');
+
+  if (!CATS.some(function(c){ return c.name === cat; })) {
+    var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
+    var r0 = await sb.from('categories').insert({ name: cat, is_free: false, sort_order: maxSort + 1 });
+    if (r0.error) { btn.disabled = false; setMsg('saveMsg', 'Could not create the deck: ' + r0.error.message, 'no'); return; }
+  }
+
+  var r1 = await sb.from('flashcards').select('card_order').eq('category', cat)
+    .order('card_order', { ascending: false }).limit(1);
+  if (r1.error) { btn.disabled = false; setMsg('saveMsg', r1.error.message, 'no'); return; }
+  var start = (r1.data && r1.data.length && r1.data[0].card_order != null) ? r1.data[0].card_order : 0;
+
+  var rows = QUEUE.map(function(c, i){
+    return { category: cat, question: c.q, answer: c.a, crumb: crumb || null, card_order: start + i + 1 };
+  });
+  var r2 = await sb.from('flashcards').insert(rows);
+  btn.disabled = false;
+  if (r2.error) { setMsg('saveMsg', 'Save failed: ' + r2.error.message, 'no'); return; }
+
+  QUEUE = []; drawQueue();
+  setMsg('saveMsg', rows.length + ' card(s) saved to "' + cat + '" ✓', 'ok');
+  loadCats();
+};
+</script></main></body></html>
