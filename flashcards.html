@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Flash Cards – Dynamic Supabase</title>
+<title>Shany – Flash Cards</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -17,15 +17,24 @@ body, html, * {
     user-select: none;
     -webkit-touch-callout: none;
 }
-body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif;padding-bottom:160px}
 main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:1.4rem;margin:.2em 0 .6em}
+
+/* ===== اللوجو ===== */
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0 14px}
+.logo svg{width:38px;height:38px;flex-shrink:0}
+.logo-text{font:700 1.6rem Georgia,serif;letter-spacing:.5px;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-text{background:linear-gradient(135deg,var(--acc),#67e8f9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}}
+
+h1{font-size:1.2rem;margin:.2em 0 .6em;text-align:center;color:var(--mut);font-family:system-ui,sans-serif;font-weight:400}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
 select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
 button{cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
 select{max-width:100%}
+
+/* ===== الكارت ===== */
 .card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
 .card.back{border-color:var(--acc)}
 .tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
@@ -35,33 +44,113 @@ select{max-width:100%}
 .ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
 mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weight:700;padding:0 3px;border-radius:3px}
 .hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
+.stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
+
+/* ===== شريط التحكم السفلي الثابت مع التغبيش ===== */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  border-top:1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+.bottom-bar::before{
+  content:'';position:absolute;top:-40px;left:0;right:0;height:40px;
+  background:linear-gradient(to top, color-mix(in srgb, var(--bg) 70%, transparent), transparent);
+  pointer-events:none;
+}
+.bottom-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .ctl{display:flex;gap:8px;justify-content:space-between;font-family:system-ui,sans-serif}
 .ctl button{flex:1}
 .ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
-.stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
 
-/* نافذة إدخال الكود */
+/* ===== Tooltips ===== */
+[data-tip]{position:relative}
+[data-tip]::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);
+  background:var(--fg);color:var(--bg);
+  font:.75rem system-ui,sans-serif;font-weight:500;
+  padding:5px 9px;border-radius:6px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
+  z-index:60;
+}
+[data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
+
+/* ===== نافذة إدخال الكود ===== */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .modal.hidden{display:none}
 .mbox{width:100%;max-width:380px;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:22px;font-family:system-ui,sans-serif}
 .mbox h2{font-size:1.15rem;margin:0 0 6px;font-family:Georgia,serif}
-.mbox input{width:100%;padding:9px 12px;margin:10px 0;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;font:1rem system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;outline:none;-webkit-user-select:text;-moz-user-select:text;user-select:text}
+.mbox input{width:100%;padding:9px 12px;margin:10px 0;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;font:1rem system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;outline:none;box-sizing:border-box;-webkit-user-select:text;-moz-user-select:text;user-select:text}
 .mbox input:focus{outline:2px solid var(--acc)}
 .msg-ok{color:var(--ok)}.msg-no{color:var(--no)}
-</style></head><body><main>
-<div class="top">
-  <h1>Flash Cards</h1>
-  <div class="row" style="margin:0"><button id="adminBtn" style="display:none">⚙ Admin</button><button id="unlock">🔑 Unlock</button><button id="logout">Logout</button></div>
+
+/* ===== القائمة المنسدلة للكروت المرقّمة ===== */
+.jump-row{display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif;font-size:.9rem;margin:6px 0}
+.jump-row select{flex:1;font-variant-numeric:tabular-nums}
+</style></head><body>
+
+<!-- اللوجو -->
+<div class="logo">
+  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#0f766e"/>
+        <stop offset="100%" stop-color="#0ea5e9"/>
+      </linearGradient>
+    </defs>
+    <rect x="10" y="14" width="36" height="44" rx="6" fill="url(#g1)" opacity=".25"/>
+    <rect x="16" y="8" width="36" height="44" rx="6" fill="url(#g1)"/>
+    <path d="M24 22h20M24 30h20M24 38h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="46" cy="46" r="10" fill="#fff" stroke="url(#g1)" stroke-width="3"/>
+    <path d="M42 46l3 3 6-6" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span class="logo-text">Shany</span>
 </div>
-<div class="row"><select id="deck"></select>
-<label><input type="checkbox" id="shuf"> Shuffle</label>
-<button id="all">All cards</button><button id="miss">Review missed</button></div>
+<h1>Flash Cards</h1>
+
+<main>
+<div class="top">
+  <div class="row" style="margin:0">
+    <button id="adminBtn" style="display:none" data-tip="Open admin panel">⚙ Admin</button>
+    <button id="unlock" data-tip="Enter access code">🔑 Unlock</button>
+    <button id="logout" data-tip="Sign out">Logout</button>
+  </div>
+</div>
+
+<div class="row">
+  <select id="deck" data-tip="Choose a deck"></select>
+  <label><input type="checkbox" id="shuf"> Shuffle</label>
+  <button id="all" data-tip="Show all cards">All cards</button>
+  <button id="miss" data-tip="Review missed cards only">Review missed</button>
+</div>
+
+<!-- القائمة المنسدلة المرقّمة -->
+<div class="jump-row" id="jumpWrap">
+  <label for="jump" style="color:var(--mut);font-size:.85rem">Go to card:</label>
+  <select id="jump" data-tip="Jump to a specific card"></select>
+</div>
+
 <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
-<div class="ctl"><button id="prev">← Prev</button><button id="flip">Flip</button><button id="next">Next →</button></div>
-<div class="ctl" style="margin-top:8px"><button class="no" id="bad">✗ Again</button><button class="ok" id="good">✓ Got it</button></div>
 <div class="stat" id="stat"></div>
-<p class="hint" style="text-align:center">Keys: Space/Enter = flip, ←/→ = Prev/Next, ↑ = Got it, ↓ = Again.</p>
 </main>
+
+<!-- شريط التحكم السفلي الثابت -->
+<div class="bottom-bar">
+  <div class="bottom-inner">
+    <div class="ctl">
+      <button id="prev" data-tip="Previous card (←)">← Prev</button>
+      <button id="flip" data-tip="Flip card (Space)">Flip</button>
+      <button id="next" data-tip="Next card (→)">Next →</button>
+    </div>
+    <div class="ctl">
+      <button class="no" id="bad" data-tip="Mark as missed (↓)">✗ Again</button>
+      <button class="ok" id="good" data-tip="Mark as known (↑)">✓ Got it</button>
+    </div>
+  </div>
+</div>
 
 <!-- نافذة إدخال كود التفعيل -->
 <div class="modal hidden" id="modal">
@@ -70,31 +159,29 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
     <div class="hint" style="margin:0">Enter your access code to unlock a premium deck.</div>
     <input id="codeInput" type="text" placeholder="ENTER CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
     <div class="ctl">
-      <button id="codeCancel">Cancel</button>
-      <button class="ok" id="codeGo">Unlock</button>
+      <button id="codeCancel" data-tip="Close">Cancel</button>
+      <button class="ok" id="codeGo" data-tip="Redeem code">Unlock</button>
     </div>
     <div class="stat" id="codeMsg"></div>
   </div>
 </div>
 
 <script>
-// 1. إعدادات Supabase
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-var CATS = [];        // كل الأقسام (مجانية ومدفوعة) من جدول categories
-var unlocked = {};    // الأقسام المدفوعة اللي المستخدم فتحها
-var D = [];           // الأقسام المتاحة للمستخدم فعلاً (وفيها الكروت)
-var st = {};          // تقدم المستخدم لكل قسم (بالاسم)
+var CATS = [];
+var unlocked = {};
+var D = [];
+var st = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
-var $ = function(i){return document.getElementById(i)}, sel = $('deck');
+var $ = function(i){return document.getElementById(i)}, sel = $('deck'), jumpSel = $('jump');
 var currentUserId = null;
 var kicked = false;
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-// 2. الرجوع لصفحة الدخول (مع مسح الجلسة)
 async function kickOut() {
     if (kicked) return;
     kicked = true;
@@ -103,7 +190,6 @@ async function kickOut() {
     window.location.href = 'index.html';
 }
 
-// 3. التأكد إن المستخدم مسجل دخول وإن الجلسة دي هي الجلسة النشطة الوحيدة
 async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) return false;
@@ -118,7 +204,7 @@ async function checkSession() {
         .eq('user_id', currentUserId)
         .maybeSingle();
 
-    if (error) return true; // مشكلة شبكة مؤقتة: منطردش المستخدم
+    if (error) return true;
     return !!data && data.session_token === localToken;
 }
 
@@ -126,7 +212,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         if (!(await checkSession())) { await kickOut(); return; }
         await loadAll();
-        // زرار الأدمن بيظهر للأدمن بس
         supabaseClient.rpc('is_admin').then(function(r){ if (r.data === true) $('adminBtn').style.display = ''; });
 
         setInterval(async () => { if (!(await checkSession())) kickOut(); }, 20000);
@@ -145,7 +230,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 $('logout').onclick = kickOut;
 $('adminBtn').onclick = function(){ window.location.href = 'admin.html'; };
 
-// 4. جلب الكروت (السيرفر بيرجّع بس المجاني + اللي المستخدم فتحه بفضل RLS)
 async function fetchCards() {
     var all = [], step = 1000, from = 0;
     while (true) {
@@ -165,7 +249,6 @@ async function fetchCards() {
 function isOpen(c){ return !!c.is_free || !!unlocked[c.name]; }
 function getDeck(name){ return D.find(function(d){ return d.n === name; }); }
 
-// تحميل الأقسام + الفتح + الكروت وإعادة بناء القايمة
 async function loadAll(preferName) {
     const res = await Promise.all([
         supabaseClient.from('categories').select('name,is_free,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
@@ -200,7 +283,6 @@ async function loadAll(preferName) {
         if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null);
     });
 
-    // اختيار القسم الحالي: المطلوب، ثم الحالي، ثم أول قسم متاح (المجاني الأول)
     var order = CATS.filter(function(c){ return c.is_free; }).concat(CATS.filter(function(c){ return !c.is_free; }));
     var firstOpen = null;
     for (var i = 0; i < order.length; i++) { if (getDeck(order[i].name)) { firstOpen = order[i].name; break; } }
@@ -213,7 +295,6 @@ async function loadAll(preferName) {
     start(false);
 }
 
-// 5. بناء القايمة المنسدلة: مجاني / مدفوع (🔒 للمقفول)
 function buildSelect() {
     sel.innerHTML = '';
     addGroup('Free', CATS.filter(function(c){ return c.is_free; }));
@@ -244,11 +325,38 @@ sel.onchange = function(){
     start(false);
 };
 
-// 6. نظام الكروت
+// ===== القائمة المرقّمة للتنقل السريع =====
+function buildJump() {
+    jumpSel.innerHTML = '';
+    if (!list.length) {
+        $('jumpWrap').style.display = 'none';
+        return;
+    }
+    $('jumpWrap').style.display = '';
+    list.forEach(function(realIdx, i) {
+        var o = document.createElement('option');
+        o.value = i;
+        var d = getDeck(curName);
+        var stv = st[curName][realIdx];
+        var mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
+        o.textContent = 'Card ' + (i + 1) + mark;
+        jumpSel.appendChild(o);
+    });
+    jumpSel.value = String(pos);
+}
+
+jumpSel.onchange = function() {
+    var i = parseInt(jumpSel.value, 10);
+    if (isNaN(i) || i < 0 || i >= list.length) return;
+    pos = i;
+    back = false;
+    render();
+};
+
 function start(missed){
     isMissedMode = missed;
     var d = getDeck(curName);
-    if (!d) { list = []; pos = 0; back = false; render(); return; }
+    if (!d) { list = []; pos = 0; back = false; buildJump(); render(); return; }
     var n = d.cards.length, idx = [];
 
     for(var i = 0; i < n; i++){
@@ -260,6 +368,7 @@ function start(missed){
     list = idx;
     pos = 0;
     back = false;
+    buildJump();
     render();
 }
 
@@ -281,17 +390,20 @@ function render(){
         c.className = 'card';
         c.innerHTML = '<div class="txt">No decks available yet. Use 🔑 Unlock to enter an access code.</div>';
         stat();
+        buildJump();
         return;
     }
     if(!list.length){
         c.className = 'card';
         c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
         stat();
+        buildJump();
         return;
     }
     var x = d.cards[list[pos]];
     c.className = 'card' + (back ? ' back' : '');
     c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
+    jumpSel.value = String(pos);
     stat();
 }
 
@@ -317,6 +429,7 @@ function mark(v){
         list.splice(pos, 1);
         if(pos >= list.length) pos = 0;
         back = false;
+        buildJump();
         render();
         return;
     }
@@ -331,7 +444,6 @@ function mark(v){
 
 function flip(){if(list.length){back=!back;render()}}
 
-// 7. نافذة كود التفعيل
 function codeMsg(text, kind){
     var m = $('codeMsg');
     m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : '');
@@ -373,7 +485,6 @@ $('shuf').onchange = function(){ start(false); };
 $('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
 $('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
 
-// الحماية واختصارات الكيبورد
 document.addEventListener('selectstart', function(e) {
     if (e.target && e.target.tagName === 'INPUT') return;
     e.preventDefault();
@@ -385,7 +496,6 @@ document.onkeydown = function(e){
         return false;
     }
 
-    // لو نافذة الكود مفتوحة: Enter = تفعيل، Esc = إغلاق، والباقي يتكتب عادي
     if (!$('modal').classList.contains('hidden')) {
         if (e.key === 'Enter') { e.preventDefault(); redeem(); }
         else if (e.key === 'Escape') { closeModal(); }
