@@ -50,15 +50,14 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);font-weig
 .bottom-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:40;
   padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
-  background:color-mix(in srgb, var(--bg) 70%, transparent);
-  backdrop-filter:blur(14px) saturate(160%);
-  -webkit-backdrop-filter:blur(14px) saturate(160%);
-  border-top:1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background:transparent;
 }
 .bottom-bar::before{
-  content:'';position:absolute;top:-40px;left:0;right:0;height:40px;
-  background:linear-gradient(to top, color-mix(in srgb, var(--bg) 70%, transparent), transparent);
-  pointer-events:none;
+  content:'';position:absolute;left:0;right:0;bottom:0;top:-36px;z-index:-1;pointer-events:none;
+  background:linear-gradient(to top, color-mix(in srgb, var(--bg) 92%, transparent) 40%, transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  -webkit-mask-image:linear-gradient(to top,#000 55%,transparent);
+  mask-image:linear-gradient(to top,#000 55%,transparent);
 }
 .bottom-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .ctl{display:flex;gap:8px;justify-content:space-between;font-family:system-ui,sans-serif}
