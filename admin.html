@@ -141,6 +141,35 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60}
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
+
+
+/* ===== Cards workspace refresh: clean table + right-side editor drawer ===== */
+:root{--shany-teal:#0f8b87;--shany-teal-soft:#eaf8f7;--shany-blue:#1686c7}
+#tab-cards> .box:first-child h2{font-family:Georgia,serif;font-size:1.8rem;letter-spacing:-.02em}
+#tab-cards .box{border-radius:12px}
+#tab-cards input,#tab-cards select,#cardEditModal input,#cardEditModal select,#cardEditModal textarea{border-radius:8px}
+#tab-cards .bulk-bar{background:#effaf9;border:1px solid #c9efeb;border-radius:10px;padding:10px 14px}
+#tab-cards table{border-collapse:separate;border-spacing:0;width:100%}
+#tab-cards thead th{background:#f7fbfc;color:#173b55;font-weight:700;border-bottom:1px solid #dcebee}
+#tab-cards tbody tr{transition:background .15s}
+#tab-cards tbody tr:hover{background:#f3fbfb}
+#tab-cards td{padding:12px 10px;border-bottom:1px solid #e3eef0;vertical-align:middle}
+#tab-cards tbody tr td:first-child{border-left:3px solid transparent}
+#tab-cards tbody tr:has(input[type=checkbox]:checked){background:#eaf8f7}
+#cardEditModal{justify-content:flex-end;align-items:stretch;padding:0;background:rgba(9,34,48,.28);backdrop-filter:blur(3px)}
+#cardEditModal .ce-drawer{height:100dvh;max-height:100dvh;width:min(440px,100vw);overflow-y:auto;border-radius:16px 0 0 16px;margin:0;padding:24px 20px;box-shadow:-12px 0 40px rgba(10,50,65,.14);animation:ceSlideIn .2s ease-out}
+#cardEditModal .ce-drawer h2{font-family:Georgia,serif;font-size:1.45rem;margin:0 0 6px}
+#cardEditModal .ce-drawer .grid{grid-template-columns:1fr}
+#cardEditModal .ce-drawer .raw-edit{font-family:inherit;min-height:105px;background:#fff}
+#cardEditModal .ce-drawer .row{gap:8px}
+#cardEditModal .ce-drawer #ceSave{width:100%;min-height:42px;background:linear-gradient(110deg,#128c88,#087f7d);color:white;border:0;font-weight:700}
+#cardEditModal .ce-drawer #ceCancel{width:100%;min-height:40px}
+#cardEditModal .ce-drawer #cePreview{background:#f5fafb;border:1px solid #e0edef;border-radius:10px;padding:10px}
+#cardEditModal .ce-drawer .wb{background:#f9fcfd;border:1px solid #d8e7eb;border-radius:9px;padding:12px;line-height:1.9;min-height:54px}
+#cardEditModal .ce-drawer .mode-btn{padding:8px 10px}
+#cardEditModal .ce-drawer label.f{display:block}
+@keyframes ceSlideIn{from{transform:translateX(18px);opacity:.7}to{transform:translateX(0);opacity:1}}
+@media(max-width:700px){#cardEditModal .ce-drawer{width:100vw;border-radius:0;padding:18px 14px}.tabs{overflow-x:auto}}
 </style></head><body><main>
 
 <div class="top">
@@ -356,13 +385,13 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 
 <!-- ============ Card Editor (with Rich + Raw text modes) ============ -->
 <div class="modal hidden" id="cardEditModal">
-  <div class="mbox" style="max-width:820px">
-    <h2 id="ceTitle">Edit card</h2>
+  <div class="mbox ce-drawer" style="max-width:820px">
+    <h2 id="ceTitle">Edit Card</h2>
     <div class="mut" id="ceMeta"></div>
 
     <div class="row" style="margin-top:10px">
       <button class="mode-btn on" id="ceModeRich" type="button" data-tip="Click words to blank them">🎨 Rich mode</button>
-      <button class="mode-btn" id="ceModeText" type="button" data-tip="Edit the raw HTML freely">📝 Text mode</button>
+      <button class="mode-btn" id="ceModeText" type="button" data-tip="Edit plain text; wrap blanks in [[double brackets]]">📝 Text mode</button>
       <span class="mut" id="ceModeHint">Click a word to mark it as a blank.</span>
     </div>
 
@@ -386,16 +415,13 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 
     <!-- Raw text mode -->
     <div id="ceTextPane" class="hidden">
-      <div class="mut" style="margin-top:14px;font-weight:700">Question HTML — edit freely (delete letters, words, add tags)</div>
-      <textarea class="raw-edit" id="ceQText" dir="auto"></textarea>
-      <div class="mut" style="margin-top:10px;font-weight:700">Answer HTML — edit freely</div>
-      <textarea class="raw-edit" id="ceAText" dir="auto"></textarea>
-      <div class="mut" style="margin-top:8px;line-height:1.8">
-        💡 Allowed tags:<br>
-        <code>&lt;mark&gt;word&lt;/mark&gt;</code> → revealed answer (highlighted)<br>
-        <code>&lt;span class="bl"&gt;&amp;nbsp;&lt;/span&gt;</code> → empty blank in question<br>
-        <code>&lt;br&gt;</code> → line break<br>
-        <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;u&gt;</code> → bold / italic / underline
+      <div class="mut" style="margin-top:14px;font-weight:700">Question — اكتب النص عادي وحدد الكلمات اللي عايز تخفيها</div>
+      <textarea class="raw-edit" id="ceQText" dir="auto" placeholder="مثال: The [[mitochondria]] produce [[ATP]]."></textarea>
+      <div class="mut" style="margin-top:10px;font-weight:700">Answer — اكتب الإجابة وحدد الكلمات المهمة بنفس الطريقة</div>
+      <textarea class="raw-edit" id="ceAText" dir="auto" placeholder="مثال: The [[mitochondria]] produce [[ATP]]."></textarea>
+      <div class="mut" style="margin-top:8px;line-height:1.8;background:#edf8f7;border-radius:8px;padding:10px">
+        💡 أي كلمة بين <code>[[ ]]</code> هتتحول لفراغ في السؤال وتتظلل في الإجابة. مثال: <code>The [[cell membrane]] controls transport.</code><br>
+        اكتب النص مباشرة؛ مش محتاج HTML أو أكواد. استخدام الوضع ده ممكن يشيل التنسيق الخاص القديم من النص.
       </div>
     </div>
 
@@ -1736,6 +1762,28 @@ function ceBuildQuestionHtml(tokens){
   return out;
 }
 
+function tokensFromMarkedText(text){
+  var out=[], re=/\[\[([\s\S]*?)\]\]/g, last=0, m;
+  function addChunk(chunk, marked){
+    var parts=tokensFromText(chunk);
+    parts.forEach(function(t){ if(t.word && marked) t.blank=true; out.push(t); });
+  }
+  text=String(text||'');
+  while((m=re.exec(text))){
+    addChunk(text.slice(last,m.index),false);
+    addChunk(m[1],true);
+    last=re.lastIndex;
+  }
+  addChunk(text.slice(last),false);
+  return out;
+}
+function tokensToMarkedText(tokens){
+  return tokens.map(function(t){
+    if(!t.word) return t.before;
+    return t.before + (t.blank ? '[['+t.word+']]' : t.word);
+  }).join('');
+}
+
 function renderCE(){
   $('ceQ').innerHTML = tokensToHtml(CE.qTokens);
   $('ceA').innerHTML = tokensToHtml(CE.aTokens);
@@ -1800,15 +1848,15 @@ function setCEMode(mode){
   $('ceModeRich').classList.toggle('on', mode === 'rich');
   $('ceModeText').classList.toggle('on', mode === 'text');
   $('ceModeHint').textContent = mode === 'rich'
-    ? 'Click a word to mark it as a blank.'
-    : 'Edit the HTML directly. Use <mark>word</mark> for revealed answers and <span class="bl">&nbsp;</span> for blanks.';
+    ? 'اضغط على أي كلمة في السؤال لإخفائها أو إظهارها.'
+    : 'اكتب بشكل عادي، واستخدم [[الكلمة]] لتحديد الفراغات.';
 
   if (mode === 'text'){
-    $('ceQText').value = ceBuildQuestionHtml(CE.qTokens);
-    $('ceAText').value = ceBuildHtml(CE.aTokens);
+    $('ceQText').value = tokensToMarkedText(CE.qTokens);
+    $('ceAText').value = tokensToMarkedText(CE.aTokens);
   } else {
-    CE.qTokens = tokensFromHtml($('ceQText').value);
-    CE.aTokens = tokensFromHtml($('ceAText').value);
+    CE.qTokens = tokensFromMarkedText($('ceQText').value);
+    CE.aTokens = tokensFromMarkedText($('ceAText').value);
     renderCE();
   }
 }
@@ -1817,8 +1865,8 @@ $('ceModeText').onclick = function(){ setCEMode('text'); };
 
 // Live preview while typing in raw text mode
 $('ceQText').oninput = $('ceAText').oninput = function(){
-  CE.qTokens = tokensFromHtml($('ceQText').value);
-  CE.aTokens = tokensFromHtml($('ceAText').value);
+  CE.qTokens = tokensFromMarkedText($('ceQText').value);
+  CE.aTokens = tokensFromMarkedText($('ceAText').value);
   renderCEPreview();
 };
 
@@ -1888,10 +1936,10 @@ $('ceSave').onclick = async function(){
   if (!EDIT_CARD) return;
   var qHtml, aHtml;
   if (CE.mode === 'text'){
-    qHtml = $('ceQText').value.trim();
-    aHtml = $('ceAText').value.trim();
-    CE.qTokens = tokensFromHtml(qHtml);
-    CE.aTokens = tokensFromHtml(aHtml);
+    CE.qTokens = tokensFromMarkedText($('ceQText').value);
+    CE.aTokens = tokensFromMarkedText($('ceAText').value);
+    qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
+    aHtml = ceBuildHtml(CE.aTokens).trim();
   } else {
     qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
     aHtml = ceBuildHtml(CE.aTokens).trim();
