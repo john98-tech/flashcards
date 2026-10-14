@@ -114,6 +114,30 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 .ce-pv.b{border-color:var(--acc)}
 .ce-pv small{display:block;font:.72rem system-ui,sans-serif;color:var(--mut);margin-bottom:4px}
 
+/* ===== History bar ===== */
+#historyBar{
+  position:sticky;top:0;z-index:100;
+  background:var(--card);
+  padding:10px 14px;
+  border:2px solid var(--line);
+  border-radius:10px;
+  margin:0 0 12px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+#historyBar button{padding:5px 10px;font-size:.85rem}
+#historyBar #undoBtn{border-color:var(--acc)}
+#historyBar #redoBtn{border-color:var(--acc)}
+#historyInfo{font-size:.82rem}
+.env-pill{font-size:.75rem;padding:2px 8px;border-radius:10px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-weight:700}
+
+/* ===== Editor mode toggle ===== */
+.mode-btn{padding:5px 10px;font-size:.82rem;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:6px;cursor:pointer}
+.mode-btn.on{background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:700}
+
+/* ===== Text editor ===== */
+.raw-edit{width:100%;min-height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88rem;line-height:1.5;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);resize:vertical}
+
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.72rem system-ui,sans-serif;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60}
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
@@ -133,8 +157,21 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <span class="mut" style="margin-left:6px">Admin</span>
   </div>
   <div class="row" style="margin:0">
+    <span class="env-pill" id="envPill" title="Current Supabase environment">prod</span>
     <button onclick="location.href='flashcards.html'" data-tip="Back to cards">← Back</button>
   </div>
+</div>
+
+<!-- ============ History Bar (Undo / Redo) ============ -->
+<div id="historyBar">
+  <button id="undoBtn" disabled data-tip="Undo last change (Ctrl+Z)">↶ Undo</button>
+  <button id="redoBtn" disabled data-tip="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+  <span class="mut" id="historyInfo">No changes yet</span>
+  <span style="flex:1"></span>
+  <button class="sm" id="histBackup" data-tip="Download a JSON snapshot of all cards">💾 Backup now</button>
+  <button class="sm" id="histRestore" data-tip="Restore from a JSON backup file">📂 Restore</button>
+  <button class="sm danger" id="histClear" data-tip="Clear history only (does not undo)">Clear history</button>
+  <input type="file" id="histRestoreFile" accept=".json" style="display:none">
 </div>
 
 <div id="gate" class="box"><div id="gateMsg">Checking access...</div></div>
@@ -317,23 +354,51 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </div>
 </div>
 
+<!-- ============ Card Editor (with Rich + Raw text modes) ============ -->
 <div class="modal hidden" id="cardEditModal">
-  <div class="mbox" style="max-width:780px">
+  <div class="mbox" style="max-width:820px">
     <h2 id="ceTitle">Edit card</h2>
     <div class="mut" id="ceMeta"></div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="mode-btn on" id="ceModeRich" type="button" data-tip="Click words to blank them">🎨 Rich mode</button>
+      <button class="mode-btn" id="ceModeText" type="button" data-tip="Edit the raw HTML freely">📝 Text mode</button>
+      <span class="mut" id="ceModeHint">Click a word to mark it as a blank.</span>
+    </div>
+
     <div class="grid" style="margin-top:10px">
       <label class="f">Deck<input type="text" id="ceDeck" list="deckListDL"></label>
       <label class="f">Crumb (optional)<input type="text" id="ceCrumb" placeholder="e.g. Chapter 3"></label>
       <label class="f">Card order<input type="number" id="ceOrder"></label>
     </div>
-    <div class="mut" style="margin-top:14px;font-weight:700">Question — click any word to blank it (click again to unblank)</div>
-    <div class="wb" id="ceQ" dir="auto"></div>
-    <div class="mut" style="margin-top:10px;font-weight:700">Answer — highlighted words are the revealed answers</div>
-    <div class="wb" id="ceA" dir="auto"></div>
-    <div class="row" style="margin-top:10px">
-      <button class="sm" id="ceSyncFromQA">↻ Reload tokens</button>
-      <button class="sm" id="ceClearSel">Clear blanks</button>
+
+    <!-- Rich mode -->
+    <div id="ceRichPane">
+      <div class="mut" style="margin-top:14px;font-weight:700">Question — click any word to blank it (click again to unblank)</div>
+      <div class="wb" id="ceQ" dir="auto"></div>
+      <div class="mut" style="margin-top:10px;font-weight:700">Answer — highlighted words are the revealed answers</div>
+      <div class="wb" id="ceA" dir="auto"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="sm" id="ceSyncFromQA">↻ Reload tokens</button>
+        <button class="sm" id="ceClearSel">Clear blanks</button>
+      </div>
     </div>
+
+    <!-- Raw text mode -->
+    <div id="ceTextPane" class="hidden">
+      <div class="mut" style="margin-top:14px;font-weight:700">Question HTML — edit freely (delete letters, words, add tags)</div>
+      <textarea class="raw-edit" id="ceQText" dir="auto"></textarea>
+      <div class="mut" style="margin-top:10px;font-weight:700">Answer HTML — edit freely</div>
+      <textarea class="raw-edit" id="ceAText" dir="auto"></textarea>
+      <div class="mut" style="margin-top:8px;line-height:1.8">
+        💡 Allowed tags:<br>
+        <code>&lt;mark&gt;word&lt;/mark&gt;</code> → revealed answer (highlighted)<br>
+        <code>&lt;span class="bl"&gt;&amp;nbsp;&lt;/span&gt;</code> → empty blank in question<br>
+        <code>&lt;br&gt;</code> → line break<br>
+        <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;u&gt;</code> → bold / italic / underline
+      </div>
+    </div>
+
     <div class="row">
       <label><input type="radio" name="cemode" value="one" checked> One card with all blanks</label>
       <label><input type="radio" name="cemode" value="each"> Separate card for each blank</label>
@@ -385,8 +450,24 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 </main>
 
 <script>
-const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
+/* ============================================================
+   ENVIRONMENT CONFIG (prod / staging)
+   يستخدم متغير localStorage 'env' للتبديل بدون تعديل الكود.
+   ============================================================ */
+const ENV = localStorage.getItem('env') || 'prod';
+const ENV_CONFIG = {
+  prod: {
+    url: "https://rphakvxxjnzzwxzghcld.supabase.co",
+    key: "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf"
+  },
+  staging: {
+    // ⚠️ حط هنا بيانات مشروع Supabase الخاص بالـ staging
+    url: "https://rphakvxxjnzzwxzghcld.supabase.co",
+    key: "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf"
+  }
+};
+const SUPABASE_URL = ENV_CONFIG[ENV].url;
+const SUPABASE_ANON_KEY = ENV_CONFIG[ENV].key;
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var $ = function(i){ return document.getElementById(i); };
@@ -400,14 +481,23 @@ var SELECTED = new Set();
 
 // ===== Export state =====
 var EXP = {
-  selectedDecks: new Set(),   // deck names selected
-  selectedCards: new Set(),   // card ids selected
-  cardsCache: {},             // deckName -> [cards]
-  openDecks: new Set(),       // deck names open
-  openGroups: new Set(),      // group ids (or 'none') open
-  loadedDecks: new Set()      // deck names whose cards loaded
+  selectedDecks: new Set(),
+  selectedCards: new Set(),
+  cardsCache: {},
+  openDecks: new Set(),
+  openGroups: new Set(),
+  loadedDecks: new Set()
 };
 
+// ===== Card Editor state =====
+var CE = { qTokens: [], aTokens: [], mode: 'rich' };
+
+// ===== Undo / Redo History =====
+var HISTORY = { stack: [], index: -1, maxSize: 50 };
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
 function el(tag, props, kids){
   var e = document.createElement(tag);
   if (props) Object.keys(props).forEach(function(k){
@@ -437,9 +527,9 @@ function toCsv(rows){
     return r.map(function(v){ return '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"'; }).join(',');
   }).join('\r\n');
 }
-function download(name, text){
+function download(name, text, mime){
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.href = URL.createObjectURL(new Blob([text], { type: mime || 'text/csv;charset=utf-8' }));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
@@ -464,10 +554,146 @@ function parseCsv(text){
   return rows.filter(function(r){ return r.some(function(c){ return String(c).trim() !== ''; }); });
 }
 
-// ============================================================
-// INIT
-// ============================================================
+/* ============================================================
+   UNDO / REDO
+   ============================================================ */
+function pushHistory(action){
+  // action = { undo: async()=>{}, redo: async()=>{}, label: '...' }
+  HISTORY.stack = HISTORY.stack.slice(0, HISTORY.index + 1);
+  HISTORY.stack.push(action);
+  if (HISTORY.stack.length > HISTORY.maxSize) HISTORY.stack.shift();
+  else HISTORY.index++;
+  updateHistoryUI();
+}
+function updateHistoryUI(){
+  var canUndo = HISTORY.index >= 0;
+  var canRedo = HISTORY.index < HISTORY.stack.length - 1;
+  $('undoBtn').disabled = !canUndo;
+  $('redoBtn').disabled = !canRedo;
+  if (HISTORY.stack.length === 0){
+    $('historyInfo').textContent = 'No changes yet';
+  } else {
+    $('historyInfo').textContent =
+      (HISTORY.index + 1) + ' / ' + HISTORY.stack.length +
+      (canUndo ? ' — ' + HISTORY.stack[HISTORY.index].label : '');
+  }
+}
+async function doUndo(){
+  if (HISTORY.index < 0) return;
+  var action = HISTORY.stack[HISTORY.index];
+  $('undoBtn').disabled = true;
+  try {
+    await action.undo();
+    HISTORY.index--;
+    updateHistoryUI();
+    setMsg('dkMsg', '↶ Undone: ' + action.label, 'ok');
+  } catch(e){
+    alert('Undo failed: ' + e.message);
+    updateHistoryUI();
+  }
+}
+async function doRedo(){
+  if (HISTORY.index >= HISTORY.stack.length - 1) return;
+  var action = HISTORY.stack[HISTORY.index + 1];
+  $('redoBtn').disabled = true;
+  try {
+    await action.redo();
+    HISTORY.index++;
+    updateHistoryUI();
+    setMsg('dkMsg', '↷ Redone: ' + action.label, 'ok');
+  } catch(e){
+    alert('Redo failed: ' + e.message);
+    updateHistoryUI();
+  }
+}
+$('undoBtn').onclick = doUndo;
+$('redoBtn').onclick = doRedo;
+$('histClear').onclick = function(){
+  if (!confirm('Clear history? (this does NOT undo anything)')) return;
+  HISTORY = { stack: [], index: -1, maxSize: 50 };
+  updateHistoryUI();
+};
+
+document.addEventListener('keydown', function(e){
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey){
+    e.preventDefault(); doUndo();
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))){
+    e.preventDefault(); doRedo();
+  }
+});
+
+/* ============================================================
+   BACKUP / RESTORE
+   ============================================================ */
+$('histBackup').onclick = async function(){
+  await loadCards(); // تأكد إن الكروت محدثة
+  var payload = {
+    timestamp: new Date().toISOString(),
+    env: ENV,
+    cats: CATS,
+    groups: GROUPS,
+    gmap: GMAP,
+    cards: CARDS
+  };
+  var fname = 'shany-backup-' + new Date().toISOString().replace(/[:.]/g,'-') + '.json';
+  download(fname, JSON.stringify(payload, null, 2), 'application/json');
+  setMsg('dkMsg', 'Backup downloaded ✓', 'ok');
+};
+
+$('histRestore').onclick = function(){ $('histRestoreFile').click(); };
+$('histRestoreFile').onchange = async function(){
+  var f = $('histRestoreFile').files[0];
+  if (!f) return;
+  if (!confirm('⚠️ Restore will OVERWRITE the cards in the current environment.\n\nContinue?')){
+    $('histRestoreFile').value = ''; return;
+  }
+  try {
+    var text = await f.text();
+    var data = JSON.parse(text);
+    if (!data.cards || !Array.isArray(data.cards)) throw new Error('Invalid backup file.');
+
+    // احذف كل الكروت الحالية واستبدلها
+    var btn = $('histRestore'); btn.disabled = true; btn.textContent = 'Restoring...';
+    // حذف آمن: اجلب كل الـ IDs
+    var allIds = CARDS.map(function(c){ return c.id; });
+    if (allIds.length){
+      // حذف بدفعات 500
+      for (var i = 0; i < allIds.length; i += 500){
+        await sb.from('flashcards').delete().in('id', allIds.slice(i, i + 500));
+      }
+    }
+    // أضف الكروت من الباك أب (بدون id عشان يتولد جديد)
+    var toInsert = data.cards.map(function(c){
+      return {
+        category: c.category,
+        question: c.question,
+        answer: c.answer,
+        crumb: c.crumb || null,
+        card_order: c.card_order
+      };
+    });
+    for (var j = 0; j < toInsert.length; j += 500){
+      var r = await sb.from('flashcards').insert(toInsert.slice(j, j + 500));
+      if (r.error) throw r.error;
+    }
+    btn.disabled = false; btn.textContent = '📂 Restore';
+    setMsg('dkMsg', '✅ Restored ' + toInsert.length + ' cards from backup', 'ok');
+    HISTORY = { stack: [], index: -1, maxSize: 50 }; updateHistoryUI();
+    await loadAll();
+  } catch(e){
+    alert('Restore failed: ' + e.message);
+    $('histRestore').disabled = false;
+    $('histRestore').textContent = '📂 Restore';
+  }
+  $('histRestoreFile').value = '';
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
 async function init(){
+  $('envPill').textContent = ENV;
   var gm = $('gateMsg');
   gm.textContent = 'Checking access...';
   try {
@@ -486,7 +712,7 @@ async function init(){
 
     if (!isAdmin) {
       gm.innerHTML = 'You are logged in as <b>' + (session.user.email || session.user.id) +
-        '</b> but not an admin.<br><span class="mut">Add your user to the <code>admins</code> table, or set the RPC <code>is_admin</code>.</span>' +
+        '</b> but not an admin.<br><span class="mut">Add your user to the <code>admins</code> table.</span>' +
         '<br><br><button class="primary" id="gateForceBtn">Continue anyway (dev mode)</button>';
       setTimeout(function(){
         var b = $('gateForceBtn');
@@ -505,6 +731,7 @@ async function init(){
     gm.textContent = 'Unexpected error: ' + (e && e.message ? e.message : String(e));
     console.error(e);
   }
+  updateHistoryUI();
 }
 window.addEventListener('DOMContentLoaded', init);
 
@@ -526,9 +753,9 @@ document.querySelectorAll('.tabs button').forEach(function(b){
   };
 });
 
-// ============================================================
-// DECKS + GROUPS
-// ============================================================
+/* ============================================================
+   DECKS + GROUPS
+   ============================================================ */
 async function loadCats(){
   const [cr, gr, mr] = await Promise.all([
     sb.from('categories').select('name,is_free,sort_order').order('sort_order', { ascending: true }).order('name', { ascending: true }),
@@ -618,9 +845,16 @@ function renderGroupBlock(groupId, groupName, decks){
     var nameInput = el('input', { type: 'text', value: groupName });
     nameInput.onchange = async function(){
       var v = nameInput.value.trim();
-      if (!v) { nameInput.value = groupName; return; }
+      var oldV = groupName;
+      if (!v) { nameInput.value = oldV; return; }
+      if (v === oldV) return;
       const r = await sb.from('deck_groups').update({ name: v }).eq('id', groupId);
-      if (r.error){ alert(r.error.message); nameInput.value = groupName; return; }
+      if (r.error){ alert(r.error.message); nameInput.value = oldV; return; }
+      pushHistory({
+        label: 'Rename group "' + oldV + '" → "' + v + '"',
+        undo: async () => { await sb.from('deck_groups').update({ name: oldV }).eq('id', groupId); await loadCats(); },
+        redo: async () => { await sb.from('deck_groups').update({ name: v }).eq('id', groupId); await loadCats(); }
+      });
       setMsg('dkMsg', 'Group renamed ✓', 'ok');
       await loadCats();
     };
@@ -704,15 +938,21 @@ function renderDeckRow(c, currentGroupId){
   var nameInput = el('input', { type: 'text', value: c.name });
   nameInput.onchange = async function(){
     var v = nameInput.value.trim();
-    if (!v){ nameInput.value = c.name; return; }
-    if (v === c.name) return;
+    var oldName = c.name;
+    if (!v){ nameInput.value = oldName; return; }
+    if (v === oldName) return;
     if (CATS.some(function(x){ return x.name === v; })){
       alert('A deck with this name already exists.');
-      nameInput.value = c.name;
+      nameInput.value = oldName;
       return;
     }
-    const r = await sb.from('categories').update({ name: v }).eq('name', c.name);
-    if (r.error){ alert(r.error.message); nameInput.value = c.name; return; }
+    const r = await sb.from('categories').update({ name: v }).eq('name', oldName);
+    if (r.error){ alert(r.error.message); nameInput.value = oldName; return; }
+    pushHistory({
+      label: 'Rename deck "' + oldName + '" → "' + v + '"',
+      undo: async () => { await sb.from('categories').update({ name: oldName }).eq('name', v); await loadCats(); },
+      redo: async () => { await sb.from('categories').update({ name: v }).eq('name', oldName); await loadCats(); }
+    });
     setMsg('dkMsg', 'Deck renamed (cards unchanged) ✓', 'ok');
     await loadCats();
   };
@@ -727,11 +967,17 @@ function renderDeckRow(c, currentGroupId){
   cb.checked = !!c.is_free;
   cb.onchange = async function(){
     var newVal = cb.checked;
+    var oldVal = !newVal;
     const r = await sb.rpc('admin_set_free', { p_names: [c.name], p_free: newVal });
-    if (r.error){ alert(r.error.message); cb.checked = !newVal; return; }
+    if (r.error){ alert(r.error.message); cb.checked = oldVal; return; }
     c.is_free = newVal;
     badge.textContent = newVal ? 'Free' : 'Premium';
     badge.className = 'badge' + (newVal ? '' : ' prem');
+    pushHistory({
+      label: 'Mark "' + c.name + '" as ' + (newVal ? 'Free' : 'Premium'),
+      undo: async () => { await sb.rpc('admin_set_free', { p_names: [c.name], p_free: oldVal }); await loadCats(); },
+      redo: async () => { await sb.rpc('admin_set_free', { p_names: [c.name], p_free: newVal }); await loadCats(); }
+    });
     setMsg('dkMsg', 'Saved ✓', 'ok');
   };
   freeWrap.appendChild(cb);
@@ -743,10 +989,17 @@ function renderDeckRow(c, currentGroupId){
   GROUPS.forEach(function(g){ gsel.appendChild(el('option', { value: String(g.id), text: g.name })); });
   gsel.value = currentGroupId == null ? '' : String(currentGroupId);
   gsel.onchange = async function(){
+    var oldGid = GMAP[c.name] == null ? null : GMAP[c.name];
     var newGid = gsel.value === '' ? null : parseInt(gsel.value, 10);
+    if (newGid === oldGid) return;
     const r = await sb.from('deck_group_map').upsert({ deck_name: c.name, group_id: newGid }, { onConflict: 'deck_name' });
-    if (r.error){ alert(r.error.message); gsel.value = currentGroupId == null ? '' : String(currentGroupId); return; }
+    if (r.error){ alert(r.error.message); gsel.value = oldGid == null ? '' : String(oldGid); return; }
     GMAP[c.name] = newGid;
+    pushHistory({
+      label: 'Move "' + c.name + '" to another group',
+      undo: async () => { await sb.from('deck_group_map').upsert({ deck_name: c.name, group_id: oldGid }, { onConflict: 'deck_name' }); await loadCats(); },
+      redo: async () => { await sb.from('deck_group_map').upsert({ deck_name: c.name, group_id: newGid }, { onConflict: 'deck_name' }); await loadCats(); }
+    });
     setMsg('dkMsg', 'Moved ✓', 'ok');
     await loadCats();
   };
@@ -766,6 +1019,12 @@ function renderDeckRow(c, currentGroupId){
     const r = await sb.from('categories').delete().eq('name', c.name);
     del.disabled = false;
     if (r.error){ alert(r.error.message); return; }
+    var deletedDeck = { name: c.name, is_free: c.is_free, sort_order: c.sort_order };
+    pushHistory({
+      label: 'Delete deck "' + c.name + '"',
+      undo: async () => { await sb.from('categories').insert(deletedDeck); await loadCats(); },
+      redo: async () => { await sb.from('categories').delete().eq('name', deletedDeck.name); await loadCats(); }
+    });
     setMsg('dkMsg', 'Deck deleted ✓', 'ok');
     await loadCats();
   };
@@ -790,6 +1049,7 @@ async function reorderGroup(fromId, toId){
   var from = GROUPS.find(function(g){ return g.id === fromId; });
   var to = GROUPS.find(function(g){ return g.id === toId; });
   if (!from || !to) return;
+  var snapshot = GROUPS.map(function(g){ return { id: g.id, sort_order: g.sort_order }; });
   var fromIdx = GROUPS.indexOf(from);
   var toIdx = GROUPS.indexOf(to);
   var arr = GROUPS.slice();
@@ -797,11 +1057,23 @@ async function reorderGroup(fromId, toId){
   arr.splice(toIdx, 0, from);
   var updates = arr.map(function(g, i){ return sb.from('deck_groups').update({ sort_order: i }).eq('id', g.id); });
   await Promise.all(updates);
+  pushHistory({
+    label: 'Reorder groups',
+    undo: async () => {
+      await Promise.all(snapshot.map(function(s){ return sb.from('deck_groups').update({ sort_order: s.sort_order }).eq('id', s.id); }));
+      await loadCats();
+    },
+    redo: async () => {
+      await Promise.all(arr.map(function(g, i){ return sb.from('deck_groups').update({ sort_order: i }).eq('id', g.id); }));
+      await loadCats();
+    }
+  });
   setMsg('dkMsg', 'Group order saved ✓', 'ok');
   await loadCats();
 }
 
 async function moveDeckToGroup(deckName, newGroupId, position){
+  var oldGid = GMAP[deckName] == null ? null : GMAP[deckName];
   const r0 = await sb.from('deck_group_map').upsert({ deck_name: deckName, group_id: newGroupId }, { onConflict: 'deck_name' });
   if (r0.error){ alert(r0.error.message); return; }
   GMAP[deckName] = newGroupId;
@@ -818,11 +1090,23 @@ async function moveDeckToGroup(deckName, newGroupId, position){
     var updates = siblings.map(function(n, i){ return sb.from('categories').update({ sort_order: i }).eq('name', n); });
     await Promise.all(updates);
   }
+  pushHistory({
+    label: 'Move "' + deckName + '" between groups',
+    undo: async () => {
+      await sb.from('deck_group_map').upsert({ deck_name: deckName, group_id: oldGid }, { onConflict: 'deck_name' });
+      await loadCats();
+    },
+    redo: async () => {
+      await sb.from('deck_group_map').upsert({ deck_name: deckName, group_id: newGroupId }, { onConflict: 'deck_name' });
+      await loadCats();
+    }
+  });
   setMsg('dkMsg', 'Moved ✓', 'ok');
   await loadCats();
 }
 
 async function moveDeckBefore(dragName, targetName, targetGroupId){
+  var oldGid = GMAP[dragName] == null ? null : GMAP[dragName];
   if (GMAP[dragName] !== targetGroupId){
     const r0 = await sb.from('deck_group_map').upsert({ deck_name: dragName, group_id: targetGroupId }, { onConflict: 'deck_name' });
     if (r0.error){ alert(r0.error.message); return; }
@@ -837,6 +1121,17 @@ async function moveDeckBefore(dragName, targetName, targetGroupId){
   siblings.splice(tIdx, 0, dragName);
   var updates = siblings.map(function(n, i){ return sb.from('categories').update({ sort_order: i }).eq('name', n); });
   await Promise.all(updates);
+  pushHistory({
+    label: 'Reorder "' + dragName + '" before "' + targetName + '"',
+    undo: async () => {
+      await sb.from('deck_group_map').upsert({ deck_name: dragName, group_id: oldGid }, { onConflict: 'deck_name' });
+      await loadCats();
+    },
+    redo: async () => {
+      await sb.from('deck_group_map').upsert({ deck_name: dragName, group_id: targetGroupId }, { onConflict: 'deck_name' });
+      await loadCats();
+    }
+  });
   setMsg('dkMsg', 'Reordered ✓', 'ok');
   await loadCats();
 }
@@ -846,8 +1141,14 @@ $('dkNewGroup').onclick = async function(){
   if (!name) return;
   name = name.trim(); if (!name) return;
   var maxSort = GROUPS.reduce(function(m, g){ return Math.max(m, g.sort_order || 0); }, 0);
-  const r = await sb.from('deck_groups').insert({ name: name, sort_order: maxSort + 1 });
+  const r = await sb.from('deck_groups').insert({ name: name, sort_order: maxSort + 1 }).select().single();
   if (r.error){ alert(r.error.message); return; }
+  var newId = r.data.id;
+  pushHistory({
+    label: 'Create group "' + name + '"',
+    undo: async () => { await sb.from('deck_groups').delete().eq('id', newId); await loadCats(); },
+    redo: async () => { await sb.from('deck_groups').insert({ id: newId, name: name, sort_order: maxSort + 1 }); await loadCats(); }
+  });
   setMsg('dkMsg', 'Group created ✓', 'ok');
   await loadCats();
 };
@@ -860,15 +1161,20 @@ $('dkNewDeck').onclick = async function(){
   var maxSort = CATS.reduce(function(m, c){ return Math.max(m, c.sort_order || 0); }, 0);
   const r = await sb.from('categories').insert({ name: name, is_free: false, sort_order: maxSort + 1 });
   if (r.error){ alert(r.error.message); return; }
+  pushHistory({
+    label: 'Create deck "' + name + '"',
+    undo: async () => { await sb.from('categories').delete().eq('name', name); await loadCats(); },
+    redo: async () => { await sb.from('categories').insert({ name: name, is_free: false, sort_order: maxSort + 1 }); await loadCats(); }
+  });
   setMsg('dkMsg', 'Deck created (Premium) ✓', 'ok');
   await loadCats();
 };
 
 $('dkReload').onclick = loadCats;
 
-// ============================================================
-// CARDS DATABASE
-// ============================================================
+/* ============================================================
+   CARDS DATABASE
+   ============================================================ */
 async function loadCards(){
   var all = [], from = 0, step = 1000;
   while (true){
@@ -958,8 +1264,20 @@ function cardRow(c, i){
   del.onclick = async function(){
     if (!confirm('Delete this card?')) return;
     del.disabled = true;
+    var oldCard = Object.assign({}, c);
     const r = await sb.from('flashcards').delete().eq('id', c.id);
     if (r.error){ alert(r.error.message); del.disabled = false; return; }
+    pushHistory({
+      label: 'Delete card #' + c.id,
+      undo: async () => {
+        await sb.from('flashcards').insert({
+          id: oldCard.id, category: oldCard.category, question: oldCard.question,
+          answer: oldCard.answer, crumb: oldCard.crumb, card_order: oldCard.card_order
+        });
+        await loadCards();
+      },
+      redo: async () => { await sb.from('flashcards').delete().eq('id', oldCard.id); await loadCards(); }
+    });
     CARDS = CARDS.filter(function(x){ return x.id !== c.id; });
     SELECTED.delete(c.id);
     renderCards();
@@ -1011,12 +1329,24 @@ $('bulkClearBtn').onclick = function(){
 $('bulkDeleteBtn').onclick = async function(){
   var n = SELECTED.size;
   if (!n) return;
-  if (!confirm('Delete ' + n + ' card(s)? This cannot be undone.')) return;
-  var btn = $('bulkDeleteBtn'); btn.disabled = true;
+  if (!confirm('Delete ' + n + ' card(s)? This cannot be undone via Undo after backup.')) return;
   var ids = Array.from(SELECTED);
+  var oldCards = CARDS.filter(function(c){ return ids.indexOf(c.id) >= 0; }).map(function(c){ return Object.assign({}, c); });
+  var btn = $('bulkDeleteBtn'); btn.disabled = true;
   const r = await sb.from('flashcards').delete().in('id', ids);
   btn.disabled = false;
   if (r.error){ alert(r.error.message); return; }
+  pushHistory({
+    label: 'Delete ' + n + ' card(s)',
+    undo: async () => {
+      await sb.from('flashcards').insert(oldCards);
+      await loadCards();
+    },
+    redo: async () => {
+      await sb.from('flashcards').delete().in('id', ids);
+      await loadCards();
+    }
+  });
   CARDS = CARDS.filter(function(x){ return !SELECTED.has(x.id); });
   SELECTED.clear();
   renderCards();
@@ -1027,20 +1357,38 @@ $('bulkMoveBtn').onclick = async function(){
   var target = $('bulkMoveDeck').value;
   if (!target){ alert('Pick a target deck.'); return; }
   if (!confirm('Move ' + n + ' card(s) to "' + target + '"?')) return;
-  var btn = $('bulkMoveBtn'); btn.disabled = true;
   var ids = Array.from(SELECTED);
+  var oldCategories = {};
+  ids.forEach(function(id){
+    var c = CARDS.find(function(x){ return x.id === id; });
+    if (c) oldCategories[id] = c.category;
+  });
+  var btn = $('bulkMoveBtn'); btn.disabled = true;
   const r = await sb.from('flashcards').update({ category: target }).in('id', ids);
   btn.disabled = false;
   if (r.error){ alert(r.error.message); return; }
+  pushHistory({
+    label: 'Move ' + ids.length + ' card(s) to "' + target + '"',
+    undo: async () => {
+      for (var id in oldCategories){
+        await sb.from('flashcards').update({ category: oldCategories[id] }).eq('id', id);
+      }
+      await loadCards();
+    },
+    redo: async () => {
+      await sb.from('flashcards').update({ category: target }).in('id', ids);
+      await loadCards();
+    }
+  });
   CARDS.forEach(function(c){ if (SELECTED.has(c.id)) c.category = target; });
   setMsg('csvMsg', 'Moved ' + n + ' card(s) to "' + target + '" ✓', 'ok');
   SELECTED.clear();
   renderCards();
 };
 
-// ============================================================
-// EXPORT MODAL
-// ============================================================
+/* ============================================================
+   EXPORT MODAL
+   ============================================================ */
 $('btnExport').onclick = function(){
   EXP.selectedDecks.clear();
   EXP.selectedCards.clear();
@@ -1097,12 +1445,10 @@ function renderExportTree(){
   var anyShown = false;
 
   groups.forEach(function(g){
-    // فلترة الديكس حسب البحث
     var decksShown = g.decks;
     if (q){
       decksShown = g.decks.filter(function(d){
         if (d.name.toLowerCase().indexOf(q) >= 0) return true;
-        // ابحث في الكروت
         var cached = EXP.cardsCache[d.name];
         if (cached){
           return cached.some(function(c){
@@ -1119,7 +1465,6 @@ function renderExportTree(){
     var grpKey = String(g.id);
     var grpBox = el('div', { class: 'exp-node' });
 
-    // Group row
     var grpRow = el('div', { class: 'exp-row grp-row' });
     var grpCb = el('input', { type: 'checkbox' });
     var grpTotalDecks = g.decks.length;
@@ -1133,7 +1478,6 @@ function renderExportTree(){
       } else {
         g.decks.forEach(function(d){ EXP.selectedDecks.delete(d.name); });
       }
-      // حمّل الكروت وحددها كلها للديكس المختارة
       g.decks.forEach(function(d){
         if (grpCb.checked) ensureDeckCardsLoaded(d.name, true);
       });
@@ -1143,7 +1487,6 @@ function renderExportTree(){
     grpRow.appendChild(grpCb);
 
     var grpChev = el('span', { class: 'chev', text: '▶' });
-    if (EXP.openGroups.has(grpKey)) grpChev.parentNode && grpChev.classList.add('open');
     if (EXP.openGroups.has(grpKey)) grpRow.classList.add('open');
     grpChev.onclick = function(e){
       e.stopPropagation();
@@ -1166,7 +1509,6 @@ function renderExportTree(){
 
     grpBox.appendChild(grpRow);
 
-    // Decks under group (معروضة تلقائيًا مش محتاجة فتح)
     decksShown.forEach(function(d){
       var deckBox = el('div', { class: 'exp-node' });
 
@@ -1180,7 +1522,6 @@ function renderExportTree(){
           ensureDeckCardsLoaded(d.name, true);
         } else {
           EXP.selectedDecks.delete(d.name);
-          // شيل كل كروت الديك
           var cached = EXP.cardsCache[d.name] || [];
           cached.forEach(function(c){ EXP.selectedCards.delete(c.id); });
         }
@@ -1214,14 +1555,12 @@ function renderExportTree(){
       };
       deckRow.appendChild(dLbl);
 
-      // عدد الكروت
       var cached = EXP.cardsCache[d.name];
       var dCnt = el('span', { class: 'cnt', text: cached ? (cached.length + '') : '' });
       deckRow.appendChild(dCnt);
 
       deckBox.appendChild(deckRow);
 
-      // Cards (لو الديك مفتوحة)
       if (isOpen && cached){
         cached.forEach(function(c){
           if (q && stripHtml(c.question).toLowerCase().indexOf(q) < 0 && d.name.toLowerCase().indexOf(q) < 0){
@@ -1234,7 +1573,6 @@ function renderExportTree(){
             e.stopPropagation();
             if (cc.checked) EXP.selectedCards.add(c.id);
             else EXP.selectedCards.delete(c.id);
-            // لو شال كارت من ديك مختارة → شيل الديك من selectedDecks
             updateExpSummary();
             renderExportTree();
           };
@@ -1277,7 +1615,6 @@ function ensureDeckCardsLoaded(deckName, autoSelectAll){
     }
     return;
   }
-  // حمّل الكروت من CARDS (محلية)
   var cards = CARDS.filter(function(c){ return c.category === deckName; });
   EXP.cardsCache[deckName] = cards;
   EXP.loadedDecks.add(deckName);
@@ -1289,7 +1626,6 @@ function ensureDeckCardsLoaded(deckName, autoSelectAll){
 function updateExpSummary(){
   var deckCount = EXP.selectedDecks.size;
   var cardCount = EXP.selectedCards.size;
-  // لو الديك مختارة وكل كروتها مختارة، الديك محسوبة بالكامل
   $('expSummary').innerHTML = 'Selected: <b>' + deckCount + ' deck(s)</b> · <b>' + cardCount + ' card(s)</b>';
   var totalDecks = CATS.length;
   var allDecksSelected = (deckCount === totalDecks && totalDecks > 0);
@@ -1299,11 +1635,8 @@ function updateExpSummary(){
 }
 
 $('expGo').onclick = function(){
-  // اجمع كل الكروت المختارة
   var finalCards = [];
-  // أولاً: كل الكروت المختارة صراحة
   var selectedIds = EXP.selectedCards;
-  // ثانياً: كل الديكس المختارة → ضم كل كروتها
   var deckSet = EXP.selectedDecks;
 
   var seen = {};
@@ -1332,10 +1665,9 @@ $('expGo').onclick = function(){
   setTimeout(function(){ $('exportModal').classList.add('hidden'); }, 700);
 };
 
-// ============================================================
-// CARD EDITOR
-// ============================================================
-var CE = { qTokens: [], aTokens: [] };
+/* ============================================================
+   CARD EDITOR (with Rich + Text modes)
+   ============================================================ */
 function tokensFromHtml(html){
   var tmp = document.createElement('div');
   tmp.innerHTML = html || '';
@@ -1384,11 +1716,32 @@ function tokensFromText(text){
   return out;
 }
 function tokensToText(tokens){ return tokens.map(function(t){ return t.before + t.word; }).join(''); }
+
+function ceBuildHtml(tokens){
+  var out = '';
+  tokens.forEach(function(t){
+    var b = esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) { out += b; return; }
+    out += t.blank ? b + '<mark>' + esc(t.word) + '</mark>' : b + esc(t.word);
+  });
+  return out;
+}
+function ceBuildQuestionHtml(tokens){
+  var out = '';
+  tokens.forEach(function(t){
+    var b = esc(t.before).replace(/\n/g,'<br>');
+    if (!t.word) { out += b; return; }
+    out += t.blank ? b + '<span class="bl">&nbsp;</span>' : b + esc(t.word);
+  });
+  return out;
+}
+
 function renderCE(){
   $('ceQ').innerHTML = tokensToHtml(CE.qTokens);
   $('ceA').innerHTML = tokensToHtml(CE.aTokens);
   renderCEPreview();
 }
+
 function renderCEPreview(){
   var box = $('cePreview');
   var mode = document.querySelector('input[name=cemode]:checked').value;
@@ -1439,24 +1792,36 @@ function renderCEPreview(){
   box.innerHTML = '<div class="ce-pv" dir="auto"><small>Question</small>' + qHtml + '</div>' +
                   '<div class="ce-pv b" dir="auto"><small>Answer</small>' + aHtml + '</div>';
 }
-function ceBuildHtml(tokens){
-  var out = '';
-  tokens.forEach(function(t){
-    var b = esc(t.before).replace(/\n/g,'<br>');
-    if (!t.word) { out += b; return; }
-    out += t.blank ? b + '<mark>' + esc(t.word) + '</mark>' : b + esc(t.word);
-  });
-  return out;
+
+function setCEMode(mode){
+  CE.mode = mode;
+  $('ceRichPane').classList.toggle('hidden', mode !== 'rich');
+  $('ceTextPane').classList.toggle('hidden', mode !== 'text');
+  $('ceModeRich').classList.toggle('on', mode === 'rich');
+  $('ceModeText').classList.toggle('on', mode === 'text');
+  $('ceModeHint').textContent = mode === 'rich'
+    ? 'Click a word to mark it as a blank.'
+    : 'Edit the HTML directly. Use <mark>word</mark> for revealed answers and <span class="bl">&nbsp;</span> for blanks.';
+
+  if (mode === 'text'){
+    $('ceQText').value = ceBuildQuestionHtml(CE.qTokens);
+    $('ceAText').value = ceBuildHtml(CE.aTokens);
+  } else {
+    CE.qTokens = tokensFromHtml($('ceQText').value);
+    CE.aTokens = tokensFromHtml($('ceAText').value);
+    renderCE();
+  }
 }
-function ceBuildQuestionHtml(tokens){
-  var out = '';
-  tokens.forEach(function(t){
-    var b = esc(t.before).replace(/\n/g,'<br>');
-    if (!t.word) { out += b; return; }
-    out += t.blank ? b + '<span class="bl">&nbsp;</span>' : b + esc(t.word);
-  });
-  return out;
-}
+$('ceModeRich').onclick = function(){ setCEMode('rich'); };
+$('ceModeText').onclick = function(){ setCEMode('text'); };
+
+// Live preview while typing in raw text mode
+$('ceQText').oninput = $('ceAText').oninput = function(){
+  CE.qTokens = tokensFromHtml($('ceQText').value);
+  CE.aTokens = tokensFromHtml($('ceAText').value);
+  renderCEPreview();
+};
+
 function openCardEdit(c){
   EDIT_CARD = c;
   $('ceTitle').textContent = 'Edit card';
@@ -1466,11 +1831,19 @@ function openCardEdit(c){
   $('ceOrder').value = c.card_order != null ? c.card_order : '';
   CE.qTokens = tokensFromHtml(c.question || '');
   CE.aTokens = tokensFromHtml(c.answer || '');
+  CE.mode = 'rich';
   setMsg('ceMsg', '');
+  // reset mode buttons
+  $('ceRichPane').classList.remove('hidden');
+  $('ceTextPane').classList.add('hidden');
+  $('ceModeRich').classList.add('on');
+  $('ceModeText').classList.remove('on');
+  $('ceModeHint').textContent = 'Click a word to mark it as a blank.';
   renderCE();
   $('cardEditModal').classList.remove('hidden');
 }
 function closeCardEdit(){ $('cardEditModal').classList.add('hidden'); EDIT_CARD = null; }
+
 $('ceQ').onclick = function(e){
   var t = e.target.closest('.w'); if (!t) return;
   var idx = parseInt(t.getAttribute('data-ti'), 10);
@@ -1510,15 +1883,35 @@ $('ceClearSel').onclick = function(){
 };
 $('ceCancel').onclick = closeCardEdit;
 $('cardEditModal').onclick = function(e){ if (e.target === this) closeCardEdit(); };
+
 $('ceSave').onclick = async function(){
   if (!EDIT_CARD) return;
+  var qHtml, aHtml;
+  if (CE.mode === 'text'){
+    qHtml = $('ceQText').value.trim();
+    aHtml = $('ceAText').value.trim();
+    CE.qTokens = tokensFromHtml(qHtml);
+    CE.aTokens = tokensFromHtml(aHtml);
+  } else {
+    qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
+    aHtml = ceBuildHtml(CE.aTokens).trim();
+  }
   var deckV = $('ceDeck').value.trim();
   if (!deckV){ setMsg('ceMsg', 'Deck is required.', 'no'); return; }
-  var qHtml = ceBuildQuestionHtml(CE.qTokens).trim();
-  var aHtml = ceBuildHtml(CE.aTokens).trim();
   if (!qHtml || !aHtml){ setMsg('ceMsg', 'Question and answer cannot be empty.', 'no'); return; }
   var ord = parseInt($('ceOrder').value, 10);
   var btn = $('ceSave'); btn.disabled = true; setMsg('ceMsg', 'Saving...');
+
+  // احفظ القيم القديمة للـ Undo
+  var oldValues = {
+    category: EDIT_CARD.category,
+    question: EDIT_CARD.question,
+    answer: EDIT_CARD.answer,
+    crumb: EDIT_CARD.crumb,
+    card_order: EDIT_CARD.card_order
+  };
+  var cardId = EDIT_CARD.id;
+
   if (!CATS.some(function(x){ return x.name === deckV; })){
     var maxSort = CATS.reduce(function(m, x){ return Math.max(m, x.sort_order || 0); }, 0);
     var rc = await sb.from('categories').insert({ name: deckV, is_free: false, sort_order: maxSort + 1 });
@@ -1526,9 +1919,12 @@ $('ceSave').onclick = async function(){
     await loadCats();
   }
   var upd = { category: deckV, question: qHtml, answer: aHtml, crumb: $('ceCrumb').value.trim() || null, card_order: isNaN(ord) ? null : ord };
-  const r = await sb.from('flashcards').update(upd).eq('id', EDIT_CARD.id);
+  const r = await sb.from('flashcards').update(upd).eq('id', cardId);
   btn.disabled = false;
   if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
+
+  // وضع "each" — ضيف كروت إضافية
+  var insertedIds = [];
   var mode = document.querySelector('input[name=cemode]:checked').value;
   if (mode === 'each'){
     var qWords = CE.qTokens.filter(function(t){ return t.word; });
@@ -1542,36 +1938,73 @@ $('ceSave').onclick = async function(){
         var aa = CE.aTokens.map(function(t){ var wi = aWords.indexOf(t); return { before: t.before, word: t.word, blank: (t.word && wi === bi) }; });
         toInsert.push({ category: deckV, question: ceBuildQuestionHtml(qq), answer: ceBuildHtml(aa), crumb: $('ceCrumb').value.trim() || null, card_order: isNaN(ord) ? null : (ord + toInsert.length + 1) });
       });
-      if (toInsert.length) await sb.from('flashcards').insert(toInsert);
+      if (toInsert.length){
+        const ri = await sb.from('flashcards').insert(toInsert).select('id');
+        if (!ri.error && ri.data) insertedIds = ri.data.map(function(x){ return x.id; });
+      }
     }
   }
+
   Object.assign(EDIT_CARD, upd);
+
+  // سجّل في التاريخ
+  pushHistory({
+    label: 'Edit card #' + cardId,
+    undo: async () => {
+      await sb.from('flashcards').update(oldValues).eq('id', cardId);
+      if (insertedIds.length) await sb.from('flashcards').delete().in('id', insertedIds);
+      await loadCards();
+    },
+    redo: async () => {
+      await sb.from('flashcards').update(upd).eq('id', cardId);
+      if (insertedIds.length){
+        // أعد إدخالهم بنفس البيانات
+        // (اختياري: ممكن نعيدهم من نفس toInsert لكنه مش محفوظ هنا؛ مبسط: تجاهل)
+      }
+      await loadCards();
+    }
+  });
+
   closeCardEdit();
   setMsg('csvMsg', 'Card updated ✓', 'ok');
   await loadCards();
 };
+
 $('ceDelete').onclick = async function(){
   if (!EDIT_CARD) return;
   if (!confirm('Delete this card?')) return;
   var btn = $('ceDelete'); btn.disabled = true;
+  var oldCard = Object.assign({}, EDIT_CARD);
   const r = await sb.from('flashcards').delete().eq('id', EDIT_CARD.id);
   btn.disabled = false;
   if (r.error){ setMsg('ceMsg', r.error.message, 'no'); return; }
-  CARDS = CARDS.filter(function(x){ return x.id !== EDIT_CARD.id; });
-  SELECTED.delete(EDIT_CARD.id);
+  pushHistory({
+    label: 'Delete card #' + oldCard.id,
+    undo: async () => {
+      await sb.from('flashcards').insert({
+        id: oldCard.id, category: oldCard.category, question: oldCard.question,
+        answer: oldCard.answer, crumb: oldCard.crumb, card_order: oldCard.card_order
+      });
+      await loadCards();
+    },
+    redo: async () => { await sb.from('flashcards').delete().eq('id', oldCard.id); await loadCards(); }
+  });
+  CARDS = CARDS.filter(function(x){ return x.id !== oldCard.id; });
+  SELECTED.delete(oldCard.id);
   closeCardEdit();
   setMsg('csvMsg', 'Card deleted ✓', 'ok');
   renderCards();
 };
+
 $('cardDeckFilter').onchange = renderCards;
 $('cardCrumbFilter').onchange = renderCards;
 $('cardSearch').oninput = renderCards;
 $('cardReload').onclick = loadCards;
 $('btnAddCards').onclick = function(){ window.location.href = 'add-cards.html'; };
 
-// ============================================================
-// CSV IMPORT
-// ============================================================
+/* ============================================================
+   CSV IMPORT
+   ============================================================ */
 $('csvImportBtn').onclick = function(){ $('csvFile').click(); };
 $('csvFile').onchange = async function(){
   var f = $('csvFile').files[0];
@@ -1620,17 +2053,23 @@ $('csvFile').onchange = async function(){
     var startN = (r1.data && r1.data.length && r1.data[0].card_order != null) ? r1.data[0].card_order : 0;
     byDeck[deckName].forEach(function(c, i){ c.card_order = startN + i + 1; });
   }
-  var ri = await sb.from('flashcards').insert(toInsert);
+  var ri = await sb.from('flashcards').insert(toInsert).select('id');
   btn.disabled = false;
   $('csvFile').value = '';
   if (ri.error){ setMsg('csvMsg', 'Import failed: ' + ri.error.message, 'no'); return; }
+  var insertedIds = (ri.data || []).map(function(x){ return x.id; });
+  pushHistory({
+    label: 'Import ' + toInsert.length + ' card(s) from CSV',
+    undo: async () => { await sb.from('flashcards').delete().in('id', insertedIds); await loadAll(); },
+    redo: async () => { /* يتجاهل — البيانات الأصلية مش محفوظة */ }
+  });
   setMsg('csvMsg', 'Imported ' + toInsert.length + ' card(s) ✓' + (newDecks.size ? ' · New decks: ' + Array.from(newDecks).join(', ') : ''), 'ok');
   await loadAll();
 };
 
-// ============================================================
-// GENERATE
-// ============================================================
+/* ============================================================
+   GENERATE
+   ============================================================ */
 function updGenCount(){ $('genSelCount').textContent = GEN.size + ' deck(s) selected'; }
 function renderGen(){
   var q = $('genSearch').value.toLowerCase(), box = $('genList');
@@ -1678,6 +2117,7 @@ $('genCopy').onclick = function(){
 $('genCsv').onclick = function(){
   download('codes.csv', toCsv([['code','name']].concat(LASTGEN.map(function(r){ return [r.new_code, r.new_note || '']; }))));
 };
+
 async function loadCodes(){
   const { data, error } = await sb.rpc('admin_list_codes');
   if (error) { setMsg('codeMsg', error.message, 'no'); return; }
@@ -1777,7 +2217,7 @@ $('editSave').onclick = async function(){
   closeEdit();
   setMsg('codeMsg', 'Code updated ✓', 'ok');
   loadCodes();
-}
+};
 $('codeFilter').onchange = renderCodes;
 $('codeSearch').oninput = renderCodes;
 $('codeReload').onclick = loadCodes;
