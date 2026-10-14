@@ -143,33 +143,34 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
 [data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
 
 
-/* ===== Cards workspace refresh: clean table + right-side editor drawer ===== */
-:root{--shany-teal:#0f8b87;--shany-teal-soft:#eaf8f7;--shany-blue:#1686c7}
-#tab-cards> .box:first-child h2{font-family:Georgia,serif;font-size:1.8rem;letter-spacing:-.02em}
+/* ===== Cards workspace v2 (Anki-style) ===== */
+.tabs{overflow-x:auto}
+.cw{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:12px;align-items:start}
+.cw-list{min-width:0}
+.cw-ed{position:sticky;top:70px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px;max-height:calc(100dvh - 90px);overflow-y:auto}
 #tab-cards .box{border-radius:12px}
-#tab-cards input,#tab-cards select,#cardEditModal input,#cardEditModal select,#cardEditModal textarea{border-radius:8px}
-#tab-cards .bulk-bar{background:#effaf9;border:1px solid #c9efeb;border-radius:10px;padding:10px 14px}
-#tab-cards table{border-collapse:separate;border-spacing:0;width:100%}
-#tab-cards thead th{background:#f7fbfc;color:#173b55;font-weight:700;border-bottom:1px solid #dcebee}
-#tab-cards tbody tr{transition:background .15s}
-#tab-cards tbody tr:hover{background:#f3fbfb}
-#tab-cards td{padding:12px 10px;border-bottom:1px solid #e3eef0;vertical-align:middle}
-#tab-cards tbody tr td:first-child{border-left:3px solid transparent}
-#tab-cards tbody tr:has(input[type=checkbox]:checked){background:#eaf8f7}
-#cardEditModal{justify-content:flex-end;align-items:stretch;padding:0;background:rgba(9,34,48,.28);backdrop-filter:blur(3px)}
-#cardEditModal .ce-drawer{height:100dvh;max-height:100dvh;width:min(440px,100vw);overflow-y:auto;border-radius:16px 0 0 16px;margin:0;padding:24px 20px;box-shadow:-12px 0 40px rgba(10,50,65,.14);animation:ceSlideIn .2s ease-out}
-#cardEditModal .ce-drawer h2{font-family:Georgia,serif;font-size:1.45rem;margin:0 0 6px}
-#cardEditModal .ce-drawer .grid{grid-template-columns:1fr}
-#cardEditModal .ce-drawer .raw-edit{font-family:inherit;min-height:105px;background:#fff}
-#cardEditModal .ce-drawer .row{gap:8px}
-#cardEditModal .ce-drawer #ceSave{width:100%;min-height:42px;background:linear-gradient(110deg,#128c88,#087f7d);color:white;border:0;font-weight:700}
-#cardEditModal .ce-drawer #ceCancel{width:100%;min-height:40px}
-#cardEditModal .ce-drawer #cePreview{background:#f5fafb;border:1px solid #e0edef;border-radius:10px;padding:10px}
-#cardEditModal .ce-drawer .wb{background:#f9fcfd;border:1px solid #d8e7eb;border-radius:9px;padding:12px;line-height:1.9;min-height:54px}
-#cardEditModal .ce-drawer .mode-btn{padding:8px 10px}
-#cardEditModal .ce-drawer label.f{display:block}
-@keyframes ceSlideIn{from{transform:translateX(18px);opacity:.7}to{transform:translateX(0);opacity:1}}
-@media(max-width:700px){#cardEditModal .ce-drawer{width:100vw;border-radius:0;padding:18px 14px}.tabs{overflow-x:auto}}
+#tab-cards tbody tr{cursor:pointer;transition:background .12s}
+#tab-cards tbody tr:hover td{background:color-mix(in srgb,var(--acc) 7%,transparent)}
+#tab-cards tbody tr.active td{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+#tab-cards tbody tr.active td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+#tab-cards td{padding:10px 8px;vertical-align:middle}
+.ed-help{font-size:.82rem;color:var(--mut);background:color-mix(in srgb,var(--acc) 8%,transparent);border-radius:8px;padding:8px 10px;margin:8px 0;line-height:1.7}
+.ed-meta{grid-template-columns:1fr 1fr 90px;margin-top:8px}
+.ed-lbl{font-weight:700;font-size:.85rem;margin:12px 0 4px}
+.ed-tb{display:flex;gap:4px;margin-bottom:4px}
+.ed-tb button{padding:3px 10px;font-size:.85rem;min-width:34px}
+.ed-rich{min-height:90px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:1rem/1.7 Georgia,system-ui,serif;outline:none}
+.ed-rich:focus{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 25%,transparent)}
+#ceText{min-height:150px;font-family:Georgia,system-ui,serif;font-size:1rem;line-height:1.8}
+#ceText:focus{border-color:var(--acc);outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 25%,transparent)}
+.ed-actions{display:flex;gap:8px;margin-top:14px;position:sticky;bottom:-14px;background:var(--card);padding:10px 0 4px}
+.ed-actions .primary{flex:1;min-height:40px}
+@media(max-width:900px){
+  .cw{grid-template-columns:1fr}
+  .cw-ed{display:none;position:fixed;inset:0;z-index:60;max-height:none;border-radius:0;border:0;top:0}
+  .cw-ed.open{display:block}
+  .ed-meta{grid-template-columns:1fr 1fr}
+}
 </style></head><body><main>
 
 <div class="top">
@@ -229,68 +230,141 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
     <div id="dkTree"></div>
   </section>
 
-  <section id="tab-cards" class="hidden">
-    <div class="box">
-      <h2>Card database</h2>
-      <div class="row">
-        <button class="primary" id="btnAddCards" data-tip="Add new cards">➕ Add cards</button>
-        <button class="primary" id="btnExport" data-tip="Export selected decks/cards to CSV">⬇ Export (CSV)</button>
-        <button id="csvImportBtn" data-tip="Upload cards from CSV">⬆ Import CSV</button>
-        <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+ <section id="tab-cards" class="hidden">
+  <div class="box">
+    <div class="row" style="margin:0">
+      <h2 style="margin:0;flex:1;min-width:120px">Cards</h2>
+      <button class="primary" id="btnNewCard" data-tip="Create a card right here">➕ New card</button>
+      <button id="btnAddCards" data-tip="Open the bulk add page">Bulk add</button>
+      <button id="btnExport" data-tip="Export selected decks/cards to CSV">⬇ Export</button>
+      <button id="csvImportBtn" data-tip="Upload cards from CSV">⬆ Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+    </div>
+    <div class="mut" style="margin-top:6px">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span></div>
+    <div class="msg" id="csvMsg"></div>
+  </div>
+
+  <div class="cw">
+    <!-- ========== LEFT: list ========== -->
+    <div class="cw-list">
+      <div class="box" style="margin-top:0">
+        <div class="grid">
+          <label class="f">Search
+            <input type="text" id="cardSearch" placeholder="Question or answer...">
+          </label>
+          <label class="f">Deck
+            <select id="cardDeckFilter"></select>
+          </label>
+          <label class="f">Crumb
+            <select id="cardCrumbFilter"></select>
+          </label>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <button id="cardReload">Refresh</button>
+          <span class="mut" id="cardCount">—</span>
+        </div>
       </div>
-      <div class="mut">CSV columns: <span class="mono">category,question,answer,crumb,card_order</span></div>
-      <div class="msg" id="csvMsg"></div>
+
+      <div class="bulk-bar hidden" id="bulkBar">
+        <span class="count" id="bulkCount">0 selected</span>
+        <span style="flex:1"></span>
+        <select id="bulkMoveDeck" style="min-width:150px"><option value="">— Move to deck —</option></select>
+        <button class="primary" id="bulkMoveBtn">Move</button>
+        <button class="danger" id="bulkDeleteBtn">Delete</button>
+        <button id="bulkClearBtn">Clear</button>
+      </div>
+
+      <div class="box" style="padding:0">
+        <div class="wrap" style="max-height:68vh;overflow-y:auto">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:32px"><input type="checkbox" id="selectAll"></th>
+                <th style="width:40px">#</th>
+                <th>Question</th>
+                <th>Answer</th>
+                <th style="width:120px">Deck</th>
+                <th style="width:100px">Crumb</th>
+                <th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody id="cardBody"></tbody>
+          </table>
+        </div>
+        <div class="row" style="padding:10px 12px;margin:0;border-top:1px solid var(--line)">
+          <button id="cardMore" class="hidden">Show more</button>
+        </div>
+      </div>
     </div>
 
-    <div class="box">
-      <div class="grid">
-        <label class="f">Search
-          <input type="text" id="cardSearch" placeholder="Question or answer...">
-        </label>
-        <label class="f">Deck
-          <select id="cardDeckFilter"></select>
-        </label>
-        <label class="f">Crumb
-          <select id="cardCrumbFilter"></select>
-        </label>
+    <!-- ========== RIGHT: inline editor ========== -->
+    <aside class="cw-ed" id="cardEditor">
+      <div id="edEmpty" class="mut" style="text-align:center;padding:48px 12px;line-height:2">
+        👈 اختار كارت من القايمة علشان تعدله<br>أو دوس <b>➕ New card</b>
       </div>
-      <div class="row">
-        <button id="cardReload" data-tip="Reload cards">Refresh</button>
-        <span class="mut" id="cardCount">—</span>
-      </div>
-    </div>
 
-    <div class="bulk-bar hidden" id="bulkBar">
-      <span class="count" id="bulkCount">0 selected</span>
-      <span style="flex:1"></span>
-      <select id="bulkMoveDeck" style="min-width:150px"><option value="">— Move to deck —</option></select>
-      <button class="primary" id="bulkMoveBtn" data-tip="Move selected">Move</button>
-      <button class="danger" id="bulkDeleteBtn" data-tip="Delete selected">Delete</button>
-      <button id="bulkClearBtn" data-tip="Clear selection">Clear</button>
-    </div>
+      <div id="edForm" class="hidden">
+        <div class="row" style="margin:0">
+          <h2 id="ceTitle" style="margin:0;flex:1">Edit card</h2>
+          <button class="sm" id="cePrev" data-tip="Previous card (Alt+←)">‹</button>
+          <button class="sm" id="ceNext" data-tip="Next card (Alt+→)">›</button>
+          <button class="sm" id="ceCancel" data-tip="Close (Esc)">✕</button>
+        </div>
+        <div class="mut" id="ceMeta"></div>
 
-    <div class="box" style="padding:0">
-      <div class="wrap" style="max-height:60vh;overflow-y:auto">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:32px"><input type="checkbox" id="selectAll"></th>
-              <th style="width:40px">#</th>
-              <th>Question</th>
-              <th>Answer</th>
-              <th style="width:130px">Deck</th>
-              <th style="width:120px">Crumb</th>
-              <th style="width:120px">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="cardBody"></tbody>
-        </table>
+        <div class="row">
+          <button class="mode-btn on" id="ceTypeCloze" type="button">🕳 Fill-in-the-blank</button>
+          <button class="mode-btn" id="ceTypeBasic" type="button">📄 Front / Back</button>
+        </div>
+
+        <div class="grid ed-meta">
+          <label class="f">Deck<input type="text" id="ceDeck" list="deckListDL"></label>
+          <label class="f">Crumb<input type="text" id="ceCrumb" placeholder="optional"></label>
+          <label class="f">Order<input type="number" id="ceOrder"></label>
+        </div>
+
+        <!-- Type 1: fill-in-the-blank -->
+        <div id="edCloze">
+          <div class="ed-help">
+            اكتب الجملة <b>كاملة</b>، بعدين <b>ظلّل</b> الكلمة اللي عايز تخفيها واضغط <b>Blank</b> (أو <code>Alt+B</code>).<br>
+            الكلمة المخفية هتظهر <code>[[كده]]</code> في الصندوق، وفي الكارت هتبقى فراغ في السؤال ومظللة في الإجابة.
+          </div>
+          <div class="row" style="margin:6px 0">
+            <button class="primary sm" id="ceBlankBtn" type="button">[ ] Blank</button>
+            <button class="sm" id="ceUnblankBtn" type="button">Un-blank</button>
+            <label class="mut" style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" id="ceEach"> كارت منفصل لكل فراغ
+            </label>
+          </div>
+          <textarea class="raw-edit" id="ceText" dir="auto" placeholder="The mitochondria produce ATP."></textarea>
+        </div>
+
+        <!-- Type 2: front / back -->
+        <div id="edBasic" class="hidden">
+          <div class="ed-tb">
+            <button type="button" data-cmd="bold"><b>B</b></button>
+            <button type="button" data-cmd="italic"><i>I</i></button>
+            <button type="button" data-cmd="underline"><u>U</u></button>
+            <button type="button" data-cmd="removeFormat" data-tip="Clear formatting">⌫</button>
+          </div>
+          <div class="ed-lbl">Front (السؤال)</div>
+          <div class="ed-rich" id="ceFront" contenteditable="true" dir="auto"></div>
+          <div class="ed-lbl">Back (الإجابة)</div>
+          <div class="ed-rich" id="ceBack" contenteditable="true" dir="auto"></div>
+        </div>
+
+        <div class="ed-lbl">Preview</div>
+        <div id="cePreview"></div>
+
+        <div class="ed-actions">
+          <button class="primary" id="ceSave">Save <span class="mut" style="color:inherit;opacity:.8">Ctrl+Enter</span></button>
+          <button class="danger" id="ceDelete">Delete</button>
+        </div>
+        <div class="msg" id="ceMsg"></div>
       </div>
-      <div class="row" style="padding:10px 12px;margin:0;border-top:1px solid var(--line)">
-        <button id="cardMore" class="hidden">Show more</button>
-      </div>
-    </div>
-  </section>
+    </aside>
+  </div>
+</section>
 
   <section id="tab-gen" class="hidden">
     <div class="box">
@@ -383,68 +457,7 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--
   </div>
 </div>
 
-<!-- ============ Card Editor (with Rich + Raw text modes) ============ -->
-<div class="modal hidden" id="cardEditModal">
-  <div class="mbox ce-drawer" style="max-width:820px">
-    <h2 id="ceTitle">Edit Card</h2>
-    <div class="mut" id="ceMeta"></div>
 
-    <div class="row" style="margin-top:10px">
-      <button class="mode-btn on" id="ceModeRich" type="button" data-tip="Click words to blank them">🎨 Rich mode</button>
-      <button class="mode-btn" id="ceModeText" type="button" data-tip="Edit plain text; wrap blanks in [[double brackets]]">📝 Text mode</button>
-      <span class="mut" id="ceModeHint">Click a word to mark it as a blank.</span>
-    </div>
-
-    <div class="grid" style="margin-top:10px">
-      <label class="f">Deck<input type="text" id="ceDeck" list="deckListDL"></label>
-      <label class="f">Crumb (optional)<input type="text" id="ceCrumb" placeholder="e.g. Chapter 3"></label>
-      <label class="f">Card order<input type="number" id="ceOrder"></label>
-    </div>
-
-    <!-- Rich mode -->
-    <div id="ceRichPane">
-      <div class="mut" style="margin-top:14px;font-weight:700">Question — click any word to blank it (click again to unblank)</div>
-      <div class="wb" id="ceQ" dir="auto"></div>
-      <div class="mut" style="margin-top:10px;font-weight:700">Answer — highlighted words are the revealed answers</div>
-      <div class="wb" id="ceA" dir="auto"></div>
-      <div class="row" style="margin-top:10px">
-        <button class="sm" id="ceSyncFromQA">↻ Reload tokens</button>
-        <button class="sm" id="ceClearSel">Clear blanks</button>
-      </div>
-    </div>
-
-    <!-- Raw text mode -->
-    <div id="ceTextPane" class="hidden">
-      <div class="mut" style="margin-top:14px;font-weight:700">Question — اكتب النص عادي وحدد الكلمات اللي عايز تخفيها</div>
-      <textarea class="raw-edit" id="ceQText" dir="auto" placeholder="مثال: The [[mitochondria]] produce [[ATP]]."></textarea>
-      <div class="mut" style="margin-top:10px;font-weight:700">Answer — اكتب الإجابة وحدد الكلمات المهمة بنفس الطريقة</div>
-      <textarea class="raw-edit" id="ceAText" dir="auto" placeholder="مثال: The [[mitochondria]] produce [[ATP]]."></textarea>
-      <div class="mut" style="margin-top:8px;line-height:1.8;background:#edf8f7;border-radius:8px;padding:10px">
-        💡 أي كلمة بين <code>[[ ]]</code> هتتحول لفراغ في السؤال وتتظلل في الإجابة. مثال: <code>The [[cell membrane]] controls transport.</code><br>
-        اكتب النص مباشرة؛ مش محتاج HTML أو أكواد. استخدام الوضع ده ممكن يشيل التنسيق الخاص القديم من النص.
-      </div>
-    </div>
-
-    <div class="row">
-      <label><input type="radio" name="cemode" value="one" checked> One card with all blanks</label>
-      <label><input type="radio" name="cemode" value="each"> Separate card for each blank</label>
-    </div>
-    <div class="mut" style="margin-top:8px">Preview:</div>
-    <div id="cePreview"></div>
-    <div class="row" style="margin-top:14px">
-      <button class="primary" id="ceSave">Save</button>
-      <button class="danger" id="ceDelete">Delete</button>
-      <button id="ceCancel">Cancel</button>
-    </div>
-    <div class="msg" id="ceMsg"></div>
-  </div>
-</div>
-
-<!-- ============ Export Modal ============ -->
-<div class="modal hidden" id="exportModal">
-  <div class="mbox" style="max-width:620px">
-    <h2>Export to CSV</h2>
-    <div class="mut">Pick which decks or individual cards to export.</div>
 
     <input type="text" class="exp-search" id="expSearch" placeholder="🔍 Search decks or cards...">
 
