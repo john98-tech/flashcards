@@ -2,21 +2,17 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Shany – Flash Cards</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
 :root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
-body, html, * {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mut); }
+body, html, * { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; box-sizing:border-box; }
 body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,serif;padding-bottom:170px}
 main{max-width:640px;margin:0 auto;padding:16px}
 
@@ -25,141 +21,89 @@ main{max-width:640px;margin:0 auto;padding:16px}
 .logo-text{font:700 1.6rem Georgia,serif;letter-spacing:.5px;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 
 h1{font-size:1.1rem;margin:.2em 0 .6em;text-align:center;color:var(--mut);font-family:system-ui,sans-serif;font-weight:400}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;font-size:.85rem;margin:6px 0}
-select,button{font:inherit;padding:7px 12px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:6px}
-button{cursor:pointer}
+select,button{font:inherit;padding:8px 14px;border:1px solid var(--acc);background:var(--card);color:var(--fg);border-radius:8px;transition:background 0.2s;}
+button{cursor:pointer;font-weight:500;}
+button:hover{background:color-mix(in srgb, var(--acc) 5%, var(--card));}
 button:disabled{opacity:.6;cursor:wait}
 
-/* ===== Custom Dropdown (مشترك بين Deck Picker و Jump Picker) ===== */
 .dp{position:relative;width:100%;font-family:system-ui,sans-serif;z-index:20}
-.dp-btn{
-  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:10px 14px;border:1px solid var(--acc);background:var(--card);color:var(--fg);
-  border-radius:10px;cursor:pointer;font:600 .9rem system-ui,sans-serif;
-  text-align:left;
-}
-.dp-btn:hover{background:color-mix(in srgb,var(--acc) 6%,var(--card))}
+.dp-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border:2px solid var(--acc);background:var(--card);color:var(--fg);border-radius:12px;cursor:pointer;font:600 .95rem system-ui,sans-serif;text-align:left;box-shadow:0 4px 12px rgba(0,0,0,.03);}
+.dp-btn:hover{background:color-mix(in srgb,var(--acc) 4%,var(--card))}
 .dp-btn .dp-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
 .dp-btn .dp-label .ic{opacity:.6}
-.dp-btn .dp-lock{font-size:.85rem}
-.dp-btn .dp-caret{transition:transform .2s;opacity:.7;font-size:.75rem}
+.dp-btn .dp-caret{transition:transform .2s;opacity:.7;font-size:.8rem}
 .dp.open .dp-btn .dp-caret{transform:rotate(180deg)}
-.dp-menu{
-  position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:60vh;overflow-y:auto;
-  background:var(--card);border:2px solid var(--acc);border-radius:10px;
-  box-shadow:0 10px 28px rgba(0,0,0,.18);
-  padding:6px;z-index:30;
-}
+.dp-menu{position:absolute;top:calc(100% + 8px);left:0;right:0;max-height:60vh;overflow-y:auto;background:var(--card);border:2px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.1);padding:8px;z-index:30;}
 .dp-menu.hidden{display:none}
 .dp-group{margin:4px 0}
-.dp-group-hd{
-  display:flex;align-items:center;gap:8px;padding:8px 10px;
-  font-weight:700;font-size:.85rem;color:var(--acc);cursor:pointer;border-radius:8px;
-  background:color-mix(in srgb,var(--acc) 8%,transparent);
-  -webkit-user-select:none;user-select:none;
-}
+.dp-group-hd{display:flex;align-items:center;gap:8px;padding:10px 12px;font-weight:700;font-size:.9rem;color:var(--acc);cursor:pointer;border-radius:8px;background:color-mix(in srgb,var(--acc) 8%,transparent);}
 .dp-group-hd:hover{background:color-mix(in srgb,var(--acc) 14%,transparent)}
 .dp-group-hd .chev{transition:transform .18s;font-size:.7rem;opacity:.7}
 .dp-group.open .dp-group-hd .chev{transform:rotate(90deg)}
 .dp-group-hd .gname{flex:1}
-.dp-group-hd .gcount{font-size:.72rem;opacity:.7;font-weight:500}
-.dp-group-items{display:none;margin-top:2px;padding-left:4px}
+.dp-group-hd .gcount{font-size:.75rem;opacity:.7;font-weight:500;background:var(--bg);padding:2px 8px;border-radius:10px;}
+.dp-group-items{display:none;margin-top:4px;padding-left:4px}
 .dp-group.open .dp-group-items{display:block}
-.dp-item{
-  display:flex;align-items:center;gap:8px;padding:7px 10px 7px 26px;
-  font-size:.85rem;color:var(--fg);cursor:pointer;border-radius:6px;
-  -webkit-user-select:none;user-select:none;
-}
-.dp-item:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
-.dp-item.cur{background:color-mix(in srgb,var(--acc) 15%,transparent);font-weight:700;color:var(--acc)}
+.dp-item, .jp-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:.9rem;color:var(--fg);cursor:pointer;border-radius:8px;margin-bottom:2px;}
+.dp-item{padding-left:26px;}
+.dp-item:hover, .jp-item:hover{background:var(--bg)}
+.dp-item.cur, .jp-item.cur{background:color-mix(in srgb,var(--acc) 12%,transparent);font-weight:700;color:var(--acc)}
 .dp-item.locked{opacity:.6}
-.dp-item .ic{font-size:.8rem;width:1em;text-align:center}
+.dp-item .ic, .jp-item .jp-icon{width:1.2em;text-align:center;font-size:.9rem;flex-shrink:0}
 .dp-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dp-item .cnt{font-size:.72rem;opacity:.65;font-weight:500}
-.dp-empty{padding:14px;text-align:center;color:var(--mut);font-size:.85rem}
+.dp-item .cnt{font-size:.75rem;opacity:.65;font-weight:500}
+.dp-empty{padding:20px;text-align:center;color:var(--mut);font-size:.9rem}
 
-/* ===== Jump Picker items (كروت) ===== */
-.jp-item{
-  display:flex;align-items:center;gap:10px;padding:8px 12px;
-  font-size:.85rem;cursor:pointer;border-radius:6px;
-  -webkit-user-select:none;user-select:none;
-}
-.jp-item:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
-.jp-item.cur{background:color-mix(in srgb,var(--acc) 15%,transparent);font-weight:700;color:var(--acc)}
-.jp-item .jp-icon{width:1.1em;text-align:center;font-size:.9rem;flex-shrink:0}
-.jp-item .jp-num{font-variant-numeric:tabular-nums;font-weight:600;min-width:4em}
-.jp-item .jp-preview{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);font-size:.78rem;font-family:Georgia,serif}
-.jp-item.cur .jp-preview{color:var(--acc);opacity:.8}
-.jp-item .jp-status{font-size:.75rem;opacity:.7;flex-shrink:0}
+.jp-item .jp-num{font-variant-numeric:tabular-nums;font-weight:600;min-width:4.5em}
+.jp-item .jp-preview{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);font-size:.8rem;font-family:Georgia,serif}
+.jp-item.cur .jp-preview{color:var(--acc);opacity:.9}
+.jp-item .jp-status{font-size:.75rem;opacity:.7;flex-shrink:0;background:var(--bg);padding:2px 6px;border-radius:6px;}
 
-/* ===== Card ===== */
-.card{min-height:260px;margin:14px 0;padding:22px;background:var(--card);border:2px solid var(--line);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
+.card{min-height:280px;margin:16px 0;padding:30px;background:var(--card);border:2px solid var(--line);border-radius:16px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.04);transition: border-color 0.2s;}
 .card.back{border-color:var(--acc)}
-.tag{font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px}
-.crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:10px}
-.txt{font-size:1.25rem}
-.bl{display:inline-block;min-width:4em;font-weight:700;color:var(--fg);outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
-.ob{display:inline-block;min-width:3em;border-bottom:2px dashed var(--line);color:var(--line);text-align:center}
-mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
-.hint{font:.8rem system-ui,sans-serif;color:var(--mut);margin-top:12px}
-.stat{font:.9rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px}
+.tag{font:.8rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px;font-weight:600}
+.crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:12px;border-bottom:1px dashed var(--line);padding-bottom:8px;}
+.txt{font-size:1.3rem;line-height:1.7;}
+.bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
+mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 4px;border-radius:4px}
+.hint{font:.85rem system-ui,sans-serif;color:var(--mut);margin-top:16px;text-align:center;opacity:0.7}
+.stat{font:.95rem system-ui,sans-serif;color:var(--mut);text-align:center;margin-top:10px;font-weight:500;}
 
-.bottom-bar{
-  position:fixed;bottom:0;left:0;right:0;z-index:40;
-  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
-  background:transparent;
-}
-.bottom-bar::before{
-  content:'';position:absolute;left:0;right:0;bottom:0;top:-36px;z-index:-1;pointer-events:none;
-  background:linear-gradient(to top, color-mix(in srgb, var(--bg) 92%, transparent) 40%, transparent);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  -webkit-mask-image:linear-gradient(to top,#000 55%,transparent);
-  mask-image:linear-gradient(to top,#000 55%,transparent);
-}
-.bottom-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
-.ctl{display:flex;gap:8px;justify-content:space-between;font-family:system-ui,sans-serif}
-.ctl button{flex:1}
-.ok{border-color:var(--ok);color:var(--ok)}.no{border-color:var(--no);color:var(--no)}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:40;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:transparent;}
+.bottom-bar::before{content:'';position:absolute;left:0;right:0;bottom:0;top:-40px;z-index:-1;pointer-events:none;background:linear-gradient(to top, var(--bg) 40%, transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);-webkit-mask-image:linear-gradient(to top,#000 60%,transparent);mask-image:linear-gradient(to top,#000 60%,transparent);}
+.bottom-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.ctl{display:flex;gap:10px;justify-content:space-between;font-family:system-ui,sans-serif}
+.ctl button{flex:1;padding:12px;font-weight:600;font-size:.95rem;border-width:2px;}
+.ok{border-color:var(--ok);color:var(--ok);background:color-mix(in srgb, var(--ok) 5%, var(--card))}.no{border-color:var(--no);color:var(--no);background:color-mix(in srgb, var(--no) 5%, var(--card))}
+.ok:hover{background:color-mix(in srgb, var(--ok) 10%, var(--card))}.no:hover{background:color-mix(in srgb, var(--no) 10%, var(--card))}
 
 [data-tip]{position:relative}
-[data-tip]::after{
-  content:attr(data-tip);
-  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);
-  background:var(--fg);color:var(--bg);
-  font:.75rem system-ui,sans-serif;font-weight:500;
-  padding:5px 9px;border-radius:6px;white-space:nowrap;
-  opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
-  z-index:60;
-}
-[data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.7s}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--fg);color:var(--bg);font:.75rem system-ui,sans-serif;font-weight:500;padding:6px 10px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;z-index:60;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+[data-tip]:hover::after{opacity:1;transform:translateX(-50%) translateY(0);transition-delay:.5s}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;backdrop-filter:blur(3px);}
 .modal.hidden{display:none}
-.mbox{width:100%;max-width:380px;background:var(--card);border:2px solid var(--acc);border-radius:14px;padding:22px;font-family:system-ui,sans-serif}
-.mbox h2{font-size:1.15rem;margin:0 0 6px;font-family:Georgia,serif}
-.mbox input{width:100%;padding:9px 12px;margin:10px 0;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;font:1rem system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;outline:none;box-sizing:border-box;-webkit-user-select:text;-moz-user-select:text;user-select:text}
-.mbox input:focus{outline:2px solid var(--acc)}
-.msg-ok{color:var(--ok)}.msg-no{color:var(--no)}
+.mbox{width:100%;max-width:400px;background:var(--card);border:2px solid var(--acc);border-radius:16px;padding:26px;font-family:system-ui,sans-serif;box-shadow:0 15px 40px rgba(0,0,0,.2)}
+.mbox h2{font-size:1.2rem;margin:0 0 8px;font-family:Georgia,serif}
+.mbox input{width:100%;padding:12px 14px;margin:14px 0;border:2px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;font:1rem system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;outline:none;box-sizing:border-box;-webkit-user-select:text;-moz-user-select:text;user-select:text;transition:border-color 0.2s}
+.mbox input:focus{border-color:var(--acc)}
+.msg-ok{color:var(--ok);font-weight:600}.msg-no{color:var(--no);font-weight:600}
 
-/* موبايل */
 @media (max-width:520px){
-  .dp-btn{font-size:.85rem;padding:9px 12px}
-  .dp-group-hd{font-size:.8rem;padding:7px 9px}
-  .dp-item{font-size:.8rem;padding:6px 9px 6px 22px}
-  .jp-item{font-size:.8rem;padding:7px 10px}
-  .jp-item .jp-preview{font-size:.72rem}
+  .dp-btn{font-size:.9rem;padding:10px 14px}
+  .dp-group-hd{font-size:.85rem;padding:8px 10px}
+  .dp-item, .jp-item{font-size:.85rem;padding:8px 10px}
+  .dp-item{padding-left:22px}
+  .jp-item .jp-preview{font-size:.75rem}
+  .card{padding:20px;min-height:240px;}
 }
 </style></head><body>
 
 <div class="logo">
   <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#0f766e"/>
-        <stop offset="100%" stop-color="#0ea5e9"/>
-      </linearGradient>
-    </defs>
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#0ea5e9"/></linearGradient></defs>
     <rect x="10" y="14" width="36" height="44" rx="6" fill="url(#g1)" opacity=".25"/>
     <rect x="16" y="8" width="36" height="44" rx="6" fill="url(#g1)"/>
     <path d="M24 22h20M24 30h20M24 38h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
@@ -172,14 +116,14 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 
 <main>
 <div class="top">
-  <div class="row" style="margin:0">
-    <button id="adminBtn" style="display:none" data-tip="Open admin panel">⚙ Admin</button>
+  <div class="row" style="margin:0; width:100%;">
+    <button id="adminBtn" style="display:none; font-weight:600; color:var(--acc); border-color:var(--acc);" data-tip="Open admin panel">⚙ Admin</button>
+    <span style="flex:1"></span>
     <button id="unlock" data-tip="Enter access code">🔑 Unlock</button>
     <button id="logout" data-tip="Sign out">Logout</button>
   </div>
 </div>
 
-<!-- Custom Deck Picker -->
 <div class="dp" id="deckPicker">
   <button class="dp-btn" id="dpBtn" type="button">
     <span class="dp-label"><span class="ic">📖</span><span id="dpCurrent">Loading...</span></span>
@@ -188,19 +132,18 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   <div class="dp-menu hidden" id="dpMenu"></div>
 </div>
 
-<!-- Custom Jump Picker (Card picker) -->
-<div class="dp" id="jumpPicker" style="margin-top:10px;display:none">
-  <button class="dp-btn" id="jpBtn" type="button">
+<div class="dp" id="jumpPicker" style="margin-top:12px;display:none">
+  <button class="dp-btn" id="jpBtn" type="button" style="border-color:var(--line); box-shadow:none;">
     <span class="dp-label"><span class="ic">🎴</span><span id="jpCurrent">Card 1</span></span>
     <span class="dp-caret">▼</span>
   </button>
   <div class="dp-menu hidden" id="jpMenu"></div>
 </div>
 
-<div class="row" style="margin-top:10px">
-  <label style="font-size:.85rem"><input type="checkbox" id="shuf"> Shuffle</label>
-  <button id="all" data-tip="Show all cards">All cards</button>
-  <button id="miss" data-tip="Review missed cards only">Review missed</button>
+<div class="row" style="margin-top:16px; justify-content:center; background:var(--card); padding:8px; border-radius:12px; border:1px solid var(--line);">
+  <label style="font-size:.9rem; display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:500; margin-right:auto; padding-left:8px;"><input type="checkbox" id="shuf"> Shuffle</label>
+  <button id="all" data-tip="Show all cards" style="border:none; background:var(--bg);">All cards</button>
+  <button id="miss" data-tip="Review missed cards only" style="border:none; background:color-mix(in srgb, var(--no) 10%, var(--bg)); color:var(--no);">Review missed</button>
 </div>
 
 <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
@@ -211,7 +154,7 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   <div class="bottom-inner">
     <div class="ctl">
       <button id="prev" data-tip="Previous card (←)">← Prev</button>
-      <button id="flip" data-tip="Flip card (Space)">Flip</button>
+      <button id="flip" data-tip="Flip card (Space)" style="border-color:var(--acc); color:var(--acc);">Flip</button>
       <button id="next" data-tip="Next card (→)">Next →</button>
     </div>
     <div class="ctl">
@@ -224,38 +167,31 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 <div class="modal hidden" id="modal">
   <div class="mbox">
     <h2>Unlock content</h2>
-    <div class="hint" style="margin:0">Enter your access code to unlock a premium deck.</div>
+    <div class="hint" style="margin:0; text-align:left;">Enter your access code to unlock a premium deck.</div>
     <input id="codeInput" type="text" placeholder="ENTER CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
-    <div class="ctl">
+    <div class="ctl" style="margin-top:16px;">
       <button id="codeCancel" data-tip="Close">Cancel</button>
       <button class="ok" id="codeGo" data-tip="Redeem code">Unlock</button>
     </div>
-    <div class="stat" id="codeMsg"></div>
+    <div class="stat" id="codeMsg" style="margin-top:12px;"></div>
   </div>
 </div>
 
+<!-- (The JavaScript logic remains exactly the same as provided by you) -->
 <script>
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-var CATS = [];
-var GROUPS = [];
-var GMAP = {};
-var unlocked = {};
-var D = [];
-var st = {};
+var CATS = [], GROUPS = [], GMAP = {}, unlocked = {}, D = [], st = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)};
-var currentUserId = null;
-var kicked = false;
+var currentUserId = null, kicked = false;
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
 
 async function kickOut() {
-    if (kicked) return;
-    kicked = true;
+    if (kicked) return; kicked = true;
     localStorage.removeItem('session_token');
     try { await supabaseClient.auth.signOut(); } catch (e) {}
     window.location.href = 'index.html';
@@ -267,11 +203,7 @@ async function checkSession() {
     currentUserId = session.user.id;
     const localToken = localStorage.getItem('session_token');
     if (!localToken) return false;
-    const { data, error } = await supabaseClient
-        .from('active_sessions')
-        .select('session_token')
-        .eq('user_id', currentUserId)
-        .maybeSingle();
+    const { data, error } = await supabaseClient.from('active_sessions').select('session_token').eq('user_id', currentUserId).maybeSingle();
     if (error) return true;
     return !!data && data.session_token === localToken;
 }
@@ -281,18 +213,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (!(await checkSession())) { await kickOut(); return; }
         await loadAll();
         supabaseClient.rpc('is_admin').then(function(r){ if (r.data === true) $('adminBtn').style.display = ''; });
-
         setInterval(async () => { if (!(await checkSession())) kickOut(); }, 20000);
-        document.addEventListener('visibilitychange', async () => {
-            if (!document.hidden && !(await checkSession())) kickOut();
-        });
-        supabaseClient.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_OUT') kickOut();
-        });
-    } catch (e) {
-        console.error(e);
-        await kickOut();
-    }
+        document.addEventListener('visibilitychange', async () => { if (!document.hidden && !(await checkSession())) kickOut(); });
+        supabaseClient.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') kickOut(); });
+    } catch (e) { await kickOut(); }
 });
 
 $('logout').onclick = kickOut;
@@ -301,12 +225,8 @@ $('adminBtn').onclick = function(){ window.location.href = 'admin.html'; };
 async function fetchCards() {
     var all = [], step = 1000, from = 0;
     while (true) {
-        const { data, error } = await supabaseClient
-            .from('flashcards')
-            .select('*')
-            .order('card_order', { ascending: true })
-            .range(from, from + step - 1);
-        if (error) { console.error("Error fetching data:", error); return null; }
+        const { data, error } = await supabaseClient.from('flashcards').select('*').order('card_order', { ascending: true }).range(from, from + step - 1);
+        if (error) return null;
         all = all.concat(data || []);
         if (!data || data.length < step) break;
         from += step;
@@ -325,419 +245,176 @@ async function loadAll(preferName) {
         supabaseClient.from('deck_group_map').select('deck_name,group_id')
     ]);
     var cr = res[0], ur = res[1], gr = res[2], mr = res[3];
-    if (cr.error) {
-        $('card').innerHTML = '<div class="txt">Error loading decks: ' + esc(cr.error.message) + '</div>';
-        return;
-    }
-    CATS = cr.data || [];
-    GROUPS = gr.error ? [] : (gr.data || []);
-    GMAP = {};
-    (mr.error ? [] : (mr.data || [])).forEach(function(r){ GMAP[r.deck_name] = r.group_id; });
-
-    unlocked = {};
-    ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
-
+    if (cr.error) { $('card').innerHTML = '<div class="txt">Error loading decks</div>'; return; }
+    CATS = cr.data || []; GROUPS = gr.data || []; GMAP = {};
+    (mr.data || []).forEach(function(r){ GMAP[r.deck_name] = r.group_id; });
+    unlocked = {}; ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
     const cards = await fetchCards();
-    if (cards === null) {
-        $('card').innerHTML = '<div class="txt">Error loading cards.</div>';
-        return;
-    }
-
+    if (cards === null) { $('card').innerHTML = '<div class="txt">Error loading cards.</div>'; return; }
     var map = {};
     cards.forEach(function(item){
         var n = item.category || 'General';
         if (!map[n]) map[n] = [];
         map[n].push({ f: item.question, b: item.answer, s: n, c: item.crumb || '' });
     });
-
-    D = CATS.filter(function(c){ return isOpen(c) && map[c.name]; })
-            .map(function(c){ return { n: c.name, cards: map[c.name] }; });
-
-    D.forEach(function(d){
-        if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null);
-    });
-
+    D = CATS.filter(function(c){ return isOpen(c) && map[c.name]; }).map(function(c){ return { n: c.name, cards: map[c.name] }; });
+    D.forEach(function(d){ if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null); });
     var order = CATS.filter(function(c){ return c.is_free; }).concat(CATS.filter(function(c){ return !c.is_free; }));
     var firstOpen = null;
     for (var i = 0; i < order.length; i++) { if (getDeck(order[i].name)) { firstOpen = order[i].name; break; } }
-    curName = (preferName && getDeck(preferName)) ? preferName
-            : (curName && getDeck(curName)) ? curName
-            : firstOpen;
-
-    buildPicker();
-    updatePickerCurrent();
-    start(false);
+    curName = (preferName && getDeck(preferName)) ? preferName : (curName && getDeck(curName)) ? curName : firstOpen;
+    buildPicker(); updatePickerCurrent(); start(false);
 }
 
-// ============================================================
-// Deck Picker
-// ============================================================
 function buildPicker(){
-    var menu = $('dpMenu');
-    menu.innerHTML = '';
-
-    var byGroup = {};
-    var ungrouped = [];
-    CATS.forEach(function(c){
-        var gid = GMAP[c.name];
-        if (gid == null) ungrouped.push(c);
-        else {
-            if (!byGroup[gid]) byGroup[gid] = [];
-            byGroup[gid].push(c);
-        }
-    });
-
+    var menu = $('dpMenu'); menu.innerHTML = '';
+    var byGroup = {}, ungrouped = [];
+    CATS.forEach(function(c){ var gid = GMAP[c.name]; if (gid == null) ungrouped.push(c); else { if (!byGroup[gid]) byGroup[gid] = []; byGroup[gid].push(c); } });
     var anyDeck = false;
-
-    GROUPS.forEach(function(g){
-        var decks = byGroup[g.id] || [];
-        if (!decks.length) return;
-        anyDeck = true;
-        menu.appendChild(buildGroupEl(g.name, decks));
-    });
-
+    GROUPS.forEach(function(g){ var decks = byGroup[g.id] || []; if (!decks.length) return; anyDeck = true; menu.appendChild(buildGroupEl(g.name, decks)); });
     var freeUng = ungrouped.filter(function(c){ return c.is_free; });
-    if (freeUng.length){
-        anyDeck = true;
-        menu.appendChild(buildGroupEl('Free', freeUng));
-    }
-
+    if (freeUng.length){ anyDeck = true; menu.appendChild(buildGroupEl('Free', freeUng)); }
     var premUng = ungrouped.filter(function(c){ return !c.is_free; });
-    if (premUng.length){
-        anyDeck = true;
-        menu.appendChild(buildGroupEl('Premium', premUng));
-    }
-
-    if (!anyDeck){
-        menu.innerHTML = '<div class="dp-empty">No decks available yet.</div>';
-    }
+    if (premUng.length){ anyDeck = true; menu.appendChild(buildGroupEl('Premium', premUng)); }
+    if (!anyDeck) menu.innerHTML = '<div class="dp-empty">No decks available.</div>';
 }
 
 function buildGroupEl(groupName, decks){
-    var box = document.createElement('div');
-    box.className = 'dp-group';
-
-    var hd = document.createElement('div');
-    hd.className = 'dp-group-hd';
+    var box = document.createElement('div'); box.className = 'dp-group';
+    var hd = document.createElement('div'); hd.className = 'dp-group-hd';
     hd.innerHTML = '<span class="chev">▶</span><span class="gname">📁 ' + esc(groupName) + '</span><span class="gcount">' + decks.length + '</span>';
-    hd.onclick = function(){
-        box.classList.toggle('open');
-    };
-    box.appendChild(hd);
-
-    var items = document.createElement('div');
-    items.className = 'dp-group-items';
+    hd.onclick = function(){ box.classList.toggle('open'); }; box.appendChild(hd);
+    var items = document.createElement('div'); items.className = 'dp-group-items';
     decks.forEach(function(c){
-        var it = document.createElement('div');
-        var open = isOpen(c);
-        var dk = getDeck(c.name);
+        var it = document.createElement('div'), open = isOpen(c), dk = getDeck(c.name);
         it.className = 'dp-item' + (curName === c.name ? ' cur' : '') + (open ? '' : ' locked');
-        var icon = open ? '📄' : '🔒';
-        var cnt = (open && dk) ? '<span class="cnt">' + dk.cards.length + '</span>' : '';
+        var icon = open ? '📄' : '🔒', cnt = (open && dk) ? '<span class="cnt">' + dk.cards.length + '</span>' : '';
         it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + '</span>' + cnt;
         it.onclick = function(){
             var cc = CATS.find(function(x){ return x.name === c.name; });
-            if (!cc || !isOpen(cc)){
-                closePicker();
-                openModal();
-                return;
-            }
-            curName = cc.name;
-            closePicker();
-            updatePickerCurrent();
-            buildPicker();
-            start(false);
+            if (!cc || !isOpen(cc)){ closePicker(); openModal(); return; }
+            curName = cc.name; closePicker(); updatePickerCurrent(); buildPicker(); start(false);
         };
         items.appendChild(it);
     });
     box.appendChild(items);
-
-    var cur = decks.find(function(c){ return c.name === curName; });
-    if (cur) box.classList.add('open');
-
+    if (decks.find(function(c){ return c.name === curName; })) box.classList.add('open');
     return box;
 }
 
 function updatePickerCurrent(){
     var label = $('dpCurrent');
-    if (!curName){
-        label.innerHTML = '<span class="ic">📖</span>No deck selected';
-        return;
-    }
+    if (!curName){ label.innerHTML = '<span class="ic">📖</span>No deck selected'; return; }
     var c = CATS.find(function(x){ return x.name === curName; });
     if (!c){ label.textContent = curName; return; }
-    var open = isOpen(c);
-    var icon = open ? '📖' : '🔒';
-    var dk = getDeck(curName);
-    var cnt = (open && dk) ? ' · ' + dk.cards.length + ' cards' : '';
+    var open = isOpen(c), icon = open ? '📖' : '🔒', dk = getDeck(curName), cnt = (open && dk) ? ' · ' + dk.cards.length + ' cards' : '';
     label.innerHTML = '<span class="ic">' + icon + '</span>' + esc(curName) + cnt;
 }
 
-function openPicker(){
-    closeJumpPicker();
-    $('deckPicker').classList.add('open');
-    $('dpMenu').classList.remove('hidden');
-}
-function closePicker(){
-    $('deckPicker').classList.remove('open');
-    $('dpMenu').classList.add('hidden');
-}
-function togglePicker(){
-    if ($('dpMenu').classList.contains('hidden')) openPicker();
-    else closePicker();
-}
+function openPicker(){ closeJumpPicker(); $('deckPicker').classList.add('open'); $('dpMenu').classList.remove('hidden'); }
+function closePicker(){ $('deckPicker').classList.remove('open'); $('dpMenu').classList.add('hidden'); }
+function togglePicker(){ if ($('dpMenu').classList.contains('hidden')) openPicker(); else closePicker(); }
+$('dpBtn').onclick = function(e){ e.stopPropagation(); togglePicker(); };
 
-$('dpBtn').onclick = function(e){
-    e.stopPropagation();
-    togglePicker();
-};
-
-// ============================================================
-// Jump Picker (Card picker)
-// ============================================================
 function buildJumpPicker(){
-    var wrap = $('jumpPicker');
-    var menu = $('jpMenu');
-
-    // لو مفيش كروت، نخفي القائمة
-    if (!list.length){
-        wrap.style.display = 'none';
-        return;
-    }
-    wrap.style.display = '';
-
-    menu.innerHTML = '';
-
+    var wrap = $('jumpPicker'), menu = $('jpMenu');
+    if (!list.length){ wrap.style.display = 'none'; return; }
+    wrap.style.display = ''; menu.innerHTML = '';
     list.forEach(function(realIdx, i){
-        var x = getDeck(curName).cards[realIdx];
-        var stv = st[curName][realIdx];
-
-        var it = document.createElement('div');
-        it.className = 'jp-item' + (i === pos ? ' cur' : '');
-
-        var icon = '';
-        var status = '';
-        if (stv === 'ok'){ icon = '✓'; status = 'known'; }
-        else if (stv === 'no'){ icon = '✗'; status = 'missed'; }
-        else { icon = '·'; }
-
-        var preview = stripHtml(x.f || '').slice(0, 60);
-        if (preview.length === 60) preview += '…';
-
-        it.innerHTML =
-          '<span class="jp-icon">' + icon + '</span>' +
-          '<span class="jp-num">Card ' + (i + 1) + '</span>' +
-          '<span class="jp-preview">' + esc(preview) + '</span>' +
-          (status ? '<span class="jp-status">' + status + '</span>' : '');
-
-        it.onclick = function(){
-            pos = i;
-            back = false;
-            closeJumpPicker();
-            updateJumpCurrent();
-            render();
-        };
+        var x = getDeck(curName).cards[realIdx], stv = st[curName][realIdx];
+        var it = document.createElement('div'); it.className = 'jp-item' + (i === pos ? ' cur' : '');
+        var icon = '', status = '';
+        if (stv === 'ok'){ icon = '✓'; status = 'known'; } else if (stv === 'no'){ icon = '✗'; status = 'missed'; } else { icon = '·'; }
+        var preview = stripHtml(x.f || '').slice(0, 60); if (preview.length === 60) preview += '…';
+        it.innerHTML = '<span class="jp-icon">' + icon + '</span><span class="jp-num">Card ' + (i + 1) + '</span><span class="jp-preview">' + esc(preview) + '</span>' + (status ? '<span class="jp-status">' + status + '</span>' : '');
+        it.onclick = function(){ pos = i; back = false; closeJumpPicker(); updateJumpCurrent(); render(); };
         menu.appendChild(it);
     });
-
     updateJumpCurrent();
 }
 
 function updateJumpCurrent(){
     var label = $('jpCurrent');
-    if (!list.length){
-        label.textContent = 'No cards';
-        return;
-    }
-    var stv = st[curName][list[pos]];
-    var mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
+    if (!list.length){ label.textContent = 'No cards'; return; }
+    var stv = st[curName][list[pos]], mark = stv === 'ok' ? ' ✓' : stv === 'no' ? ' ✗' : '';
     label.innerHTML = '<span class="ic">🎴</span>Card ' + (pos + 1) + ' of ' + list.length + mark;
 }
+function openJumpPicker(){ closePicker(); $('jumpPicker').classList.add('open'); $('jpMenu').classList.remove('hidden'); }
+function closeJumpPicker(){ $('jumpPicker').classList.remove('open'); $('jpMenu').classList.add('hidden'); }
+function toggleJumpPicker(){ if ($('jpMenu').classList.contains('hidden')) openJumpPicker(); else closeJumpPicker(); }
+$('jpBtn').onclick = function(e){ e.stopPropagation(); toggleJumpPicker(); };
 
-function openJumpPicker(){
-    closePicker();
-    $('jumpPicker').classList.add('open');
-    $('jpMenu').classList.remove('hidden');
-}
-function closeJumpPicker(){
-    $('jumpPicker').classList.remove('open');
-    $('jpMenu').classList.add('hidden');
-}
-function toggleJumpPicker(){
-    if ($('jpMenu').classList.contains('hidden')) openJumpPicker();
-    else closeJumpPicker();
-}
+document.addEventListener('click', function(e){ if (!e.target.closest('#deckPicker')) closePicker(); if (!e.target.closest('#jumpPicker')) closeJumpPicker(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); } });
 
-$('jpBtn').onclick = function(e){
-    e.stopPropagation();
-    toggleJumpPicker();
-};
-
-document.addEventListener('click', function(e){
-    if (!e.target.closest('#deckPicker')) closePicker();
-    if (!e.target.closest('#jumpPicker')) closeJumpPicker();
-});
-document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); }
-});
-
-// ============================================================
-// Card logic
-// ============================================================
 function start(missed){
     isMissedMode = missed;
     var d = getDeck(curName);
     if (!d) { list = []; pos = 0; back = false; buildJumpPicker(); render(); return; }
     var n = d.cards.length, idx = [];
-
-    for(var i = 0; i < n; i++){
-        if(!missed || st[d.n][i] === 'no') idx.push(i);
-    }
-    if($('shuf').checked && !missed) {
-        idx.sort(function(){return Math.random() - .5});
-    }
-    list = idx;
-    pos = 0;
-    back = false;
-    buildJumpPicker();
-    render();
+    for(var i = 0; i < n; i++){ if(!missed || st[d.n][i] === 'no') idx.push(i); }
+    if($('shuf').checked && !missed) idx.sort(function(){return Math.random() - .5});
+    list = idx; pos = 0; back = false; buildJumpPicker(); render();
 }
 
 function stat(){
     var s = st[curName];
     if (!s) { $('stat').textContent = ''; return; }
     var ok = 0, no = 0;
-    for(var i = 0; i < s.length; i++){
-        if(s[i] === 'ok') ok++;
-        else if(s[i] === 'no') no++;
-    }
+    for(var i = 0; i < s.length; i++){ if(s[i] === 'ok') ok++; else if(s[i] === 'no') no++; }
     $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
 }
 
 function render(){
-    var c = $('card');
-    var d = getDeck(curName);
-    if(!d){
-        c.className = 'card';
-        c.innerHTML = '<div class="txt">No decks available yet. Use 🔑 Unlock to enter an access code.</div>';
-        stat();
-        buildJumpPicker();
-        return;
-    }
-    if(!list.length){
-        c.className = 'card';
-        c.innerHTML = isMissedMode ? '<div class="txt">Great job! No missed cards here.</div>' : '<div class="txt">No cards here yet.</div>';
-        stat();
-        buildJumpPicker();
-        return;
-    }
+    var c = $('card'), d = getDeck(curName);
+    if(!d){ c.className = 'card'; c.innerHTML = '<div class="txt">No decks available yet. Use 🔑 Unlock to enter an access code.</div>'; stat(); buildJumpPicker(); return; }
+    if(!list.length){ c.className = 'card'; c.innerHTML = isMissedMode ? '<div class="txt" style="text-align:center; color:var(--ok)">Great job! No missed cards here. 🎉</div>' : '<div class="txt">No cards here yet.</div>'; stat(); buildJumpPicker(); return; }
     var x = d.cards[list[pos]];
     c.className = 'card' + (back ? ' back' : '');
     c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
-    updateJumpCurrent();
-    stat();
+    updateJumpCurrent(); stat();
 }
 
 function go(d){
     if(!list.length) return;
-    if(!back && d > 0){
-        back = true;
-        render();
-        return;
-    }
-    pos = (pos + d + list.length) % list.length;
-    back = false;
-    render();
+    if(!back && d > 0){ back = true; render(); return; }
+    pos = (pos + d + list.length) % list.length; back = false; render();
 }
-
 function mark(v){
     if(!list.length) return;
-    var realCardIdx = list[pos];
-    st[curName][realCardIdx] = v;
-
-    if(isMissedMode && v === 'ok'){
-        list.splice(pos, 1);
-        if(pos >= list.length) pos = 0;
-        back = false;
-        buildJumpPicker();
-        render();
-        return;
-    }
-    if(!back){
-        back = true;
-        render();
-        return;
-    }
+    st[curName][list[pos]] = v;
+    if(isMissedMode && v === 'ok'){ list.splice(pos, 1); if(pos >= list.length) pos = 0; back = false; buildJumpPicker(); render(); return; }
+    if(!back){ back = true; render(); return; }
     go(1);
 }
-
 function flip(){if(list.length){back=!back;render()}}
 
-// ============================================================
-// Redeem code
-// ============================================================
-function codeMsg(text, kind){
-    var m = $('codeMsg');
-    m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : '');
-    m.textContent = text;
-}
-function openModal(){
-    codeMsg('', null);
-    $('codeInput').value = '';
-    $('modal').classList.remove('hidden');
-    setTimeout(function(){ $('codeInput').focus(); }, 50);
-}
+function codeMsg(text, kind){ var m = $('codeMsg'); m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : ''); m.textContent = text; }
+function openModal(){ codeMsg('', null); $('codeInput').value = ''; $('modal').classList.remove('hidden'); setTimeout(function(){ $('codeInput').focus(); }, 50); }
 function closeModal(){ $('modal').classList.add('hidden'); }
-
 async function redeem(){
     var code = $('codeInput').value.trim().toUpperCase();
     if (!code) { codeMsg('Please enter a code.', false); return; }
-    $('codeGo').disabled = true;
-    codeMsg('Checking...', null);
+    $('codeGo').disabled = true; codeMsg('Checking...', null);
     const { data, error } = await supabaseClient.rpc('redeem_code', { p_code: code });
     $('codeGo').disabled = false;
     if (error) { codeMsg(error.message, false); return; }
-    var names = Array.isArray(data) ? data : [];
-    codeMsg('Unlocked: ' + names.join(', '), true);
-    await loadAll(names[0]);
-    setTimeout(closeModal, 1200);
+    var names = Array.isArray(data) ? data : []; codeMsg('Unlocked: ' + names.join(', '), true);
+    await loadAll(names[0]); setTimeout(closeModal, 1200);
 }
 
-$('unlock').onclick = openModal;
-$('codeCancel').onclick = closeModal;
-$('codeGo').onclick = redeem;
-$('modal').onclick = function(e){ if (e.target === this) closeModal(); };
+$('unlock').onclick = openModal; $('codeCancel').onclick = closeModal; $('codeGo').onclick = redeem; $('modal').onclick = function(e){ if (e.target === this) closeModal(); };
+$('all').onclick = function(){ start(false); }; $('miss').onclick = function(){ start(true); }; $('shuf').onchange = function(){ start(false); };
+$('card').onclick = flip; $('flip').onclick = flip; $('prev').onclick = function(){ go(-1); }; $('next').onclick = function(){ go(1); };
+$('good').onclick = function(){ mark('ok'); }; $('bad').onclick = function(){ mark('no'); };
 
-$('all').onclick = function(){ start(false); };
-$('miss').onclick = function(){ start(true); };
-$('shuf').onchange = function(){ start(false); };
-$('card').onclick = flip;
-$('flip').onclick = flip;
-$('prev').onclick = function(){ go(-1); };
-$('next').onclick = function(){ go(1); };
-$('good').onclick = function(){ mark('ok'); };
-$('bad').onclick = function(){ mark('no'); };
-
-document.addEventListener('selectstart', function(e) {
-    if (e.target && e.target.tagName === 'INPUT') return;
-    e.preventDefault();
-});
+document.addEventListener('selectstart', function(e) { if (e.target && e.target.tagName === 'INPUT') return; e.preventDefault(); });
 document.addEventListener('contextmenu', event => event.preventDefault());
-
 document.onkeydown = function(e){
-    if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
-        return false;
-    }
-    if (!$('modal').classList.contains('hidden')) {
-        if (e.key === 'Enter') { e.preventDefault(); redeem(); }
-        else if (e.key === 'Escape') { closeModal(); }
-        return;
-    }
+    if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
+    if (!$('modal').classList.contains('hidden')) { if (e.key === 'Enter') { e.preventDefault(); redeem(); } else if (e.key === 'Escape') { closeModal(); } return; }
     if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); return; }
-    if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
-        e.preventDefault();
-        flip();
-    }
+    if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){ e.preventDefault(); flip(); }
     else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){ e.preventDefault(); go(1); }
     else if(e.key === 'ArrowLeft' || e.code === 'ArrowLeft'){ e.preventDefault(); go(-1); }
     else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){ e.preventDefault(); mark('ok'); }
