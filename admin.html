@@ -522,8 +522,7 @@ function buildFilters() {
     MS[k].sel = new Set([...MS[k].sel].filter(v => MS[k].opts.some(o => o.v === v)));
   }
   Object.keys(MS).forEach(renderMS);
-  fillSelect($('bulkDeck'), decks, 'Move to deck…');
-  $('deckDL').innerHTML = decks.map(d => `<option value="${esc(d)}">`).join('');
+fillSelect($('bulkDeck'), DECKS, 'Move to deck…');  $('deckDL').innerHTML = decks.map(d => `<option value="${esc(d)}">`).join('');
   $('crumbDL').innerHTML = crumbs.map(d => `<option value="${esc(d)}">`).join('');
 }
 
