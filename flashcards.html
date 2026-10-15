@@ -101,6 +101,9 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   .jp-item .jp-preview{font-size:.75rem}
   .card{padding:20px;min-height:240px;}
 }
+  .ud-menu{margin-top:8px;max-height:40vh;overflow-y:auto;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.1);text-align:start}
+.ud-menu.hidden{display:none}
+.ud-wrap{width:100%;margin-top:10px;font-family:system-ui,sans-serif}
 </style></head><body>
 
 <div class="logo">
@@ -396,7 +399,33 @@ function flip(){if(list.length){back=!back;render()}}
 function codeMsg(text, kind){ var m = $('codeMsg'); m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : ''); m.textContent = text; }
 function openModal(){ codeMsg('', null); $('codeInput').value = ''; $('modal').classList.remove('hidden'); setTimeout(function(){ $('codeInput').focus(); }, 50); }
 function closeModal(){ $('modal').classList.add('hidden'); }
-
+function showUnlocked(names){
+    var m = $('codeMsg');
+    m.className = 'stat msg-ok';
+    m.innerHTML = '';
+    var wrap = document.createElement('div');
+    wrap.className = 'dp ud-wrap';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dp-btn';
+    btn.innerHTML = '<span class="dp-label"><span class="ic">✅</span>اتفتح ' + names.length + ' دكّة</span><span class="dp-caret">▼</span>';
+    var menu = document.createElement('div');
+    menu.className = 'ud-menu hidden';
+    names.forEach(function(n){
+        var it = document.createElement('div');
+        it.className = 'dp-item';
+        it.innerHTML = '<span class="ic">📄</span><span class="nm">' + esc(n) + '</span>';
+        menu.appendChild(it);
+    });
+    btn.onclick = function(e){
+        e.stopPropagation();
+        wrap.classList.toggle('open');
+        menu.classList.toggle('hidden');
+    };
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    m.appendChild(wrap);
+}
 async function redeem(){
     var code = $('codeInput').value.trim().toUpperCase();
     if (!code) { codeMsg('اكتب الكود الأول', false); return; }
@@ -406,9 +435,8 @@ async function redeem(){
     if (error) { codeMsg(friendlyErr(error.message), false); return; }
     var names = Array.isArray(data) ? data : [];
     if (!names.length) { codeMsg('الكود ده مفيهوش أي دكّة', false); return; }
-    codeMsg('✅ اتفتح: ' + names.join(', '), true);
     await loadAll(names[0]);
-    setTimeout(closeModal, 1500);
+    showUnlocked(names);
 }
 
 function friendlyErr(m){
