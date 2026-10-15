@@ -44,8 +44,22 @@ input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-
 .pane{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .list-pane{min-width:0}
 
-/* List */
-.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
+/* Filters */
+.filters{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-bottom:1px solid var(--line);align-items:center}
+#fSearch{flex:1 1 200px}
+#fSort{flex:0 0 auto}
+.omin,.omax{width:100px;flex:0 0 auto}
+.ms{position:relative;flex:1 1 150px;min-width:150px}
+.ms-btn{width:100%;text-align:start;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--card)}
+.ms-btn::after{content:" ▾";color:var(--mut)}
+.ms-panel{position:absolute;top:calc(100% + 4px);left:0;min-width:240px;max-width:320px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:50;padding:8px;display:flex;flex-direction:column;gap:6px}
+.ms-search{width:100%}
+.ms-opts{max-height:280px;overflow:auto;display:flex;flex-direction:column}
+.ms-opt{display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;cursor:pointer}
+.ms-opt:hover{background:var(--bg)}
+.ms-empty{padding:6px}
+.ms-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+
 .bulk{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--acc-soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .table-wrap{flex:1;overflow:auto;min-height:0}
 table{width:100%;border-collapse:collapse}
@@ -83,8 +97,10 @@ tbody tr.on{background:var(--acc-soft)}
 .rt{min-height:110px;max-height:260px;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:0 0 8px 8px;background:var(--card);font:16px/1.8 Georgia,"Times New Roman",serif;outline:none;overflow-wrap:anywhere}
 .rt:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
 .rt.is-empty::before{content:attr(data-ph);color:var(--mut)}
-.cloze{background:var(--bl);border-bottom:2px solid var(--fg);border-radius:4px;padding:0 4px;font-weight:700}
-.cloze::after{content:attr(data-c);font:700 10px system-ui,sans-serif;color:var(--acc);vertical-align:super;margin-inline-start:3px}
+
+/* Blanks & highlights (same classes as the stored cards) */
+.ob,.bl{background:var(--bl);border-bottom:2px solid var(--fg);border-radius:4px;padding:0 4px;font-weight:700}
+mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
 
 /* Preview */
 .preview{border:1px dashed var(--line);border-radius:10px;padding:12px}
@@ -92,8 +108,6 @@ tbody tr.on{background:var(--acc-soft)}
 .pv-card{background:var(--bg);border-radius:8px;padding:14px;font:15px/1.7 Georgia,"Times New Roman",serif;overflow-wrap:anywhere}
 .pv-card small{display:block;font:700 10px system-ui,sans-serif;color:var(--mut);text-transform:uppercase;margin-bottom:4px}
 .pv-card hr{border:none;border-top:1px dashed var(--line);margin:12px 0}
-.pv-blank{display:inline-block;min-width:4em;text-align:center;border-bottom:2px solid var(--acc);color:var(--acc);font-weight:700;padding:0 4px}
-.pv-rev{font-weight:700;color:var(--acc)}
 
 /* Sticky actions */
 .ed-actions{display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding:12px 16px;margin:0 -16px -16px;border-top:1px solid var(--line)}
@@ -111,7 +125,6 @@ tbody tr.on{background:var(--acc-soft)}
   .list-pane{min-height:60vh}
   .table-wrap{max-height:55vh}
   .edit-pane{min-height:70vh}
-  .filters{grid-template-columns:1fr 1fr}
   .stats{margin-inline-start:0}
 }
 </style>
@@ -147,20 +160,45 @@ tbody tr.on{background:var(--acc-soft)}
   <section class="pane list-pane">
     <div class="filters">
       <input id="fSearch" type="search" placeholder="🔍 Search question or answer…  ( / )">
-      <select id="fDeck"></select>
-      <select id="fCrumb"></select>
-      <select id="fStatus">
-        <option value="">All statuses</option>
-        <option value="cloze">Has blanks</option>
-        <option value="plain">No blanks</option>
-        <option value="issues">Incomplete</option>
-      </select>
+
+      <div class="ms" id="msDeck">
+        <button type="button" class="ms-btn">All decks</button>
+        <div class="ms-panel hidden">
+          <input class="ms-search" type="search" placeholder="Search decks…">
+          <div class="ms-opts"></div>
+          <div class="ms-foot"><span></span><button type="button" class="sm" data-clear>Clear</button></div>
+        </div>
+      </div>
+
+      <div class="ms" id="msCrumb">
+        <button type="button" class="ms-btn">All crumbs</button>
+        <div class="ms-panel hidden">
+          <input class="ms-search" type="search" placeholder="Search crumbs…">
+          <div class="ms-opts"></div>
+          <div class="ms-foot"><span></span><button type="button" class="sm" data-clear>Clear</button></div>
+        </div>
+      </div>
+
+      <div class="ms" id="msStatus">
+        <button type="button" class="ms-btn">All statuses</button>
+        <div class="ms-panel hidden">
+          <input class="ms-search" type="search" placeholder="Search…">
+          <div class="ms-opts"></div>
+          <div class="ms-foot"><span></span><button type="button" class="sm" data-clear>Clear</button></div>
+        </div>
+      </div>
+
       <select id="fSort">
         <option value="id_asc">Oldest first</option>
         <option value="id_desc">Newest first</option>
-        <option value="order">By order</option>
+        <option value="deck_order">Deck, then order</option>
+        <option value="order">By order (all decks)</option>
         <option value="q">Alphabetical (question)</option>
       </select>
+
+      <input id="fOMin" class="omin" type="number" placeholder="Order ≥">
+      <input id="fOMax" class="omax" type="number" placeholder="Order ≤">
+      <button class="sm" id="btnReset">✕ Reset</button>
     </div>
 
     <div class="bulk hidden" id="bulk">
@@ -193,7 +231,7 @@ tbody tr.on{background:var(--acc-soft)}
   <section class="pane edit-pane" id="editor">
     <div class="empty" id="edEmpty">
       👈 Select a card from the list to edit it<br>or click <b>＋ New card</b>
-      <small>Ctrl+S save · Ctrl+B bold · Ctrl+Shift+C hide word · Alt+↑↓ navigate</small>
+      <small>Ctrl+S save · Ctrl+B bold · Ctrl+Shift+C hide/highlight · Ctrl+Shift+X show · Alt+↑↓ navigate</small>
     </div>
 
     <div class="ed hidden" id="edForm">
@@ -222,8 +260,9 @@ tbody tr.on{background:var(--acc-soft)}
           <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
           <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
           <span class="mut">|</span>
-          <button data-cmd="cloze" title="Hide selected word (Ctrl+Shift+C)">▭ Hide</button>
-          <button data-cmd="uncloze" title="Show word (Ctrl+Shift+X)">Show</button>
+          <button data-cmd="blank" title="Hide selected word as ____ (Ctrl+Shift+C)">▭ ____</button>
+          <button data-cmd="dots" title="Hide selected word as ...">▭ ...</button>
+          <button data-cmd="uncloze" title="Show word back (Ctrl+Shift+X)">Show</button>
           <span class="mut">|</span>
           <button data-cmd="clear" title="Clear formatting">⌫ Format</button>
         </div>
@@ -236,8 +275,8 @@ tbody tr.on{background:var(--acc-soft)}
           <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
           <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
           <span class="mut">|</span>
-          <button data-cmd="cloze" title="Hide selected word">▭ Hide</button>
-          <button data-cmd="uncloze" title="Show word">Show</button>
+          <button data-cmd="mark" title="Highlight selected word (Ctrl+Shift+C)">🖍 Highlight</button>
+          <button data-cmd="uncloze" title="Remove highlight (Ctrl+Shift+X)">Show</button>
           <span class="mut">|</span>
           <button data-cmd="clear" title="Clear formatting">⌫ Format</button>
         </div>
@@ -245,10 +284,7 @@ tbody tr.on{background:var(--acc-soft)}
       </div>
 
       <div class="preview">
-        <div class="pv-hd">
-          <span>Preview</span>
-          <select id="pvMode"></select>
-        </div>
+        <div class="pv-hd"><span>Preview</span></div>
         <div class="pv-card">
           <small>Front</small>
           <div id="pvFront"></div>
@@ -256,7 +292,6 @@ tbody tr.on{background:var(--acc-soft)}
           <small>Back</small>
           <div id="pvBack"></div>
         </div>
-        <div class="mut" id="pvCount" style="margin-top:8px;font-size:12px"></div>
       </div>
 
       <div class="ed-actions">
@@ -280,16 +315,25 @@ const sb = window.supabase.createClient(CFG[ENV].url, CFG[ENV].key);
 
 const $ = id => document.getElementById(id);
 const PAGE = 150;
-const CLOZE_RE = /\{\{c(\d+)::([\s\S]*?)\}\}/g;
+const CLOZE_RE = /\{\{c(\d+)::([\s\S]*?)\}\}/g;       // legacy format, converted on load
 const CRUMB_RE = /^\s*<span class="crumb">([\s\S]*?)<\/span>/;
+const BLANK_RE = /class="(ob|bl)"|\{\{c\d+::/;
+const NONE = '__none__';
 
 let DECKS = [], CARDS = [], VIEW = [], SEL = new Set();
 let CUR = null, SAVED = null, SHOWN = 0;
 const HIST = { stack: [], i: -1 };
 
+const MS = {
+  deck:   { el: 'msDeck',   sel: new Set(), all: 'All decks',    opts: [] },
+  crumb:  { el: 'msCrumb',  sel: new Set(), all: 'All crumbs',   opts: [] },
+  status: { el: 'msStatus', sel: new Set(), all: 'All statuses',
+            opts: [{ v: 'blank', t: 'Has blanks' }, { v: 'plain', t: 'No blanks' }, { v: 'issues', t: 'Incomplete' }] }
+};
+
 /* ---------- helpers ---------- */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const hasCloze = s => /\{\{c\d+::/.test(s || '');
+const hasBlank = s => BLANK_RE.test(s || '');
 const plain = s => String(s ?? '')
   .replace(CLOZE_RE, '$2').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ')
   .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -301,10 +345,6 @@ const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
 function toast(msg, kind = '') {
   const t = $('toast'); t.textContent = msg; t.className = 'show ' + kind;
   clearTimeout(toast._t); toast._t = setTimeout(() => t.className = '', 2200);
-}
-function clozeNums(s) {
-  const nums = [...s.matchAll(/\{\{c(\d+)::/g)].map(m => Number(m[1]));
-  return [...new Set(nums)].sort((a, b) => a - b);
 }
 function fillSelect(sel, items, first) {
   sel.innerHTML = `<option value="">${esc(first)}</option>` + items.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
@@ -348,35 +388,87 @@ async function loadAll() {
 function buildFilters() {
   const decks = [...new Set([...DECKS, ...CARDS.map(c => c.category).filter(Boolean)])];
   const crumbs = [...new Set(CARDS.map(c => c.crumb).filter(Boolean))].sort();
-  const keepDeck = $('fDeck').value, keepCrumb = $('fCrumb').value;
-  fillSelect($('fDeck'), decks, 'All decks');
-  fillSelect($('fCrumb'), crumbs, 'All crumbs');
+  MS.deck.opts = decks.map(d => ({ v: d, t: d }));
+  MS.crumb.opts = [...crumbs.map(c => ({ v: c, t: c })), { v: NONE, t: '(no crumb)' }];
+  for (const k of ['deck', 'crumb']) {
+    MS[k].sel = new Set([...MS[k].sel].filter(v => MS[k].opts.some(o => o.v === v)));
+  }
+  Object.keys(MS).forEach(renderMS);
   fillSelect($('bulkDeck'), decks, 'Move to deck…');
-  $('fDeck').value = keepDeck; $('fCrumb').value = keepCrumb;
   $('deckDL').innerHTML = decks.map(d => `<option value="${esc(d)}">`).join('');
   $('crumbDL').innerHTML = crumbs.map(d => `<option value="${esc(d)}">`).join('');
+}
+
+/* ---------- multi-select dropdowns ---------- */
+function msLabel(key) {
+  const m = MS[key], n = m.sel.size;
+  if (!n) return m.all;
+  if (n === 1) { const v = [...m.sel][0]; return (m.opts.find(o => o.v === v) || { t: v }).t; }
+  return `${n} selected`;
+}
+function renderMS(key) {
+  const m = MS[key], root = $(m.el);
+  root.querySelector('.ms-btn').textContent = msLabel(key);
+  const q = root.querySelector('.ms-search').value.trim().toLowerCase();
+  const list = m.opts.filter(o => !q || o.t.toLowerCase().includes(q));
+  root.querySelector('.ms-opts').innerHTML = list.length
+    ? list.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o.v)}" ${m.sel.has(o.v) ? 'checked' : ''}><span>${esc(o.t)}</span></label>`).join('')
+    : '<div class="mut ms-empty">No results</div>';
+}
+function closeMS() { document.querySelectorAll('.ms-panel').forEach(p => p.classList.add('hidden')); }
+
+function bindMS() {
+  Object.keys(MS).forEach(key => {
+    const root = $(MS[key].el);
+    const panel = root.querySelector('.ms-panel');
+    root.querySelector('.ms-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      const wasHidden = panel.classList.contains('hidden');
+      closeMS();
+      if (wasHidden) { panel.classList.remove('hidden'); root.querySelector('.ms-search').focus(); }
+    });
+    panel.addEventListener('click', e => e.stopPropagation());
+    root.querySelector('.ms-search').addEventListener('input', () => renderMS(key));
+    root.querySelector('.ms-opts').addEventListener('change', e => {
+      const v = e.target.value;
+      e.target.checked ? MS[key].sel.add(v) : MS[key].sel.delete(v);
+      renderMS(key); applyFilters();
+    });
+    root.querySelector('[data-clear]').addEventListener('click', () => {
+      MS[key].sel.clear(); renderMS(key); applyFilters();
+    });
+  });
+  document.addEventListener('click', closeMS);
 }
 
 /* ---------- list ---------- */
 function applyFilters() {
   const q = $('fSearch').value.trim().toLowerCase();
-  const d = $('fDeck').value, cr = $('fCrumb').value, st = $('fStatus').value;
+  const D = MS.deck.sel, CR = MS.crumb.sel, ST = MS.status.sel;
+  const omin = $('fOMin').value === '' ? null : Number($('fOMin').value);
+  const omax = $('fOMax').value === '' ? null : Number($('fOMax').value);
 
   VIEW = CARDS.filter(c => {
-    if (d && c.category !== d) return false;
-    if (cr && (c.crumb || '') !== cr) return false;
-    const cl = hasCloze(c.question);
-    if (st === 'cloze' && !cl) return false;
-    if (st === 'plain' && cl) return false;
-    if (st === 'issues' && !isIssue(c)) return false;
+    if (D.size && !D.has(c.category)) return false;
+    if (CR.size && !CR.has(c.crumb || NONE)) return false;
+    if (ST.size) {
+      const bl = hasBlank(c.question);
+      const ok = (ST.has('blank') && bl) || (ST.has('plain') && !bl) || (ST.has('issues') && isIssue(c));
+      if (!ok) return false;
+    }
+    const o = c.card_order == null ? NaN : Number(c.card_order);
+    if (omin !== null && !(o >= omin)) return false;
+    if (omax !== null && !(o <= omax)) return false;
     if (q && (plain(c.question) + ' ' + plain(c.answer)).toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
 
   const s = $('fSort').value;
   VIEW.sort((a, b) => {
+    const oa = Number(a.card_order) || 0, ob = Number(b.card_order) || 0;
     if (s === 'id_desc') return cmp(b.id, a.id);
-    if (s === 'order') return (Number(a.card_order) || 0) - (Number(b.card_order) || 0) || cmp(a.category || '', b.category || '');
+    if (s === 'deck_order') return cmp(a.category || '', b.category || '') || (oa - ob) || cmp(a.id, b.id);
+    if (s === 'order') return (oa - ob) || cmp(a.category || '', b.category || '');
     if (s === 'q') return plain(a.question).localeCompare(plain(b.question), 'en');
     return cmp(a.id, b.id);
   });
@@ -445,64 +537,85 @@ function updateStats() {
 }
 
 /* ---------- rich editor ---------- */
-function setRich(ed, html) {
+// Loads HTML into an editor. Legacy {{c::word}} is converted to the blank/highlight format.
+function setRich(ed, html, isAns) {
+  const src = String(html ?? '').replace(CLOZE_RE, (_, n, w) => isAns
+    ? `<mark>${w}</mark>`
+    : `<span class="ob" data-w="${esc(w)}" title="Hidden: ${esc(w)}">____</span>`);
   const t = document.createElement('template');
-  t.innerHTML = String(html ?? '').replace(CLOZE_RE, '<span class="cloze" data-c="$1">$2</span>');
+  t.innerHTML = src;
   t.content.querySelectorAll('script,style,iframe,img,object').forEach(n => n.remove());
   ed.innerHTML = '';
   ed.appendChild(t.content);
-  renumber(ed);
 }
 
+// Saves the editor as HTML. Blanks are always written as the stored blank markup.
 function serialize(ed) {
   const c = ed.cloneNode(true);
-  c.querySelectorAll('.cloze').forEach(s => s.replaceWith(`{{c${s.dataset.c}::${s.textContent}}}`));
+  c.querySelectorAll('.ob,.bl').forEach(s => {
+    const isOb = s.classList.contains('ob');
+    const x = document.createElement('span');
+    x.className = isOb ? 'ob' : 'bl';
+    x.textContent = isOb ? '____' : '...';
+    s.replaceWith(x);
+  });
   let h = c.innerHTML.replace(/&nbsp;/g, ' ')
     .replace(/<div><br><\/div>/gi, '<br>').replace(/<div>/gi, '<br>').replace(/<\/div>/gi, '')
     .replace(/^(<br>)+/i, '').replace(/(<br>)+$/i, '');
   return h.trim();
 }
 
-function renumber(ed) {
-  ed.querySelectorAll('.cloze').forEach((s, i) => s.dataset.c = i + 1);
-}
-
-function wrapCloze(ed) {
+// kind: 'ob' (____), 'bl' (...), or 'mark' (highlight)
+function hideWord(ed, kind) {
   const sel = window.getSelection();
   if (!sel.rangeCount || sel.isCollapsed || !ed.contains(sel.anchorNode)) { toast('Select a word first', 'no'); return false; }
   const r = sel.getRangeAt(0);
   const anc = r.commonAncestorContainer;
   const host = anc.nodeType === 1 ? anc : anc.parentElement;
-  if (host && host.closest('.cloze')) { toast('This word is already hidden', 'no'); return false; }
-  const span = document.createElement('span');
-  span.className = 'cloze';
-  try { r.surroundContents(span); }
-  catch (e) { span.appendChild(r.extractContents()); r.insertNode(span); }
-  renumber(ed);
+  if (host && host.closest('.ob,.bl,mark')) { toast('This word is already hidden/highlighted', 'no'); return false; }
+
+  if (kind === 'mark') {
+    const m = document.createElement('mark');
+    try { r.surroundContents(m); }
+    catch (e) { m.appendChild(r.extractContents()); r.insertNode(m); }
+  } else {
+    const word = sel.toString();
+    const s = document.createElement('span');
+    s.className = kind;
+    s.dataset.w = word;
+    s.title = 'Hidden: ' + word;
+    s.textContent = kind === 'ob' ? '____' : '...';
+    r.deleteContents();
+    r.insertNode(s);
+  }
   sel.removeAllRanges();
   return true;
 }
 
-function unwrapCloze(ed) {
+function showWord(ed) {
   const sel = window.getSelection();
   if (!sel.rangeCount) return false;
   const anc = sel.getRangeAt(0).commonAncestorContainer;
   const host = anc.nodeType === 1 ? anc : anc.parentElement;
-  const el = host && host.closest('.cloze');
+  const el = host && host.closest('.ob,.bl,mark');
   if (!el || !ed.contains(el)) { toast('Place the cursor inside a hidden word', 'no'); return false; }
-  const parent = el.parentNode;
-  while (el.firstChild) parent.insertBefore(el.firstChild, el);
-  el.remove();
-  parent.normalize();
-  renumber(ed);
+  if (el.tagName === 'MARK') {
+    el.replaceWith(...el.childNodes);
+  } else {
+    if (!el.dataset.w) { toast('Original word unknown; hide it again', 'no'); return false; }
+    el.replaceWith(document.createTextNode(el.dataset.w));
+  }
+  ed.normalize();
   return true;
 }
 
 function runCmd(ed, cmd) {
   if (cmd === 'bold' || cmd === 'italic') document.execCommand(cmd);
   else if (cmd === 'clear') document.execCommand('removeFormat');
-  else if (cmd === 'cloze') wrapCloze(ed);
-  else if (cmd === 'uncloze') unwrapCloze(ed);
+  else if (cmd === 'blank') hideWord(ed, 'ob');
+  else if (cmd === 'dots') hideWord(ed, 'bl');
+  else if (cmd === 'mark') hideWord(ed, 'mark');
+  else if (cmd === 'uncloze') showWord(ed);
   onEdit();
 }
 
@@ -531,7 +644,7 @@ function loadEditorFrom(c) {
   $('ceCrumb').value = c.crumb || '';
   $('ceOrder').value = c.card_order ?? '';
   setRich($('ceQ'), c.question);
-  setRich($('ceA'), c.answer);
+  setRich($('ceA'), c.answer, true);
   SAVED = snapshot();
   refreshEditor();
 }
@@ -545,12 +658,13 @@ function openCard(c, force) {
 function openNew() {
   if (!confirmDiscard()) return;
   CUR = null;
-  const deck = $('fDeck').value || DECKS[0] || '';
+  const deck = MS.deck.sel.size === 1 ? [...MS.deck.sel][0] : (DECKS[0] || '');
+  const cr = MS.crumb.sel.size === 1 ? [...MS.crumb.sel][0] : '';
   const maxO = CARDS.reduce((m, c) => c.category === deck ? Math.max(m, Number(c.card_order) || 0) : m, 0);
   $('ceDeck').value = deck;
-  $('ceCrumb').value = $('fCrumb').value || '';
+  $('ceCrumb').value = cr === NONE ? '' : cr;
   $('ceOrder').value = maxO + 1;
-  setRich($('ceQ'), ''); setRich($('ceA'), '');
+  setRich($('ceQ'), ''); setRich($('ceA'), '', true);
   SAVED = snapshot();
   showEditor(); refreshEditor(); markRows();
   $('ceQ').focus();
@@ -575,8 +689,8 @@ function refreshEditor() {
   const q = serialize($('ceQ')), a = serialize($('ceA'));
   $('ceQ').classList.toggle('is-empty', !q);
   $('ceA').classList.toggle('is-empty', !a);
-  const nums = clozeNums(q);
-  $('cntQ').textContent = `${plain(q).length} chars` + (nums.length ? ` · ${nums.length} blank${nums.length > 1 ? 's' : ''}` : '');
+  const nb = (q.match(/class="(ob|bl)"/g) || []).length;
+  $('cntQ').textContent = `${plain(q).length} chars` + (nb ? ` · ${nb} blank${nb > 1 ? 's' : ''}` : '');
   $('cntA').textContent = `${plain(a).length} chars`;
   const dirty = isDirty();
   $('dirty').classList.toggle('hidden', !dirty);
@@ -588,31 +702,12 @@ function refreshEditor() {
   const idx = CUR ? VIEW.findIndex(c => String(c.id) === String(CUR.id)) : -1;
   $('btnPrev').disabled = idx <= 0;
   $('btnNext').disabled = idx < 0 || idx >= VIEW.length - 1;
-  updatePreview(q, a, nums);
+  updatePreview(q, a);
 }
 
-function render(s, hideN, reveal) {
-  return s.replace(CLOZE_RE, (_, n, t) => {
-    const hide = !reveal && (hideN === 'all' || Number(n) === hideN);
-    return hide ? '<span class="pv-blank">[ ? ]</span>' : `<span class="pv-rev">${t}</span>`;
-  });
-}
-
-function updatePreview(q, a, nums) {
-  const sel = $('pvMode'), prev = sel.value;
-  sel.innerHTML = '<option value="all">All blanks hidden (one card)</option>' +
-    nums.map(n => `<option value="${n}">Card hiding blank ${n}</option>`).join('');
-  sel.value = [...sel.options].some(o => o.value === prev) ? prev : 'all';
-  const mode = sel.value === 'all' ? 'all' : Number(sel.value);
-
-  $('pvFront').innerHTML = q ? render(q, mode, false) : '<span class="mut">— empty —</span>';
-  let back = '';
-  if (nums.length) back += render(q, null, true);
-  if (a) back += (back ? '<hr>' : '') + render(a, null, true);
-  $('pvBack').innerHTML = back || '<span class="mut">— empty —</span>';
-
-  const count = nums.length || 1;
-  $('pvCount').textContent = count > 1 ? `Will produce ${count} cards (one per blank)` : 'Will produce one card';
+function updatePreview(q, a) {
+  $('pvFront').innerHTML = q || '<span class="mut">— empty —</span>';
+  $('pvBack').innerHTML = a || '<span class="mut">— empty —</span>';
 }
 
 /* ---------- save / delete / duplicate ---------- */
@@ -864,6 +959,8 @@ async function importFile(e) {
 
 /* ---------- events ---------- */
 function bindEvents() {
+  bindMS();
+
   // Toolbars (keep text selection when clicking buttons)
   document.querySelectorAll('.toolbar button').forEach(b => {
     b.addEventListener('mousedown', e => e.preventDefault());
@@ -875,8 +972,8 @@ function bindEvents() {
     ed.addEventListener('input', onEdit);
     ed.addEventListener('keydown', e => {
       const m = e.ctrlKey || e.metaKey;
-      if (m && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); if (wrapCloze(ed)) onEdit(); }
-      else if (m && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); if (unwrapCloze(ed)) onEdit(); }
+      if (m && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); runCmd(ed, id === 'ceQ' ? 'blank' : 'mark'); }
+      else if (m && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); runCmd(ed, 'uncloze'); }
     });
     ed.addEventListener('paste', e => {
       e.preventDefault();
@@ -885,7 +982,6 @@ function bindEvents() {
   });
 
   ['ceDeck', 'ceCrumb', 'ceOrder'].forEach(id => $(id).addEventListener('input', onEdit));
-  $('pvMode').addEventListener('change', () => refreshEditor());
 
   $('btnSave').onclick = save;
   $('btnRevert').onclick = () => { if (CUR) openCard(CUR, true); };
@@ -904,7 +1000,17 @@ function bindEvents() {
 
   let t;
   $('fSearch').addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 150); });
-  ['fDeck', 'fCrumb', 'fStatus', 'fSort'].forEach(id => $(id).addEventListener('change', applyFilters));
+  ['fOMin', 'fOMax'].forEach(id => $(id).addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 150); }));
+  $('fSort').addEventListener('change', applyFilters);
+
+  $('btnReset').onclick = () => {
+    Object.values(MS).forEach(m => m.sel.clear());
+    document.querySelectorAll('.ms-search').forEach(i => i.value = '');
+    Object.keys(MS).forEach(renderMS);
+    $('fSearch').value = ''; $('fSort').value = 'id_asc';
+    $('fOMin').value = ''; $('fOMax').value = '';
+    applyFilters();
+  };
 
   $('chkAll').onchange = e => {
     VIEW.forEach(c => e.target.checked ? SEL.add(c.id) : SEL.delete(c.id));
@@ -921,7 +1027,8 @@ function bindEvents() {
     const inField = /INPUT|TEXTAREA|SELECT/.test(ae.tagName) || ae.isContentEditable;
     const key = e.key.toLowerCase();
 
-    if (m && key === 's') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') closeMS();
+    else if (m && key === 's') { e.preventDefault(); save(); }
     else if (m && key === 'n') { e.preventDefault(); openNew(); }
     else if (m && key === 'z' && !inField) { e.preventDefault(); undo(); }
     else if (m && key === 'y' && !inField) { e.preventDefault(); redo(); }
@@ -933,4 +1040,4 @@ function bindEvents() {
 init();
 </script>
 </body>
-  </html>
+        </html>
