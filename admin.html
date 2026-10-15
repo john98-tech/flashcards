@@ -75,6 +75,7 @@ tbody tr.on{background:var(--acc-soft)}
 .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--acc-soft);color:var(--acc);font-weight:600;white-space:nowrap}
 .free{display:inline-block;padding:0 6px;border-radius:5px;font-size:11px;font-weight:700;background:var(--ok);color:var(--bg);margin-inline-start:4px;vertical-align:middle}
+.lock{display:inline-block;margin-inline-start:6px;font-size:13px;vertical-align:middle}
 .issue{color:var(--no)}
 .more{padding:12px;text-align:center}
 
@@ -295,7 +296,13 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
       </div>
 
       <div class="preview">
-        <div class="pv-hd"><span>Preview</span><span class="free hidden" id="pvFree">FREE</span></div>
+        <div class="pv-hd">
+          <span>Preview</span>
+          <span>
+            <span class="free hidden" id="pvFree">FREE</span>
+            <span class="lock hidden" id="pvLock" title="Paid">🔒 Paid</span>
+          </span>
+        </div>
         <div class="pv-card">
           <small>Front</small>
           <div id="pvFront"></div>
@@ -504,7 +511,7 @@ function makeRow(c, n) {
     <td class="num">${n}</td>
     <td class="t"><div class="ell">${esc(plain(c.question)) || '<span class="issue">— empty —</span>'}</div></td>
     <td class="t"><div class="ell mut">${esc(plain(c.answer)) || '<span class="issue">— empty —</span>'}</div></td>
-    <td><span class="tag">${esc(c.category || '—')}</span>${c.is_free ? '<span class="free">FREE</span>' : ''}</td>
+    <td><span class="tag">${esc(c.category || '—')}</span>${c.is_free ? '<span class="free">FREE</span>' : '<span class="lock" title="Paid">🔒</span>'}</td>
     <td class="mut">${esc(c.crumb || '')}</td>`;
   tr.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') openCard(c); });
   tr.querySelector('input').addEventListener('change', e => {
@@ -727,7 +734,9 @@ function refreshEditor() {
 function updatePreview(q, a) {
   $('pvFront').innerHTML = q || '<span class="mut">— empty —</span>';
   $('pvBack').innerHTML = a || '<span class="mut">— empty —</span>';
-  $('pvFree').classList.toggle('hidden', !$('ceFree').checked);
+  const free = $('ceFree').checked;
+  $('pvFree').classList.toggle('hidden', !free);
+  $('pvLock').classList.toggle('hidden', free);
 }
 
 /* ---------- save / delete / duplicate ---------- */
@@ -841,7 +850,7 @@ async function bulkFree(val) {
   pushHist(`Mark ${sel.length} card(s) ${val ? 'free' : 'paid'}`, () => setFreeMany(before), () => setFreeMany(after));
   SEL.clear();
   applyFilters();
-  toast(`Marked ${sel.length} card(s) ${val ? 'free 🆓' : 'paid'} ✓`, 'ok');
+  toast(`Marked ${sel.length} card(s) ${val ? 'free 🆓' : 'paid 🔒'} ✓`, 'ok');
 }
 
 async function bulkMove() {
