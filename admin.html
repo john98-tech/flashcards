@@ -448,6 +448,7 @@ const NONE = '__none__';
 
 let DECKS = [], CARDS = [], VIEW = [], SEL = new Set();
 let CUR = null, SAVED = null, SHOWN = 0;
+let FETCH_OK = true;
 const HIST = { stack: [], i: -1 };
 
 const MS = {
@@ -492,9 +493,10 @@ async function init() {
 
 async function fetchAllCards() {
   let all = [], from = 0; const step = 1000;
+  FETCH_OK = true;
   while (true) {
     const { data, error } = await sb.from('flashcards').select('*').order('id').range(from, from + step - 1);
-    if (error) { toast('Failed to load: ' + error.message, 'no'); break; }
+    if (error) { FETCH_OK = false; toast('Failed to load: ' + error.message, 'no'); break; }
     all = all.concat(data || []);
     if (!data || data.length < step) break;
     from += step;
@@ -507,10 +509,13 @@ async function loadAll() {
     sb.from('categories').select('name').order('sort_order'),
     fetchAllCards()
   ]);
+  if (cats.error) FETCH_OK = false;
   DECKS = (cats.data || []).map(c => c.name);
   CARDS = cards;
   buildFilters();
   applyFilters();
+  // Clean up decks that are already empty (only when everything loaded fine)
+  if (FETCH_OK) await pruneEmptyDecks();
 }
 
 function buildFilters() {
@@ -528,13 +533,18 @@ fillSelect($('bulkDeck'), DECKS, 'Move to deck…');  $('deckDL').innerHTML = de
 
 /* ---------- empty deck cleanup ---------- */
 // Removes decks that have no cards left from the categories table (and from the UI).
+// Verifies the rows were really deleted in the database (RLS can silently block deletes).
 async function pruneEmptyDecks() {
   const used = new Set(CARDS.map(c => c.category).filter(Boolean));
   const empty = DECKS.filter(d => !used.has(d));
   if (!empty.length) return;
-  const { error } = await sb.from('categories').delete().in('name', empty);
+  const { data, error } = await sb.from('categories').delete().in('name', empty).select('name');
   if (error) { toast('Could not remove empty deck: ' + error.message, 'no'); return; }
-  DECKS = DECKS.filter(d => used.has(d));
+  const gone = new Set((data || []).map(r => r.name));
+  if (gone.size < empty.length) {
+    toast('Empty deck was NOT removed from the database (no delete permission on categories)', 'no');
+  }
+  DECKS = DECKS.filter(d => used.has(d) || !gone.has(d));
   buildFilters();
   applyFilters();
 }
