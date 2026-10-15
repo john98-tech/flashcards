@@ -632,9 +632,20 @@ function bindMS() {
   });
   document.addEventListener('click', closeMS);
 }
+// قفل الدكّة يظهر بس لو كل كروتها مدفوعة. لو فيها كروت مجانية ما يتقفلش اسمها.
 function refreshDeckOpts() {
-  const paid = new Set(CARDS.filter(c => !c.is_free).map(c => c.category));
-  MS.deck.opts = MS.deck.opts.map(o => ({ v: o.v, t: (paid.has(o.v) ? '🔒 ' : '') + o.v }));
+  const byDeck = {};
+  CARDS.forEach(c => {
+    const d = c.category;
+    if (!d) return;
+    if (!byDeck[d]) byDeck[d] = { free: 0, paid: 0 };
+    byDeck[d][c.is_free ? 'free' : 'paid']++;
+  });
+  MS.deck.opts = MS.deck.opts.map(o => {
+    const s = byDeck[o.v];
+    const icon = s && s.free === 0 && s.paid > 0 ? '🔒 ' : '';
+    return { v: o.v, t: icon + o.v };
+  });
   renderMS('deck');
 }
 /* ---------- list ---------- */
