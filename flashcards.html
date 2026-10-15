@@ -197,6 +197,7 @@ const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 var CATS = [], GROUPS = [], GMAP = {}, unlocked = {}, D = [], st = {};
+  var PAID = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)};
 var currentUserId = null, kicked = false;
@@ -265,6 +266,8 @@ async function loadAll(preferName) {
     unlocked = {}; ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
     const cards = await fetchCards();
     if (cards === null) { $('card').innerHTML = '<div class="txt">Error loading cards.</div>'; return; }
+      PAID = {};
+    cards.forEach(function(item){ if (!item.is_free) PAID[item.category || 'General'] = true; });
     var map = {};
     cards.forEach(function(item){
         var n = item.category || 'General';
@@ -303,8 +306,8 @@ function buildGroupEl(groupName, decks){
         var it = document.createElement('div'), open = isOpen(c), dk = getDeck(c.name);
         it.className = 'dp-item' + (curName === c.name ? ' cur' : '') + (open ? '' : ' locked');
         var icon = open ? '📄' : '🔒', cnt = (open && dk) ? '<span class="cnt">' + dk.cards.length + '</span>' : '';
-        it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + '</span>' + cnt;
-        it.onclick = function(){
+        var lockIc = (open && PAID[c.name]) ? ' 🔒' : '';
+        it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + lockIc + '</span>' + cnt;        it.onclick = function(){
             var cc = CATS.find(function(x){ return x.name === c.name; });
             if (!cc || !isOpen(cc)){ closePicker(); openModal(); return; }
             curName = cc.name; closePicker(); updatePickerCurrent(); buildPicker(); start(false);
