@@ -526,30 +526,6 @@ fillSelect($('bulkDeck'), DECKS, 'Move to deck…');  $('deckDL').innerHTML = de
   $('crumbDL').innerHTML = crumbs.map(d => `<option value="${esc(d)}">`).join('');
 }
 
-/* ---------- empty deck cleanup ---------- */
-// Removes decks that have no cards left from the categories table (and from the UI).
-async function pruneEmptyDecks() {
-  const used = new Set(CARDS.map(c => c.category).filter(Boolean));
-  const empty = DECKS.filter(d => !used.has(d));
-  if (!empty.length) return;
-  const { error } = await sb.from('categories').delete().in('name', empty);
-  if (error) { toast('Could not remove empty deck: ' + error.message, 'no'); return; }
-  DECKS = DECKS.filter(d => used.has(d));
-  buildFilters();
-  applyFilters();
-}
-
-// Makes sure decks exist in the categories table (used by undo after a deck was pruned).
-async function ensureDecks(names) {
-  let added = false;
-  for (const d of new Set(names)) {
-    if (!d || DECKS.includes(d)) continue;
-    const { error } = await sb.from('categories').insert({ name: d });
-    if (!error) { DECKS.push(d); added = true; }
-  }
-  if (added) buildFilters();
-}
-
 /* ---------- multi-select dropdowns ---------- */
 function msLabel(key) {
   const m = MS[key], n = m.sel.size;
@@ -740,3 +716,688 @@ function hideWord(ed, kind) {
     s.title = 'Hidden: ' + word;
     s.textContent = kind === 'ob' ? '____' : '...';
     r.deleteContents();
+    r.insertNode(s);
+  }
+  sel.removeAllRanges();
+  return true;
+}
+
+function showWord(ed) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return false;
+  const anc = sel.getRangeAt(0).commonAncestorContainer;
+  const host = anc.nodeType === 1 ? anc : anc.parentElement;
+  const el = host && host.closest('.ob,.bl,mark');
+  if (!el || !ed.contains(el)) { toast('Place the cursor inside a hidden word', 'no'); return false; }
+  if (el.tagName === 'MARK') {
+    el.replaceWith(...el.childNodes);
+  } else {
+    if (!el.dataset.w) { toast('Original word unknown; hide it again', 'no'); return false; }
+    el.replaceWith(document.createTextNode(el.dataset.w));
+  }
+  ed.normalize();
+  return true;
+}
+
+function runCmd(ed, cmd) {
+  if (cmd === 'bold' || cmd === 'italic') document.execCommand(cmd);
+  else if (cmd === 'clear') document.execCommand('removeFormat');
+  else if (cmd === 'blank') hideWord(ed, 'ob');
+  else if (cmd === 'dots') hideWord(ed, 'bl');
+  else if (cmd === 'mark') hideWord(ed, 'mark');
+  else if (cmd === 'uncloze') showWord(ed);
+  onEdit();
+}
+
+/* ---------- editor state ---------- */
+function snapshot() {
+  return {
+    question: serialize($('ceQ')),
+    answer: serialize($('ceA')),
+    category: $('ceDeck').value.trim(),
+    crumb: $('ceCrumb').value.trim() || null,
+    card_order: $('ceOrder').value === '' ? null : Number($('ceOrder').value),
+    is_free: $('ceFree').checked
+  };
+}
+function isDirty() {
+  return !!SAVED && JSON.stringify(snapshot()) !== JSON.stringify(SAVED);
+}
+function confirmDiscard() {
+  return !isDirty() || confirm('You have unsaved changes. Discard them?');
+}
+function showEditor() {
+  $('edEmpty').classList.add('hidden');
+  $('edForm').classList.remove('hidden');
+}
+function loadEditorFrom(c) {
+  $('ceDeck').value = c.category || '';
+  $('ceCrumb').value = c.crumb || '';
+  $('ceOrder').value = c.card_order ?? '';
+  $('ceFree').checked = !!c.is_free;
+  setRich($('ceQ'), c.question);
+  setRich($('ceA'), c.answer, true);
+  SAVED = snapshot();
+  refreshEditor();
+}
+function openCard(c, force) {
+  if (!force && !confirmDiscard()) return;
+  CUR = c;
+  loadEditorFrom(c);
+  showEditor();
+  markRows();
+}
+function openNew() {
+  if (!confirmDiscard()) return;
+  CUR = null;
+  const deck = MS.deck.sel.size === 1 ? [...MS.deck.sel][0] : (DECKS[0] || '');
+  const cr = MS.crumb.sel.size === 1 ? [...MS.crumb.sel][0] : '';
+  const maxO = CARDS.reduce((m, c) => c.category === deck ? Math.max(m, Number(c.card_order) || 0) : m, 0);
+  $('ceDeck').value = deck;
+  $('ceCrumb').value = cr === NONE ? '' : cr;
+  $('ceOrder').value = maxO + 1;
+  $('ceFree').checked = false;
+  setRich($('ceQ'), ''); setRich($('ceA'), '', true);
+  SAVED = snapshot();
+  showEditor(); refreshEditor(); markRows();
+  $('ceQ').focus();
+}
+function closeEditor(force) {
+  if (!force && !confirmDiscard()) return;
+  CUR = null; SAVED = null;
+  $('edEmpty').classList.remove('hidden');
+  $('edForm').classList.add('hidden');
+  markRows();
+}
+function step(dir) {
+  if (!CUR) return;
+  const i = VIEW.findIndex(c => String(c.id) === String(CUR.id));
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= VIEW.length) return;
+  openCard(VIEW[j]);
+}
+function onEdit() { refreshEditor(); }
+
+function refreshEditor() {
+  const q = serialize($('ceQ')), a = serialize($('ceA'));
+  $('ceQ').classList.toggle('is-empty', !q);
+  $('ceA').classList.toggle('is-empty', !a);
+  const nb = (q.match(/class="(ob|bl)"/g) || []).length;
+  $('cntQ').textContent = `${plain(q).length} chars` + (nb ? ` · ${nb} blank${nb > 1 ? 's' : ''}` : '');
+  $('cntA').textContent = `${plain(a).length} chars`;
+  const dirty = isDirty();
+  $('dirty').classList.toggle('hidden', !dirty);
+  $('btnRevert').disabled = !dirty;
+  $('edTitle').textContent = CUR ? 'Edit card' : 'New card';
+  $('edMeta').textContent = CUR ? `ID: ${CUR.id}` : 'Not saved yet';
+  $('btnDup').disabled = !CUR;
+  $('btnDel').disabled = !CUR;
+  const idx = CUR ? VIEW.findIndex(c => String(c.id) === String(CUR.id)) : -1;
+  $('btnPrev').disabled = idx <= 0;
+  $('btnNext').disabled = idx < 0 || idx >= VIEW.length - 1;
+  updatePreview(q, a);
+}
+
+function updatePreview(q, a) {
+  $('pvFront').innerHTML = q || '<span class="mut">— empty —</span>';
+  $('pvBack').innerHTML = a || '<span class="mut">— empty —</span>';
+  const free = $('ceFree').checked;
+  $('pvFree').classList.toggle('hidden', !free);
+  $('pvLock').classList.toggle('hidden', free);
+}
+
+/* ---------- save / delete / duplicate ---------- */
+function replaceLocal(row) {
+  const i = CARDS.findIndex(c => String(c.id) === String(row.id));
+  if (i >= 0) CARDS[i] = row;
+}
+
+async function writeBack(id, fields) {
+  const { data, error } = await sb.from('flashcards').update(fields).eq('id', id).select().single();
+  if (error) throw error;
+  replaceLocal(data);
+  if (CUR && String(CUR.id) === String(id)) { CUR = data; loadEditorFrom(data); }
+  applyFilters();
+}
+
+async function save() {
+  if ($('edForm').classList.contains('hidden')) return;
+  const p = snapshot();
+  if (!plain(p.question)) return toast('Question is empty', 'no');
+  if (!p.category) return toast('Choose a deck', 'no');
+
+  if (CUR) {
+    const id = CUR.id, before = pick(CUR);
+    const { data, error } = await sb.from('flashcards').update(p).eq('id', id).select().single();
+    if (error) return toast('Save failed: ' + error.message, 'no');
+    replaceLocal(data);
+    CUR = data;
+    pushHist('Edit card', () => writeBack(id, before), () => writeBack(id, p));
+  } else {
+    const { data, error } = await sb.from('flashcards').insert(p).select().single();
+    if (error) return toast('Add failed: ' + error.message, 'no');
+    CARDS.push(data);
+    CUR = data;
+  }
+  SAVED = snapshot();
+  toast('Saved ✓', 'ok');
+  applyFilters();
+  refreshEditor();
+  markRows();
+}
+
+async function duplicate() {
+  if (!CUR) return;
+  const row = { ...pick(CUR), card_order: (Number(CUR.card_order) || 0) + 1 };
+  const { data, error } = await sb.from('flashcards').insert(row).select().single();
+  if (error) return toast('Copy failed: ' + error.message, 'no');
+  CARDS.push(data);
+  toast('Copy created ✓', 'ok');
+  applyFilters();
+  openCard(data, true);
+}
+
+async function deleteCurrent() {
+  if (!CUR || !confirm('Permanently delete this card?')) return;
+  const { error } = await sb.from('flashcards').delete().eq('id', CUR.id);
+  if (error) return toast('Delete failed: ' + error.message, 'no');
+  CARDS = CARDS.filter(c => String(c.id) !== String(CUR.id));
+  SEL.delete(CUR.id);
+  closeEditor(true);
+  applyFilters();
+  toast('Deleted', 'ok');
+}
+
+/* ---------- bulk actions ---------- */
+async function setCategories(list) {
+  const groups = {};
+  list.forEach(x => (groups[x.category] ??= []).push(x.id));
+  for (const [cat, ids] of Object.entries(groups)) {
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').update({ category: cat }).in('id', ch);
+      if (error) throw error;
+    }
+  }
+  list.forEach(x => {
+    const c = CARDS.find(y => String(y.id) === String(x.id));
+    if (c) c.category = x.category;
+  });
+  if (CUR) {
+    const f = CARDS.find(c => String(c.id) === String(CUR.id));
+    if (f) { CUR = f; if (!isDirty()) loadEditorFrom(f); }
+  }
+}
+
+// list: [{ id, is_free }]
+async function setFreeMany(list) {
+  for (const val of [true, false]) {
+    const ids = list.filter(x => !!x.is_free === val).map(x => x.id);
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').update({ is_free: val }).in('id', ch);
+      if (error) throw error;
+    }
+  }
+  list.forEach(x => {
+    const c = CARDS.find(y => String(y.id) === String(x.id));
+    if (c) c.is_free = !!x.is_free;
+  });
+  if (CUR) {
+    const f = CARDS.find(c => String(c.id) === String(CUR.id));
+    if (f) { CUR = f; if (!isDirty()) loadEditorFrom(f); }
+  }
+}
+
+async function bulkFree(val) {
+  const sel = CARDS.filter(c => SEL.has(c.id));
+  if (!sel.length) return;
+  const before = sel.map(c => ({ id: c.id, is_free: !!c.is_free }));
+  const after = before.map(b => ({ id: b.id, is_free: val }));
+  try { await setFreeMany(after); }
+  catch (e) { return toast('Update failed: ' + e.message, 'no'); }
+  pushHist(`Mark ${sel.length} card(s) ${val ? 'free' : 'paid'}`, () => setFreeMany(before), () => setFreeMany(after));
+  SEL.clear();
+  applyFilters();
+  toast(`Marked ${sel.length} card(s) ${val ? 'free 🆓' : 'paid 🔒'} ✓`, 'ok');
+}
+
+async function bulkMove() {
+  const d = $('bulkDeck').value;
+  if (!d) return toast('Choose the new deck', 'no');
+  const ids = [...SEL];
+  const before = CARDS.filter(c => SEL.has(c.id)).map(c => ({ id: c.id, category: c.category }));
+  const after = before.map(b => ({ id: b.id, category: d }));
+  try { await setCategories(after); }
+  catch (e) { return toast('Move failed: ' + e.message, 'no'); }
+  pushHist(`Move ${ids.length} card(s) to ${d}`, () => setCategories(before), () => setCategories(after));
+  SEL.clear();
+  applyFilters();
+  toast(`Moved ${ids.length} card(s) ✓`, 'ok');
+}
+
+async function bulkDelete() {
+  const ids = [...SEL];
+  if (!ids.length || !confirm(`Permanently delete ${ids.length} card(s)?`)) return;
+  try {
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').delete().in('id', ch);
+      if (error) throw error;
+    }
+  } catch (e) { return toast('Delete failed: ' + e.message, 'no'); }
+  CARDS = CARDS.filter(c => !SEL.has(c.id));
+  if (CUR && SEL.has(CUR.id)) closeEditor(true);
+  SEL.clear();
+  applyFilters();
+  toast('Deleted ✓', 'ok');
+}
+
+/* ---------- history ---------- */
+function pushHist(label, undoFn, redoFn) {
+  HIST.stack = HIST.stack.slice(0, HIST.i + 1);
+  HIST.stack.push({ label, undo: undoFn, redo: redoFn });
+  if (HIST.stack.length > 50) HIST.stack.shift();
+  HIST.i = HIST.stack.length - 1;
+  updHist();
+}
+function updHist() {
+  $('btnUndo').disabled = HIST.i < 0;
+  $('btnRedo').disabled = HIST.i >= HIST.stack.length - 1;
+  $('btnUndo').title = HIST.i >= 0 ? 'Undo: ' + HIST.stack[HIST.i].label : '';
+  $('btnRedo').title = HIST.i < HIST.stack.length - 1 ? 'Redo: ' + HIST.stack[HIST.i + 1].label : '';
+}
+async function undo() {
+  if (HIST.i < 0) return;
+  const a = HIST.stack[HIST.i];
+  try { await a.undo(); HIST.i--; toast('↶ ' + a.label, 'ok'); }
+  catch (e) { toast('Undo failed: ' + e.message, 'no'); }
+  updHist(); applyFilters();
+}
+async function redo() {
+  if (HIST.i >= HIST.stack.length - 1) return;
+  const a = HIST.stack[HIST.i + 1];
+  try { await a.redo(); HIST.i++; toast('↷ ' + a.label, 'ok'); }
+  catch (e) { toast('Redo failed: ' + e.message, 'no'); }
+  updHist(); applyFilters();
+}
+
+/* ---------- import / export (tab-separated, with comma fallback) ---------- */
+function exportTsv() {
+  const cell = v => {
+    const s = String(v ?? '');
+    return /["\t\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows = [['id','category','question','answer','crumb','card_order','is_free'],
+    ...VIEW.map(c => [c.id, c.category, c.question, c.answer, c.crumb, c.card_order, c.is_free ? 'true' : 'false'])];
+  const tsv = rows.map(r => r.map(cell).join('\t')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8' }));
+  a.download = `cards-${new Date().toISOString().slice(0, 10)}.tsv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`Exported ${VIEW.length} card(s)`, 'ok');
+}
+
+// Repairs UTF-8 text that was decoded as Windows-1252 (e.g. "â€º" → "›").
+const CP1252_HI = '€\0‚ƒ„…†‡ˆ‰Š‹Œ\0Ž\0\0‘’“”•–—˜™š›œ\0žŸ';
+function fixMojibake(s) {
+  if (!s || !/[\u00C2-\u00F4]/.test(s)) return s;
+  const bytes = [];
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (c > 127 && c < 256) bytes.push(c);
+    else if (c > 255 && CP1252_HI.includes(ch)) bytes.push(0x80 + CP1252_HI.indexOf(ch));
+    else if (c < 128) bytes.push(c);
+    else return s;
+  }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bytes)); }
+  catch { return s; }
+}
+
+// Parses tab-separated (or comma-separated) text. Quotes only wrap a field when
+// they open at field start and close before a delimiter/newline, so unescaped
+// quotes inside HTML (class="crumb") are tolerated.
+function parseTable(text) {
+  const d = text.split(/\r?\n/, 1)[0].includes('\t') ? '\t' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { f += '"'; i++; }
+        else if (i + 1 >= text.length || text[i + 1] === d || text[i + 1] === '\n' || text[i + 1] === '\r') q = false;
+        else f += '"';
+      } else f += ch;
+    } else if (ch === '"' && f === '') q = true;
+    else if (ch === d) { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    } else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+const FREE_TRUE = ['true', '1', 'yes', 'y', 'free', 'مجانية', 'ببلاش', 'نعم'];
+
+async function importFile(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const rows = parseTable((await file.text()).replace(/^\uFEFF/, '')).filter(r => r.some(x => x.trim()));
+  if (rows.length < 2) return toast('File is empty', 'no');
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const idx = n => head.indexOf(n);
+  if (idx('question') < 0 || idx('answer') < 0 || idx('category') < 0)
+    return toast('Required columns: category, question, answer', 'no');
+
+  const get = (r, n) => idx(n) >= 0 ? fixMojibake(r[idx(n)] ?? '') : '';
+
+  const items = rows.slice(1).map(r => {
+    let question = get(r, 'question');
+    let answer = get(r, 'answer');
+    let crumb = get(r, 'crumb').trim() || null;
+
+    // Move a leading <span class="crumb"> out of the question into the crumb field.
+    const m = question.match(CRUMB_RE);
+    if (m) {
+      crumb = crumb || plain(m[1]);
+      question = question.slice(m[0].length);
+    }
+    answer = answer.replace(CRUMB_RE, '');
+
+    const ord = idx('card_order') >= 0 ? Number(get(r, 'card_order')) : NaN;
+    const freeRaw = get(r, 'is_free').trim().toLowerCase();
+    return {
+      question,
+      answer,
+      category: get(r, 'category').trim(),
+      crumb,
+      card_order: Number.isFinite(ord) ? ord : null,
+      is_free: FREE_TRUE.includes(freeRaw)
+    };
+  }).filter(x => plain(x.question) && x.category);
+
+  if (!items.length) return toast('No valid rows found', 'no');
+  if (!confirm(`Import ${items.length} card(s)?`)) return;
+  try {
+    for (const ch of chunks(items, 500)) {
+      const { error } = await sb.from('flashcards').insert(ch);
+      if (error) throw error;
+    }
+  } catch (err) { return toast('Import failed: ' + err.message, 'no'); }
+  toast(`Imported ${items.length} card(s) ✓`, 'ok');
+  await loadAll();
+}
+
+/* ---------- events ---------- */
+function bindEvents() {
+  bindMS();
+
+  // Toolbars (keep text selection when clicking buttons)
+  document.querySelectorAll('.toolbar button').forEach(b => {
+    b.addEventListener('mousedown', e => e.preventDefault());
+    b.addEventListener('click', () => runCmd($(b.closest('.toolbar').dataset.target), b.dataset.cmd));
+  });
+
+  ['ceQ', 'ceA'].forEach(id => {
+    const ed = $(id);
+    ed.addEventListener('input', onEdit);
+    ed.addEventListener('keydown', e => {
+      const m = e.ctrlKey || e.metaKey;
+      if (m && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); runCmd(ed, id === 'ceQ' ? 'blank' : 'mark'); }
+      else if (m && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); runCmd(ed, 'uncloze'); }
+    });
+    ed.addEventListener('paste', e => {
+      e.preventDefault();
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+    });
+  });
+
+  ['ceDeck', 'ceCrumb', 'ceOrder'].forEach(id => $(id).addEventListener('input', onEdit));
+  $('ceFree').addEventListener('change', onEdit);
+
+  $('btnSave').onclick = save;
+  $('btnRevert').onclick = () => { if (CUR) openCard(CUR, true); };
+  $('btnDup').onclick = duplicate;
+  $('btnDel').onclick = deleteCurrent;
+  $('btnClose').onclick = () => closeEditor();
+  $('btnPrev').onclick = () => step(-1);
+  $('btnNext').onclick = () => step(1);
+  $('btnNew').onclick = openNew;
+  $('btnRefresh').onclick = loadAll;
+  $('btnUndo').onclick = undo;
+  $('btnRedo').onclick = redo;
+  $('btnExport').onclick = exportTsv;
+  $('btnImport').onclick = () => $('csvFile').click();
+  $('csvFile').onchange = importFile;
+
+  let t;
+  $('fSearch').addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 150); });
+  ['fOMin', 'fOMax'].forEach(id => $(id).addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 150); }));
+  $('fSort').addEventListener('change', applyFilters);
+
+  $('btnReset').onclick = () => {
+    Object.values(MS).forEach(m => m.sel.clear());
+    document.querySelectorAll('.ms-search').forEach(i => i.value = '');
+    Object.keys(MS).forEach(renderMS);
+    $('fSearch').value = ''; $('fSort').value = 'id_asc';
+    $('fOMin').value = ''; $('fOMax').value = '';
+    applyFilters();
+  };
+
+  $('chkAll').onchange = e => {
+    VIEW.forEach(c => e.target.checked ? SEL.add(c.id) : SEL.delete(c.id));
+    renderTable(); updateBulk();
+  };
+  $('btnMore').onclick = () => appendRows(Math.min(SHOWN + PAGE, VIEW.length));
+  $('bulkMove').onclick = bulkMove;
+  $('bulkFreeOn').onclick = () => bulkFree(true);
+  $('bulkFreeOff').onclick = () => bulkFree(false);
+  $('bulkDel').onclick = bulkDelete;
+  $('bulkClear').onclick = () => { SEL.clear(); renderTable(); updateBulk(); };
+
+  document.addEventListener('keydown', e => {
+    const m = e.ctrlKey || e.metaKey;
+    const ae = document.activeElement;
+    const inField = /INPUT|TEXTAREA|SELECT/.test(ae.tagName) || ae.isContentEditable;
+    const key = e.key.toLowerCase();
+
+    if (e.key === 'Escape') closeMS();
+    else if (m && key === 's') { e.preventDefault(); save(); }
+    else if (m && key === 'n') { e.preventDefault(); openNew(); }
+    else if (m && key === 'z' && !inField) { e.preventDefault(); undo(); }
+    else if (m && key === 'y' && !inField) { e.preventDefault(); redo(); }
+    else if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); step(e.key === 'ArrowDown' ? 1 : -1); }
+    else if (e.key === '/' && !inField) { e.preventDefault(); $('fSearch').focus(); }
+  });
+}
+
+/* ===================== ACTIVATION CODES ===================== */
+// عدّل نص رسالة الواتساب هنا براحتك
+const CODE_MSG = (name, code) =>
+`أهلاً ${name || ''} 👋
+ده كود تفعيل الفلاش كاردس بتاعك:
+
+*${code}*
+
+ادخل على الموقع واضغط 🔑 Unlock واكتب الكود.
+⚠️ الكود ده يستخدم مرة واحدة بس.`;
+
+const CV = { rows: [], selDecks: new Set() };
+const codeStatus = c => !c.active ? 'off' : c.used_at ? 'used' : 'free';
+const STATUS_LBL = { free: 'Available', used: 'Used', off: 'Disabled' };
+const fmtDate = s => s ? new Date(s).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+const allDecks = () => [...new Set(DECKS)];
+
+async function copyText(text, msg = 'Copied ✓') {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
+  toast(msg, 'ok');
+}
+
+async function loadCodes() {
+  const { data, error } = await sb.rpc('admin_list_codes');
+  if (error) return toast('Codes load failed: ' + error.message, 'no');
+  CV.rows = data || [];
+  renderCodes();
+}
+
+function renderDeckPick() {
+  const list = allDecks();
+  $('cgDeckList').innerHTML = list.length
+    ? list.map(d => `<label class="cg-opt"><input type="checkbox" value="${esc(d)}" ${CV.selDecks.has(d) ? 'checked' : ''}><span>${esc(d)}</span></label>`).join('')
+    : '<div class="mut">No decks</div>';
+}
+
+  function deckDropdown(c) {
+  const ds = c.decks || [];
+  if (!ds.length) return '<span class="mut">—</span>';
+  const label = ds.length === 1
+    ? esc(ds[0])
+    : `${esc(ds[0])} <span class="dk-more">+${ds.length - 1}</span>`;
+  return `<details class="dk-dd">
+    <summary>${label}<span class="dk-caret">▾</span></summary>
+    <div class="dk-panel">${ds.map(d => `<div class="dk-item">📄 ${esc(d)}</div>`).join('')}</div>
+  </details>`;
+}
+function renderCodes() {
+  const q = $('cvSearch').value.trim().toLowerCase(), st = $('cvStatus').value;
+  const rows = CV.rows.filter(c =>
+    (!st || codeStatus(c) === st) &&
+    (!q || (c.code + ' ' + (c.student_name || '') + ' ' + (c.note || '')).toLowerCase().includes(q)));
+
+  $('cvTotal').textContent = CV.rows.length;
+  $('cvFree').textContent = CV.rows.filter(c => codeStatus(c) === 'free').length;
+  $('cvUsed').textContent = CV.rows.filter(c => codeStatus(c) === 'used').length;
+  $('cvOff').textContent = CV.rows.filter(c => codeStatus(c) === 'off').length;
+
+  $('cvBody').innerHTML = rows.length ? rows.map(c => {
+    const s = codeStatus(c);
+    return `<tr data-id="${c.id}">
+      <td><code class="cv-code">${esc(c.code)}</code></td>
+      <td>${esc(c.student_name || '—')}${c.note ? `<div class="mut sm2">${esc(c.note)}</div>` : ''}</td>
+      <td>${deckDropdown(c)}</td>
+      <td><span class="badge b-${s}">${STATUS_LBL[s]}</span></td>
+      <td class="mut">${fmtDate(c.used_at)}</td>
+      <td class="cv-acts">
+        <button class="sm" data-act="copy" title="Copy code">📋</button>
+        <button class="sm" data-act="wa" title="Copy WhatsApp message">💬</button>
+        <button class="sm" data-act="rename" title="Edit name / note">✏️</button>
+        ${s !== 'used' ? (c.active
+          ? `<button class="sm" data-act="off">Disable</button>`
+          : `<button class="sm" data-act="on">Enable</button>`) : ''}
+        <button class="sm danger" data-act="del" title="Delete">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty-row">No codes</td></tr>`;
+}
+
+async function generateCodes() {
+  const count = Math.min(500, Math.max(1, parseInt($('cgCount').value) || 1));
+  const decks = [...CV.selDecks];
+  if (!decks.length) return toast('Choose at least one deck', 'no');
+
+  const btn = $('cgGo'); btn.disabled = true;
+  const { data, error } = await sb.rpc('admin_create_codes', {
+    p_count: count, p_student: $('cgName').value, p_decks: decks, p_note: $('cgNote').value
+  });
+  btn.disabled = false;
+ if (error) {
+  console.error('admin_create_codes error:', error);
+  const extra = [error.details, error.hint].filter(Boolean).join(' | ');
+  return toast('Failed: ' + error.message + (extra ? ' | ' + extra : ''), 'no');
+}
+
+  toast(`${data.length} code(s) created ✓`, 'ok');
+  $('cgName').value = ''; $('cgNote').value = '';
+  await loadCodes();
+  copyText(data.map(c => c.code).join('\n'), 'New codes copied 📋');
+}
+
+async function setCodeActive(c, on) {
+  const { error } = await sb.rpc('admin_set_code_active', { p_id: c.id, p_active: on });
+  if (error) return toast(error.message, 'no');
+  toast(on ? 'Enabled ✓' : 'Disabled ✓', 'ok');
+  loadCodes();
+}
+
+async function deleteCode(c) {
+  if (!confirm(`Delete code ${c.code}?`)) return;
+  const { error } = await sb.rpc('admin_delete_code', { p_id: c.id });
+  if (error) return toast(error.message, 'no');
+  toast('Deleted ✓', 'ok');
+  loadCodes();
+}
+
+async function renameCode(c) {
+  const name = prompt('Student name:', c.student_name || ''); if (name === null) return;
+  const note = prompt('Note:', c.note || ''); if (note === null) return;
+  const { error } = await sb.rpc('admin_update_code', { p_id: c.id, p_student: name, p_note: note });
+  if (error) return toast(error.message, 'no');
+  toast('Updated ✓', 'ok');
+  loadCodes();
+}
+
+function exportCodes() {
+  const rows = [['code', 'student', 'decks', 'status', 'used_at', 'note'],
+    ...CV.rows.map(c => [c.code, c.student_name || '', (c.decks || []).join('|'),
+      STATUS_LBL[codeStatus(c)], c.used_at || '', c.note || ''])];
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `codes-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function openCodes() {
+  renderDeckPick();
+  $('codesView').classList.remove('hidden');
+  loadCodes();
+}
+function closeCodes() { $('codesView').classList.add('hidden'); }
+
+function bindCodes() {
+  $('btnCodes').onclick = openCodes;
+  $('cvClose').onclick = closeCodes;
+  $('cgGo').onclick = generateCodes;
+  $('cgAll').onclick = () => { allDecks().forEach(d => CV.selDecks.add(d)); renderDeckPick(); };
+  $('cgNone').onclick = () => { CV.selDecks.clear(); renderDeckPick(); };
+  $('cgDeckList').addEventListener('change', e => {
+    if (e.target.type !== 'checkbox') return;
+    e.target.checked ? CV.selDecks.add(e.target.value) : CV.selDecks.delete(e.target.value);
+  });
+  $('cvSearch').addEventListener('input', renderCodes);
+  $('cvStatus').addEventListener('change', renderCodes);
+  $('cvCopyAvail').onclick = () => {
+    const free = CV.rows.filter(c => codeStatus(c) === 'free');
+    if (!free.length) return toast('No available codes', 'no');
+    copyText(free.map(c => c.student_name ? `${c.student_name}: ${c.code}` : c.code).join('\n'),
+             `${free.length} code(s) copied 📋`);
+  };
+  $('cvExport').onclick = exportCodes;
+  $('cvBody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const c = CV.rows.find(x => String(x.id) === b.closest('tr').dataset.id); if (!c) return;
+    const a = b.dataset.act;
+    if (a === 'copy') copyText(c.code, 'Code copied ✓');
+    if (a === 'wa') copyText(CODE_MSG(c.student_name, c.code), 'Message copied 💬');
+    if (a === 'rename') renameCode(c);
+    if (a === 'off') setCodeActive(c, false);
+    if (a === 'on') setCodeActive(c, true);
+    if (a === 'del') deleteCode(c);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('codesView').classList.contains('hidden')) closeCodes();
+  });
+}
+bindCodes();
+
+init();
+</script>
+</body>
+</html>
