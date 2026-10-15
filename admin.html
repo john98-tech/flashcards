@@ -1228,7 +1228,7 @@ const CV = { rows: [], selDecks: new Set() };
 const codeStatus = c => !c.active ? 'off' : c.used_at ? 'used' : 'free';
 const STATUS_LBL = { free: 'Available', used: 'Used', off: 'Disabled' };
 const fmtDate = s => s ? new Date(s).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-const allDecks = () => [...new Set([...DECKS, ...CARDS.map(c => c.category).filter(Boolean)])];
+const allDecks = () => [...new Set(DECKS)];
 
 async function copyText(text, msg = 'Copied ✓') {
   try { await navigator.clipboard.writeText(text); }
