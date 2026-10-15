@@ -181,6 +181,11 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
   border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:2px}
 .dk-item{padding:6px 10px;border-radius:6px;font-size:13px;white-space:nowrap}
 .dk-item:hover{background:var(--bg)}
+  .gr-list{display:flex;flex-direction:column;gap:2px;overflow:auto}
+.gr-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer}
+.gr-item:hover{background:var(--bg)}
+.gr-item.on{background:var(--acc-soft);color:var(--acc);font-weight:700}
+.gr-decks{flex:1;overflow:auto;display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:8px;padding:6px}
 </style>
 </head>
 <body>
@@ -205,6 +210,7 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
     <button class="sm" id="btnExport">⬇ Export</button>
     <button class="sm" id="btnRefresh">↻ Refresh</button>
     <button class="sm primary" id="btnCodes">🔑 Codes</button>
+        <button class="sm" id="btnGroups">📁 Groups</button>
     <a class="btn sm" href="flashcards.html">Exit</a>
     <input type="file" id="csvFile" accept=".tsv,.csv,text/tab-separated-values,text/csv" hidden>
   </div>
@@ -433,7 +439,30 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
     </section>
   </div>
 </div>
-
+<div id="grView" class="cv hidden">
+  <div class="cv-top">
+    <div><b>📁 Deck Groups</b><small>اجمع كذا دكّة في جروب واحد يظهر في قائمة الفلاش كاردس</small></div>
+    <button class="sm" id="grClose">✕ Close</button>
+  </div>
+  <div class="cv-body">
+    <aside class="cv-card">
+      <h3>Groups</h3>
+      <div style="display:flex;gap:6px">
+        <input id="grNew" placeholder="اسم الجروب" style="flex:1">
+        <button class="primary sm" id="grAdd">＋</button>
+      </div>
+      <div id="grList" class="gr-list"></div>
+    </aside>
+    <section class="cv-list" style="padding:16px;gap:10px;display:flex;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <b id="grTitle">Select a group</b>
+        <button class="primary sm" id="grSave">💾 Save decks</button>
+      </div>
+      <small class="mut">كل دكّة تتبع جروب واحد بس. لو حدّدتها في جروب تاني هتتشال من القديم.</small>
+      <div id="grDecks" class="gr-decks"></div>
+    </section>
+  </div>
+</div>
 <script>
 const ENV = localStorage.getItem('env') || 'prod';
 const CFG = { prod: { url: "https://rphakvxxjnzzwxzghcld.supabase.co", key: "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf" } };
@@ -551,13 +580,15 @@ async function pruneEmptyDecks() {
 
 // Makes sure decks exist in the categories table (used by undo after a deck was pruned).
 async function ensureDecks(names) {
-  let added = false;
+  let added = false, failed = [];
   for (const d of new Set(names)) {
     if (!d || DECKS.includes(d)) continue;
     const { error } = await sb.from('categories').insert({ name: d });
-    if (!error) { DECKS.push(d); added = true; }
+    if (error) failed.push(d);
+    else { DECKS.push(d); added = true; }
   }
   if (added) buildFilters();
+  if (failed.length) toast('Deck not registered: ' + failed.join(', '), 'no');
 }
 
 /* ---------- multi-select dropdowns ---------- */
@@ -601,9 +632,14 @@ function bindMS() {
   });
   document.addEventListener('click', closeMS);
 }
-
+function refreshDeckOpts() {
+  const paid = new Set(CARDS.filter(c => !c.is_free).map(c => c.category));
+  MS.deck.opts = MS.deck.opts.map(o => ({ v: o.v, t: (paid.has(o.v) ? '🔒 ' : '') + o.v }));
+  renderMS('deck');
+}
 /* ---------- list ---------- */
 function applyFilters() {
+   refreshDeckOpts();
   const q = $('fSearch').value.trim().toLowerCase();
   const D = MS.deck.sel, CR = MS.crumb.sel, ST = MS.status.sel;
   const omin = $('fOMin').value === '' ? null : Number($('fOMin').value);
@@ -1160,7 +1196,7 @@ async function importFile(e) {
   }).filter(x => plain(x.question) && x.category);
 
   if (!items.length) return toast('No valid rows found', 'no');
-  if (!confirm(`Import ${items.length} card(s)?`)) return;
+  if (!confirm(`Import ${items.length} card(s)?`)) return;await ensureDecks(items.map(x => x.category));
   try {
     for (const ch of chunks(items, 500)) {
       const { error } = await sb.from('flashcards').insert(ch);
@@ -1437,6 +1473,100 @@ function bindCodes() {
     if (e.key === 'Escape' && !$('codesView').classList.contains('hidden')) closeCodes();
   });
 }
+  /* ===================== DECK GROUPS ===================== */
+const GR = { groups: [], map: {}, cur: null };
+const grName = id => (GR.groups.find(g => String(g.id) === String(id)) || {}).name || '';
+
+async function loadGroups() {
+  const [g, m] = await Promise.all([
+    sb.from('deck_groups').select('id,name,sort_order').order('sort_order').order('name'),
+    sb.from('deck_group_map').select('deck_name,group_id')
+  ]);
+  const err = g.error || m.error;
+  if (err) return toast('Groups load failed: ' + err.message, 'no');
+  GR.groups = g.data || [];
+  GR.map = {};
+  (m.data || []).forEach(r => GR.map[r.deck_name] = r.group_id);
+  if (!GR.groups.find(x => String(x.id) === String(GR.cur))) GR.cur = GR.groups[0] ? GR.groups[0].id : null;
+  renderGroups();
+}
+
+function renderGroups() {
+  $('grList').innerHTML = GR.groups.length ? GR.groups.map(g => {
+    const n = Object.keys(GR.map).filter(d => String(GR.map[d]) === String(g.id)).length;
+    return `<div class="gr-item ${String(g.id) === String(GR.cur) ? 'on' : ''}" data-id="${esc(g.id)}">
+      <span class="ell" style="flex:1">📁 ${esc(g.name)}</span>
+      <span class="mut sm2">${n}</span>
+      <button class="sm danger" data-del="${esc(g.id)}" title="Delete group">🗑</button>
+    </div>`;
+  }).join('') : '<div class="mut">No groups yet</div>';
+
+  const g = GR.groups.find(x => String(x.id) === String(GR.cur));
+  $('grTitle').textContent = g ? g.name : 'Select a group';
+  $('grSave').disabled = !g;
+  $('grDecks').innerHTML = g ? DECKS.map(d => {
+    const inG = String(GR.map[d]) === String(g.id);
+    const other = GR.map[d] != null && !inG ? ` <span class="mut sm2">(${esc(grName(GR.map[d]))})</span>` : '';
+    return `<label class="cg-opt"><input type="checkbox" value="${esc(d)}" ${inG ? 'checked' : ''}><span>${esc(d)}</span>${other}</label>`;
+  }).join('') : '';
+}
+
+async function addGroup() {
+  const name = $('grNew').value.trim();
+  if (!name) return toast('Write a group name', 'no');
+  const { data, error } = await sb.from('deck_groups').insert({ name }).select().single();
+  if (error) return toast('Create failed: ' + error.message, 'no');
+  $('grNew').value = '';
+  GR.cur = data.id;
+  toast('Group created ✓', 'ok');
+  loadGroups();
+}
+
+async function deleteGroup(id) {
+  if (!confirm(`Delete group "${grName(id)}"? Its decks stay available, just ungrouped.`)) return;
+  const m = await sb.from('deck_group_map').delete().eq('group_id', id);
+  if (m.error) return toast(m.error.message, 'no');
+  const { error } = await sb.from('deck_groups').delete().eq('id', id);
+  if (error) return toast(error.message, 'no');
+  if (String(GR.cur) === String(id)) GR.cur = null;
+  toast('Deleted ✓', 'ok');
+  loadGroups();
+}
+
+async function saveGroup() {
+  const g = GR.groups.find(x => String(x.id) === String(GR.cur));
+  if (!g) return;
+  const checked = new Set([...$('grDecks').querySelectorAll('input:checked')].map(i => i.value));
+  const toAdd = [...checked].filter(d => String(GR.map[d]) !== String(g.id));
+  const toRemove = DECKS.filter(d => String(GR.map[d]) === String(g.id) && !checked.has(d));
+
+  if (toRemove.length) {
+    const { error } = await sb.from('deck_group_map').delete().in('deck_name', toRemove);
+    if (error) return toast('Save failed: ' + error.message, 'no');
+  }
+  if (toAdd.length) {
+    const { error } = await sb.from('deck_group_map')
+      .upsert(toAdd.map(d => ({ deck_name: d, group_id: g.id })), { onConflict: 'deck_name' });
+    if (error) return toast('Save failed: ' + error.message, 'no');
+  }
+  toast('Group saved ✓', 'ok');
+  loadGroups();
+}
+
+function bindGroups() {
+  $('btnGroups').onclick = () => { $('grView').classList.remove('hidden'); loadGroups(); };
+  $('grClose').onclick = () => $('grView').classList.add('hidden');
+  $('grAdd').onclick = addGroup;
+  $('grNew').addEventListener('keydown', e => { if (e.key === 'Enter') addGroup(); });
+  $('grSave').onclick = saveGroup;
+  $('grList').addEventListener('click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del) return deleteGroup(del.dataset.del);
+    const item = e.target.closest('.gr-item');
+    if (item) { GR.cur = item.dataset.id; renderGroups(); }
+  });
+}
+  bindGroups();
 bindCodes();
 
 init();
