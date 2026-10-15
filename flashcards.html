@@ -57,6 +57,7 @@ button:disabled{opacity:.6;cursor:wait}
 .dp-empty{padding:20px;text-align:center;color:var(--mut);font-size:.9rem}
 
 .jp-item .jp-num{font-variant-numeric:tabular-nums;font-weight:600;min-width:4.5em}
+.jp-item .jp-lock{font-size:.8rem;flex-shrink:0}
 .jp-item .jp-preview{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut);font-size:.8rem;font-family:Georgia,serif}
 .jp-item.cur .jp-preview{color:var(--acc);opacity:.9}
 .jp-item .jp-status{font-size:.75rem;opacity:.7;flex-shrink:0;background:var(--bg);padding:2px 6px;border-radius:6px;}
@@ -64,6 +65,7 @@ button:disabled{opacity:.6;cursor:wait}
 .card{min-height:280px;margin:16px 0;padding:30px;background:var(--card);border:2px solid var(--line);border-radius:16px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.04);transition: border-color 0.2s;}
 .card.back{border-color:var(--acc)}
 .tag{font:.8rem system-ui,sans-serif;color:var(--mut);margin-bottom:8px;font-weight:600}
+.lk{font-size:.9em;margin-inline-start:6px}
 .crumb{font:.85rem system-ui,sans-serif;color:var(--mut);margin-bottom:12px;border-bottom:1px dashed var(--line);padding-bottom:8px;}
 .txt{font-size:1.3rem;line-height:1.7;}
 .bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
@@ -255,7 +257,7 @@ async function loadAll(preferName) {
     cards.forEach(function(item){
         var n = item.category || 'General';
         if (!map[n]) map[n] = [];
-        map[n].push({ f: item.question, b: item.answer, s: n, c: item.crumb || '' });
+        map[n].push({ f: item.question, b: item.answer, s: n, c: item.crumb || '', fr: !!item.is_free });
     });
     D = CATS.filter(function(c){ return isOpen(c) && map[c.name]; }).map(function(c){ return { n: c.name, cards: map[c.name] }; });
     D.forEach(function(d){ if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null); });
@@ -326,7 +328,8 @@ function buildJumpPicker(){
         var icon = '', status = '';
         if (stv === 'ok'){ icon = '✓'; status = 'known'; } else if (stv === 'no'){ icon = '✗'; status = 'missed'; } else { icon = '·'; }
         var preview = stripHtml(x.f || '').slice(0, 60); if (preview.length === 60) preview += '…';
-        it.innerHTML = '<span class="jp-icon">' + icon + '</span><span class="jp-num">Card ' + (i + 1) + '</span><span class="jp-preview">' + esc(preview) + '</span>' + (status ? '<span class="jp-status">' + status + '</span>' : '');
+        var lock = x.fr ? '' : '<span class="jp-lock" title="Paid">🔒</span>';
+        it.innerHTML = '<span class="jp-icon">' + icon + '</span><span class="jp-num">Card ' + (i + 1) + '</span>' + lock + '<span class="jp-preview">' + esc(preview) + '</span>' + (status ? '<span class="jp-status">' + status + '</span>' : '');
         it.onclick = function(){ pos = i; back = false; closeJumpPicker(); updateJumpCurrent(); render(); };
         menu.appendChild(it);
     });
@@ -371,7 +374,8 @@ function render(){
     if(!list.length){ c.className = 'card'; c.innerHTML = isMissedMode ? '<div class="txt" style="text-align:center; color:var(--ok)">Great job! No missed cards here. 🎉</div>' : '<div class="txt">No cards here yet.</div>'; stat(); buildJumpPicker(); return; }
     var x = d.cards[list[pos]];
     c.className = 'card' + (back ? ' back' : '');
-    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
+    var lock = x.fr ? '' : '<span class="lk" title="Paid">🔒</span>';
+    c.innerHTML = '<div class="tag">' + x.s + ' · ' + (pos + 1) + ' / ' + list.length + lock + '</div>' + (x.c ? '<div class="crumb">' + x.c.replace(/</g,'&lt;') + '</div>' : '') + '<div class="txt">' + (back ? x.b : x.f) + '</div><div class="hint"' + (back ? ' style="visibility:hidden"' : '') + '>Press ✓ Got it or ✗ Again to see the answer</div>';
     updateJumpCurrent(); stat();
 }
 
