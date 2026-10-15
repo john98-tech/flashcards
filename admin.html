@@ -74,6 +74,7 @@ tbody tr.sel{background:color-mix(in srgb,var(--acc) 6%,var(--card))}
 tbody tr.on{background:var(--acc-soft)}
 .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--acc-soft);color:var(--acc);font-weight:600;white-space:nowrap}
+.free{display:inline-block;padding:0 6px;border-radius:5px;font-size:11px;font-weight:700;background:var(--ok);color:var(--bg);margin-inline-start:4px;vertical-align:middle}
 .issue{color:var(--no)}
 .more{padding:12px;text-align:center}
 
@@ -89,6 +90,8 @@ tbody tr.on{background:var(--acc-soft)}
 .dirty{color:var(--no);font-weight:700;font-size:12px}
 .meta{display:grid;grid-template-columns:1fr 1fr 90px;gap:8px}
 .meta label{font-size:12px;color:var(--mut);font-weight:700;display:flex;flex-direction:column;gap:4px}
+.free-row{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;width:max-content}
+.free-row input{width:16px;height:16px;padding:0;accent-color:var(--ok)}
 .field-hd{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-bottom:6px}
 .field-hd .cnt{font-size:12px;color:var(--mut);font-weight:500}
 .toolbar{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:4px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:var(--bg)}
@@ -140,6 +143,7 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
     <div class="stat"><b id="stTotal">0</b><span>Total</span></div>
     <div class="stat"><b id="stShown">0</b><span>Shown</span></div>
     <div class="stat"><b id="stSel">0</b><span>Selected</span></div>
+    <div class="stat"><b id="stFree">0</b><span>Free</span></div>
     <div class="stat"><b id="stIssues">0</b><span>Incomplete</span></div>
   </div>
   <div class="top-actions">
@@ -206,6 +210,8 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
       <span style="flex:1"></span>
       <select id="bulkDeck"></select>
       <button class="primary sm" id="bulkMove">Move</button>
+      <button class="sm" id="bulkFreeOn">🆓 Make free</button>
+      <button class="sm" id="bulkFreeOff">Make paid</button>
       <button class="danger sm" id="bulkDel">Delete</button>
       <button class="sm" id="bulkClear">Clear selection</button>
     </div>
@@ -254,6 +260,11 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
         <label>Order<input id="ceOrder" type="number"></label>
       </div>
 
+      <label class="free-row">
+        <input type="checkbox" id="ceFree">
+        <span>🆓 Free card (ببلاش)</span>
+      </label>
+
       <div>
         <div class="field-hd"><span>Question</span><span class="cnt" id="cntQ"></span></div>
         <div class="toolbar" data-target="ceQ">
@@ -284,7 +295,7 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
       </div>
 
       <div class="preview">
-        <div class="pv-hd"><span>Preview</span></div>
+        <div class="pv-hd"><span>Preview</span><span class="free hidden" id="pvFree">FREE</span></div>
         <div class="pv-card">
           <small>Front</small>
           <div id="pvFront"></div>
@@ -328,7 +339,9 @@ const MS = {
   deck:   { el: 'msDeck',   sel: new Set(), all: 'All decks',    opts: [] },
   crumb:  { el: 'msCrumb',  sel: new Set(), all: 'All crumbs',   opts: [] },
   status: { el: 'msStatus', sel: new Set(), all: 'All statuses',
-            opts: [{ v: 'blank', t: 'Has blanks' }, { v: 'plain', t: 'No blanks' }, { v: 'issues', t: 'Incomplete' }] }
+            opts: [{ v: 'blank', t: 'Has blanks' }, { v: 'plain', t: 'No blanks' },
+                   { v: 'free', t: 'Free' }, { v: 'paid', t: 'Paid' },
+                   { v: 'issues', t: 'Incomplete' }] }
 };
 
 /* ---------- helpers ---------- */
@@ -338,7 +351,7 @@ const plain = s => String(s ?? '')
   .replace(CLOZE_RE, '$2').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ')
   .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const isIssue = c => !plain(c.question) || !plain(c.answer) || !c.category;
-const pick = c => ({ question: c.question, answer: c.answer, category: c.category, crumb: c.crumb, card_order: c.card_order });
+const pick = c => ({ question: c.question, answer: c.answer, category: c.category, crumb: c.crumb, card_order: c.card_order, is_free: !!c.is_free });
 const chunks = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
 const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
 
@@ -453,7 +466,9 @@ function applyFilters() {
     if (CR.size && !CR.has(c.crumb || NONE)) return false;
     if (ST.size) {
       const bl = hasBlank(c.question);
-      const ok = (ST.has('blank') && bl) || (ST.has('plain') && !bl) || (ST.has('issues') && isIssue(c));
+      const free = !!c.is_free;
+      const ok = (ST.has('blank') && bl) || (ST.has('plain') && !bl) || (ST.has('issues') && isIssue(c))
+              || (ST.has('free') && free) || (ST.has('paid') && !free);
       if (!ok) return false;
     }
     const o = c.card_order == null ? NaN : Number(c.card_order);
@@ -489,7 +504,7 @@ function makeRow(c, n) {
     <td class="num">${n}</td>
     <td class="t"><div class="ell">${esc(plain(c.question)) || '<span class="issue">— empty —</span>'}</div></td>
     <td class="t"><div class="ell mut">${esc(plain(c.answer)) || '<span class="issue">— empty —</span>'}</div></td>
-    <td><span class="tag">${esc(c.category || '—')}</span></td>
+    <td><span class="tag">${esc(c.category || '—')}</span>${c.is_free ? '<span class="free">FREE</span>' : ''}</td>
     <td class="mut">${esc(c.crumb || '')}</td>`;
   tr.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') openCard(c); });
   tr.querySelector('input').addEventListener('change', e => {
@@ -533,6 +548,7 @@ function updateStats() {
   $('stTotal').textContent = CARDS.length;
   $('stShown').textContent = VIEW.length;
   $('stSel').textContent = SEL.size;
+  $('stFree').textContent = CARDS.filter(c => c.is_free).length;
   $('stIssues').textContent = CARDS.filter(isIssue).length;
 }
 
@@ -626,7 +642,8 @@ function snapshot() {
     answer: serialize($('ceA')),
     category: $('ceDeck').value.trim(),
     crumb: $('ceCrumb').value.trim() || null,
-    card_order: $('ceOrder').value === '' ? null : Number($('ceOrder').value)
+    card_order: $('ceOrder').value === '' ? null : Number($('ceOrder').value),
+    is_free: $('ceFree').checked
   };
 }
 function isDirty() {
@@ -643,6 +660,7 @@ function loadEditorFrom(c) {
   $('ceDeck').value = c.category || '';
   $('ceCrumb').value = c.crumb || '';
   $('ceOrder').value = c.card_order ?? '';
+  $('ceFree').checked = !!c.is_free;
   setRich($('ceQ'), c.question);
   setRich($('ceA'), c.answer, true);
   SAVED = snapshot();
@@ -664,6 +682,7 @@ function openNew() {
   $('ceDeck').value = deck;
   $('ceCrumb').value = cr === NONE ? '' : cr;
   $('ceOrder').value = maxO + 1;
+  $('ceFree').checked = false;
   setRich($('ceQ'), ''); setRich($('ceA'), '', true);
   SAVED = snapshot();
   showEditor(); refreshEditor(); markRows();
@@ -708,6 +727,7 @@ function refreshEditor() {
 function updatePreview(q, a) {
   $('pvFront').innerHTML = q || '<span class="mut">— empty —</span>';
   $('pvBack').innerHTML = a || '<span class="mut">— empty —</span>';
+  $('pvFree').classList.toggle('hidden', !$('ceFree').checked);
 }
 
 /* ---------- save / delete / duplicate ---------- */
@@ -792,6 +812,38 @@ async function setCategories(list) {
   }
 }
 
+// list: [{ id, is_free }]
+async function setFreeMany(list) {
+  for (const val of [true, false]) {
+    const ids = list.filter(x => !!x.is_free === val).map(x => x.id);
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').update({ is_free: val }).in('id', ch);
+      if (error) throw error;
+    }
+  }
+  list.forEach(x => {
+    const c = CARDS.find(y => String(y.id) === String(x.id));
+    if (c) c.is_free = !!x.is_free;
+  });
+  if (CUR) {
+    const f = CARDS.find(c => String(c.id) === String(CUR.id));
+    if (f) { CUR = f; if (!isDirty()) loadEditorFrom(f); }
+  }
+}
+
+async function bulkFree(val) {
+  const sel = CARDS.filter(c => SEL.has(c.id));
+  if (!sel.length) return;
+  const before = sel.map(c => ({ id: c.id, is_free: !!c.is_free }));
+  const after = before.map(b => ({ id: b.id, is_free: val }));
+  try { await setFreeMany(after); }
+  catch (e) { return toast('Update failed: ' + e.message, 'no'); }
+  pushHist(`Mark ${sel.length} card(s) ${val ? 'free' : 'paid'}`, () => setFreeMany(before), () => setFreeMany(after));
+  SEL.clear();
+  applyFilters();
+  toast(`Marked ${sel.length} card(s) ${val ? 'free 🆓' : 'paid'} ✓`, 'ok');
+}
+
 async function bulkMove() {
   const d = $('bulkDeck').value;
   if (!d) return toast('Choose the new deck', 'no');
@@ -857,8 +909,8 @@ function exportTsv() {
     const s = String(v ?? '');
     return /["\t\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const rows = [['id','category','question','answer','crumb','card_order'],
-    ...VIEW.map(c => [c.id, c.category, c.question, c.answer, c.crumb, c.card_order])];
+  const rows = [['id','category','question','answer','crumb','card_order','is_free'],
+    ...VIEW.map(c => [c.id, c.category, c.question, c.answer, c.crumb, c.card_order, c.is_free ? 'true' : 'false'])];
   const tsv = rows.map(r => r.map(cell).join('\t')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8' }));
@@ -909,6 +961,8 @@ function parseTable(text) {
   return rows;
 }
 
+const FREE_TRUE = ['true', '1', 'yes', 'y', 'free', 'مجانية', 'ببلاش', 'نعم'];
+
 async function importFile(e) {
   const file = e.target.files[0];
   e.target.value = '';
@@ -936,12 +990,14 @@ async function importFile(e) {
     answer = answer.replace(CRUMB_RE, '');
 
     const ord = idx('card_order') >= 0 ? Number(get(r, 'card_order')) : NaN;
+    const freeRaw = get(r, 'is_free').trim().toLowerCase();
     return {
       question,
       answer,
       category: get(r, 'category').trim(),
       crumb,
-      card_order: Number.isFinite(ord) ? ord : null
+      card_order: Number.isFinite(ord) ? ord : null,
+      is_free: FREE_TRUE.includes(freeRaw)
     };
   }).filter(x => plain(x.question) && x.category);
 
@@ -982,6 +1038,7 @@ function bindEvents() {
   });
 
   ['ceDeck', 'ceCrumb', 'ceOrder'].forEach(id => $(id).addEventListener('input', onEdit));
+  $('ceFree').addEventListener('change', onEdit);
 
   $('btnSave').onclick = save;
   $('btnRevert').onclick = () => { if (CUR) openCard(CUR, true); };
@@ -1018,6 +1075,8 @@ function bindEvents() {
   };
   $('btnMore').onclick = () => appendRows(Math.min(SHOWN + PAGE, VIEW.length));
   $('bulkMove').onclick = bulkMove;
+  $('bulkFreeOn').onclick = () => bulkFree(true);
+  $('bulkFreeOff').onclick = () => bulkFree(false);
   $('bulkDel').onclick = bulkDelete;
   $('bulkClear').onclick = () => { SEL.clear(); renderTable(); updateBulk(); };
 
@@ -1040,4 +1099,4 @@ function bindEvents() {
 init();
 </script>
 </body>
-        </html>
+</html>
