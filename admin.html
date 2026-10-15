@@ -1,557 +1,936 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Admin – Shany</title>
+<title>Flashcard Manager – Shany</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
-:root[data-theme="dark"]{--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}
+:root{--bg:#f4f6f5;--card:#fff;--fg:#1c2a26;--mut:#6b7b75;--line:#dbe3e0;--acc:#0f766e;--acc-soft:rgba(15,118,110,.1);--bl:#fff2b8;--no:#b91c1c;--ok:#15803d;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#111b18;--card:#1a2925;--fg:#e4ece9;--mut:#93a7a0;--line:#2f4841;--acc:#5eead4;--acc-soft:rgba(94,234,212,.12);--bl:#3d3a14;--no:#f87171;--ok:#4ade80;color-scheme:dark}}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow:hidden;} /* Prevent full page scroll in Anki mode */
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;}
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--mut); }
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;transition:.15s}
+button:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+button.primary:hover:not(:disabled){filter:brightness(1.08);color:#fff}
+button.danger{color:var(--no);border-color:color-mix(in srgb,var(--no) 45%,var(--line))}
+button.danger:hover:not(:disabled){background:color-mix(in srgb,var(--no) 8%,var(--card));color:var(--no);border-color:var(--no)}
+button.sm{padding:4px 10px;font-size:13px}
+.btn{display:inline-flex;align-items:center;padding:6px 12px;border:1px solid var(--line);border-radius:7px;text-decoration:none;color:var(--mut);background:var(--card)}
+input,select{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:7px 10px;outline:none;min-width:0}
+input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.hidden{display:none!important}
+.mut{color:var(--mut)}
 
-/* Navigation Bar */
-.navbar { display:flex; justify-content:space-between; align-items:center; background:var(--card); border-bottom:2px solid var(--line); padding:10px 20px; z-index:100;}
-.logo{display:flex;align-items:center;gap:8px}
-.logo svg{width:28px;height:28px}
-.logo-text{font:700 1.3rem Georgia,serif;background:linear-gradient(135deg,var(--acc),#0ea5e9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.tabs { display:flex; gap:6px; margin:0 20px;}
-.tabs button { background:transparent; border:none; color:var(--mut); font-weight:600; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:15px; transition:all 0.2s;}
-.tabs button:hover { background:var(--bg); color:var(--fg);}
-.tabs button.active { background:color-mix(in srgb, var(--acc) 12%, transparent); color:var(--acc); }
-.nav-actions { display:flex; gap:10px; align-items:center;}
-.env-pill{font-size:.75rem;padding:3px 8px;border-radius:12px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-weight:700; border:1px solid color-mix(in srgb,var(--acc) 30%,transparent)}
+/* Top bar */
+.top{display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--acc),#0ea5e9);display:grid;place-items:center;font-size:18px}
+.brand b{display:block;font-size:15px}
+.brand small{color:var(--mut);font-size:12px}
+.stats{display:flex;gap:6px;margin-inline-start:auto}
+.stat{padding:4px 12px;border:1px solid var(--line);border-radius:8px;text-align:center;min-width:72px}
+.stat b{display:block;font-size:16px}
+.stat span{font-size:11px;color:var(--mut)}
+.top-actions{display:flex;gap:6px;flex-wrap:wrap}
 
-/* History Bar */
-#historyBar{ background:var(--card); padding:8px 20px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center; flex-shrink:0;}
-#historyBar button{padding:4px 10px;font-size:.85rem}
-#historyInfo{font-size:.85rem; font-weight:500;}
+/* Layout */
+.gate{margin:auto;font-size:16px;padding:40px;text-align:center}
+.app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 480px;gap:14px;padding:14px 18px}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.list-pane{min-width:0}
 
-/* Main App Container */
-main{flex:1; padding:16px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:16px;}
-section { flex:1; display:flex; flex-direction:column; min-height:0; }
-
-/* General Elements */
-h1{font:1.4rem Georgia,serif;margin:.2em 0}
-h2{font:1.1rem Georgia,serif;margin:0 0 10px}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-button,select,input,textarea{font:inherit;padding:8px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px; outline:none;}
-input:focus, select:focus, textarea:focus { border-color:var(--acc); }
-button{cursor:pointer; font-weight:500; transition:all 0.15s;}
-button:hover{background:color-mix(in srgb, var(--fg) 5%, var(--card))}
-button.primary{background:var(--acc);color:var(--bg);font-weight:700; border-color:var(--acc);}
-button.primary:hover{filter:brightness(1.1);}
-button.danger{border-color:var(--no);color:var(--no); background:color-mix(in srgb, var(--no) 5%, var(--card))}
-button.danger:hover{background:color-mix(in srgb, var(--no) 10%, var(--card))}
-button.sm{padding:4px 10px;font-size:.85rem}
-button:disabled{opacity:.5;cursor:wait; filter:grayscale(1)}
-input[type=checkbox]{padding:0;width:auto;cursor:pointer}
-
-.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.02)}
-.msg{min-height:1.3em;font-weight:600;margin-top:8px; font-size:.9rem;}
-.msg.ok{color:var(--ok)}.msg.no{color:var(--no)}
-.mut{color:var(--mut);font-size:.85rem}
-.hidden{display:none !important}
-
-/* ===== Decks Drag & Drop ===== */
-.dk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
-.grp{border:1px solid var(--line);border-radius:10px;margin:12px 0;background:var(--card);overflow:hidden;}
-.grp.dragging{opacity:.4}
-.grp.drag-over{border:2px dashed var(--acc);}
-.grp-hd{display:flex;gap:8px;align-items:center;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--line);}
-.grp-hd .handle, .dk .handle{cursor:grab;font-size:1.2rem;padding:0 4px;color:var(--mut);}
-.grp-hd .nm{font-weight:700;font-size:1rem;flex:1;}
-.grp-hd .nm input{padding:4px 8px;width:100%;max-width:320px;border:1px solid transparent;background:transparent;}
-.grp-bd{padding:10px 16px;min-height:40px}
-.dk{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:8px;margin:4px 0;background:color-mix(in srgb, var(--bg) 50%, var(--card));border:1px solid var(--line);}
-.dk:hover{border-color:var(--acc)}
-.dk .nm{flex:1;font-weight:600}
-.dk .nm input{padding:4px 8px;width:100%;border:1px solid transparent;background:transparent;}
-.badge{font-size:.72rem;padding:2px 8px;border-radius:12px;background:color-mix(in srgb,var(--acc) 15%,transparent);color:var(--acc);font-weight:700}
-.badge.prem{background:color-mix(in srgb,#f59e0b 20%,transparent);color:#b45309}
-
-/* ===== Cards Workspace (Anki Style) ===== */
-.cw { display:flex; flex:1; gap:16px; min-height:0; } /* min-height:0 is crucial for flexbox scrolling inside */
-.cw-list { flex:1.2; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.02); }
-.cw-list-top { padding:16px; border-bottom:1px solid var(--line); background:var(--card); z-index:2; flex-shrink:0;}
-.cw-list-body { flex:1; overflow-y:auto; background:var(--bg);}
-.cw-ed { width:420px; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.02); flex-shrink:0;}
-.cw-ed-inner { padding:20px; display:flex; flex-direction:column; gap:12px; }
-
-/* Table styling */
-table{width:100%;border-collapse:collapse;font-size:.9rem}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
-th{background:var(--card);position:sticky;top:0;z-index:2;font-weight:700;box-shadow:0 1px 0 var(--line);}
-tbody tr{cursor:pointer; background:var(--card); transition:background .1s}
+/* List */
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
+.bulk{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--acc-soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.table-wrap{flex:1;overflow:auto;min-height:0}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;vertical-align:middle}
+th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mut);font-weight:700;z-index:1}
+td.c,th.c{width:38px;text-align:center}
+td.num{color:var(--mut);font-size:12px;width:46px}
+td.t{max-width:0;width:34%}
+tbody tr{cursor:pointer}
 tbody tr:hover{background:var(--bg)}
-tbody tr.active td{background:color-mix(in srgb,var(--acc) 10%,transparent);}
-tbody tr.sel td{background:color-mix(in srgb,var(--acc) 15%,transparent);}
-.q-cell .qi, .a-cell .ai {display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; font-family:Georgia,serif;}
-.a-cell {color:var(--mut)}
+tbody tr.sel{background:color-mix(in srgb,var(--acc) 6%,var(--card))}
+tbody tr.on{background:var(--acc-soft)}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--acc-soft);color:var(--acc);font-weight:600;white-space:nowrap}
+.issue{color:var(--no)}
+.more{padding:12px;text-align:center}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--mut);font-weight:600;}
+/* Editor */
+.edit-pane{overflow:auto}
+.empty{margin:auto;text-align:center;color:var(--mut);padding:40px 24px;line-height:1.9}
+.empty small{display:block;margin-top:10px;font-size:12px}
+.ed{padding:16px;display:flex;flex-direction:column;gap:14px}
+.ed-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ed-head b{font-size:16px;display:block}
+.ed-head small{color:var(--mut);font-size:12px}
+.nav{display:flex;gap:4px}
+.dirty{color:var(--no);font-weight:700;font-size:12px}
+.meta{display:grid;grid-template-columns:1fr 1fr 90px;gap:8px}
+.meta label{font-size:12px;color:var(--mut);font-weight:700;display:flex;flex-direction:column;gap:4px}
+.field-hd{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-bottom:6px}
+.field-hd .cnt{font-size:12px;color:var(--mut);font-weight:500}
+.toolbar{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:4px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:var(--bg)}
+.toolbar button{padding:3px 9px;font-size:13px;border:none;background:transparent}
+.toolbar button:hover{background:var(--card)}
+.rt{min-height:110px;max-height:260px;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:0 0 8px 8px;background:var(--card);font:16px/1.8 Georgia,"Times New Roman",serif;outline:none;overflow-wrap:anywhere}
+.rt:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.rt.is-empty::before{content:attr(data-ph);color:var(--mut)}
+.cloze{background:var(--bl);border-bottom:2px solid var(--fg);border-radius:4px;padding:0 4px;font-weight:700}
+.cloze::after{content:attr(data-c);font:700 10px system-ui,sans-serif;color:var(--acc);vertical-align:super;margin-inline-start:3px}
 
-/* Editor Styling */
-.ed-meta{grid-template-columns:1fr 1fr 80px;}
-.mode-btn{flex:1; padding:8px; font-size:.85rem; border:1px solid var(--line); background:var(--bg); color:var(--mut); border-radius:6px; cursor:pointer}
-.mode-btn.on{background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:700}
-.ed-lbl{font-weight:700;font-size:.85rem;margin:8px 0 4px;}
-.ed-rich{min-height:90px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:1rem/1.7 Georgia,system-ui,serif;outline:none}
-.ed-rich:focus{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 25%,transparent)}
-.raw-edit{width:100%;min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:.9rem;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);resize:vertical}
-.raw-edit:focus{border-color:var(--acc)}
-.ce-pv{padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:1rem/1.7 Georgia,serif;margin:4px 0}
-.ce-pv.b{border-color:var(--acc); background:color-mix(in srgb, var(--acc) 2%, var(--bg));}
-.ce-pv small{display:block;font:.75rem system-ui,sans-serif;color:var(--mut);margin-bottom:6px; font-weight:700; text-transform:uppercase;}
+/* Preview */
+.preview{border:1px dashed var(--line);border-radius:10px;padding:12px}
+.pv-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--mut);font-weight:700}
+.pv-card{background:var(--bg);border-radius:8px;padding:14px;font:15px/1.7 Georgia,"Times New Roman",serif;overflow-wrap:anywhere}
+.pv-card small{display:block;font:700 10px system-ui,sans-serif;color:var(--mut);text-transform:uppercase;margin-bottom:4px}
+.pv-card hr{border:none;border-top:1px dashed var(--line);margin:12px 0}
+.pv-blank{display:inline-block;min-width:4em;text-align:center;border-bottom:2px solid var(--acc);color:var(--acc);font-weight:700;padding:0 4px}
+.pv-rev{font-weight:700;color:var(--acc)}
 
-/* Editor Cloze Interactive Words */
-.wb{font:1.15rem/2.3 Georgia,serif;padding:16px;border:2px dashed var(--line);border-radius:8px;background:var(--bg);min-height:100px; outline:none;}
-.wb .w{cursor:pointer;padding:2px 4px;border-radius:5px;border:1px solid transparent;-webkit-user-select:none;user-select:none;display:inline}
-.wb .w:hover{border-color:var(--acc)}
-.wb .w.sel{background:var(--bl);border-bottom:2px solid var(--fg);font-weight:700}
-.bl{display:inline-block;min-width:4em;font-weight:700;outline:2px solid var(--acc);border-bottom:2px solid var(--fg);background:var(--bl);text-align:center;color:var(--mut)}
-mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0 3px;border-radius:3px}
+/* Sticky actions */
+.ed-actions{display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding:12px 16px;margin:0 -16px -16px;border-top:1px solid var(--line)}
 
-.bulk-bar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:color-mix(in srgb,var(--acc) 10%,var(--card));border-bottom:1px solid var(--acc);font-size:.9rem}
-.tag-deck{display:inline-block;padding:2px 8px;border-radius:12px;background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--acc);font-size:.78rem;font-weight:700}
-.tag-crumb{display:inline-block;padding:2px 8px;border-radius:12px;background:var(--bg);color:var(--mut);font-size:.78rem;border:1px solid var(--line)}
+/* Toast */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:8px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:99}
+#toast.show{opacity:1}
+#toast.ok{background:var(--ok);color:#fff}
+#toast.no{background:var(--no);color:#fff}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:150}
-.mbox{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,0.2);}
-
-/* Responsive */
-@media(max-width:950px){
-  .cw{flex-direction:column;}
-  .cw-ed{width:100%; max-height:50vh;}
+@media (max-width:1000px){
+  body{overflow:auto;height:auto;min-height:100%}
+  html{height:auto}
+  .app{grid-template-columns:1fr}
+  .list-pane{min-height:60vh}
+  .table-wrap{max-height:55vh}
+  .edit-pane{min-height:70vh}
+  .filters{grid-template-columns:1fr 1fr}
+  .stats{margin-inline-start:0}
 }
-</style></head><body>
+</style>
+</head>
+<body>
 
-<div class="navbar">
-  <div class="logo">
-    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#0ea5e9"/></linearGradient></defs>
-      <rect x="10" y="14" width="36" height="44" rx="6" fill="url(#g1)" opacity=".25"/>
-      <rect x="16" y="8" width="36" height="44" rx="6" fill="url(#g1)"/>
-      <path d="M24 22h20M24 30h20M24 38h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="46" cy="46" r="10" fill="#fff" stroke="url(#g1)" stroke-width="3"/>
-      <path d="M42 46l3 3 6-6" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span class="logo-text">Shany</span>
-    <span class="mut" style="margin-left:4px; font-weight:600;">Admin</span>
+<header class="top">
+  <div class="brand">
+    <div class="logo">🃏</div>
+    <div><b>Flashcard Manager</b><small>Shany · <span id="envLbl">prod</span></small></div>
   </div>
-  <div class="tabs">
-    <button class="active" data-tab="decks">Decks</button>
-    <button data-tab="cards">Cards Browser</button>
-    <button data-tab="gen">Generate Codes</button>
-    <button data-tab="codes">Manage Codes</button>
+  <div class="stats">
+    <div class="stat"><b id="stTotal">0</b><span>Total</span></div>
+    <div class="stat"><b id="stShown">0</b><span>Shown</span></div>
+    <div class="stat"><b id="stSel">0</b><span>Selected</span></div>
+    <div class="stat"><b id="stIssues">0</b><span>Incomplete</span></div>
   </div>
-  <div class="nav-actions">
-    <span class="env-pill" id="envPill">prod</span>
-    <button class="sm" onclick="location.href='flashcards.html'">Exit</button>
+  <div class="top-actions">
+    <button id="btnUndo" class="sm" disabled>↶ Undo</button>
+    <button id="btnRedo" class="sm" disabled>↷ Redo</button>
+    <button class="primary sm" id="btnNew">＋ New card</button>
+    <button class="sm" id="btnImport">⬆ Import</button>
+    <button class="sm" id="btnExport">⬇ Export</button>
+    <button class="sm" id="btnRefresh">↻ Refresh</button>
+    <a class="btn sm" href="flashcards.html">Exit</a>
+    <input type="file" id="csvFile" accept=".tsv,.csv,text/tab-separated-values,text/csv" hidden>
   </div>
-</div>
+</header>
 
-<div id="historyBar">
-  <button id="undoBtn" class="sm" disabled>↶ Undo</button>
-  <button id="redoBtn" class="sm" disabled>↷ Redo</button>
-  <span class="mut" id="historyInfo">No changes yet</span>
-  <span style="flex:1"></span>
-  <button class="sm" id="histBackup">💾 Backup</button>
-  <button class="sm" id="histRestore">📂 Restore</button>
-  <button class="sm danger" id="histClear">Clear History</button>
-  <input type="file" id="histRestoreFile" accept=".json" style="display:none">
-</div>
+<div id="gate" class="gate">Checking access...</div>
 
-<main id="app" class="hidden">
-  <div id="gate" class="box"><div id="gateMsg">Checking access...</div></div>
-
-  <!-- DECKS TAB -->
-  <section id="tab-decks">
-    <div class="box">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <h2>Decks & Groups</h2>
-          <div class="mut">Organize your decks into groups. Drag ☰ to reorder.</div>
-        </div>
-        <div class="dk-toolbar" style="margin:0">
-          <button class="primary" id="dkNewGroup">➕ New group</button>
-          <button class="primary" id="dkNewDeck">➕ New deck</button>
-          <button id="dkReload">↻ Refresh</button>
-        </div>
-      </div>
-      <div class="msg" id="dkMsg"></div>
-    </div>
-    <div id="dkTree" style="flex:1; overflow-y:auto; padding-right:8px;"></div>
-  </section>
-
-  <!-- CARDS TAB (ANKI STYLE) -->
-  <section id="tab-cards" class="hidden">
-    <div class="box" style="padding:12px 16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0">Cards Database</h2>
-      <div class="row" style="margin:0">
-        <button class="primary" id="btnNewCard">➕ Add Card</button>
-        <button id="btnAddCards">Add via Text Tool</button>
-        <button id="btnExport">⬇ Export</button>
-        <button id="csvImportBtn">⬆ Import CSV</button>
-        <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
-      </div>
+<main id="app" class="app hidden">
+  <section class="pane list-pane">
+    <div class="filters">
+      <input id="fSearch" type="search" placeholder="🔍 Search question or answer…  ( / )">
+      <select id="fDeck"></select>
+      <select id="fCrumb"></select>
+      <select id="fStatus">
+        <option value="">All statuses</option>
+        <option value="cloze">Has blanks</option>
+        <option value="plain">No blanks</option>
+        <option value="issues">Incomplete</option>
+      </select>
+      <select id="fSort">
+        <option value="id_asc">Oldest first</option>
+        <option value="id_desc">Newest first</option>
+        <option value="order">By order</option>
+        <option value="q">Alphabetical (question)</option>
+      </select>
     </div>
 
-    <div class="cw">
-      <!-- LEFT: BROWSER -->
-      <div class="cw-list">
-        <div class="cw-list-top">
-          <div class="grid">
-            <label class="f">Search <input type="text" id="cardSearch" placeholder="Question or answer..."></label>
-            <label class="f">Deck <select id="cardDeckFilter"></select></label>
-            <label class="f">Crumb <select id="cardCrumbFilter"></select></label>
-          </div>
-          <div class="row" style="margin-bottom:0; margin-top:10px;">
-            <button class="sm" id="cardReload">Refresh List</button>
-            <span class="mut" id="cardCount" style="margin-left:8px;">—</span>
-          </div>
-        </div>
+    <div class="bulk hidden" id="bulk">
+      <b id="bulkCount"></b>
+      <span style="flex:1"></span>
+      <select id="bulkDeck"></select>
+      <button class="primary sm" id="bulkMove">Move</button>
+      <button class="danger sm" id="bulkDel">Delete</button>
+      <button class="sm" id="bulkClear">Clear selection</button>
+    </div>
 
-        <div class="bulk-bar hidden" id="bulkBar">
-          <span style="font-weight:700;color:var(--acc);" id="bulkCount">0 selected</span>
-          <span style="flex:1"></span>
-          <select id="bulkMoveDeck" style="padding:4px 8px; font-size:.85rem;"><option value="">— Move to deck —</option></select>
-          <button class="primary sm" id="bulkMoveBtn">Move</button>
-          <button class="danger sm" id="bulkDeleteBtn">Delete</button>
-          <button class="sm" id="bulkClearBtn">Clear</button>
-        </div>
-
-        <div class="cw-list-body">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAll"></th>
-                <th>Question</th>
-                <th>Answer</th>
-                <th style="width:140px">Deck</th>
-              </tr>
-            </thead>
-            <tbody id="cardBody"></tbody>
-          </table>
-          <div style="padding:16px; text-align:center;">
-             <button id="cardMore" class="hidden">Show more cards ↓</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: EDITOR -->
-      <div class="cw-ed" id="cardEditor">
-        <div class="cw-ed-inner">
-          <div id="edEmpty" class="mut" style="text-align:center;padding:60px 20px;line-height:2">
-            👈 Select a card from the list to edit.<br>Or click <b>➕ Add Card</b>.
-          </div>
-
-          <div id="edForm" class="hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--line); padding-bottom:8px;">
-              <h2 id="ceTitle" style="margin:0">Edit Card</h2>
-              <div class="row" style="margin:0">
-                <button class="sm" id="cePrev">‹</button>
-                <button class="sm" id="ceNext">›</button>
-                <button class="sm" id="ceCancel">✕</button>
-              </div>
-            </div>
-            
-            <div class="mut" id="ceMeta" style="margin-bottom:12px;"></div>
-
-            <div class="grid ed-meta">
-              <label class="f">Deck<input type="text" id="ceDeck" list="deckListDL"></label>
-              <label class="f">Crumb<input type="text" id="ceCrumb" placeholder="optional"></label>
-              <label class="f">Order<input type="number" id="ceOrder"></label>
-            </div>
-
-            <div class="row" style="margin-top:16px;">
-              <button class="mode-btn on" id="ceModeRich">🕳 Fill-in-the-blank (Cloze)</button>
-              <button class="mode-btn" id="ceModeText">📄 Raw Text / Basic</button>
-            </div>
-            <div class="mut" id="ceModeHint" style="margin-bottom:12px; font-size:0.8rem;">Click a word to mark it as a blank.</div>
-
-            <!-- MODE 1: RICH (Cloze interactive) -->
-            <div id="ceRichPane">
-              <div class="ed-lbl">Question (السؤال)</div>
-              <div class="wb" id="ceQ" dir="auto"></div>
-              <div class="ed-lbl" style="margin-top:12px;">Answer (الإجابة)</div>
-              <div class="wb" id="ceA" dir="auto"></div>
-              <div class="row" style="margin-top:8px;">
-                <button class="sm" id="ceSyncFromQA">Sync (Reset tags)</button>
-                <button class="sm" id="ceClearSel">Clear all blanks</button>
-              </div>
-            </div>
-
-            <!-- MODE 2: TEXT (Raw HTML/Tags) -->
-            <div id="ceTextPane" class="hidden">
-              <div class="ed-lbl">Question Text</div>
-              <textarea class="raw-edit" id="ceQText" dir="auto"></textarea>
-              <div class="ed-lbl" style="margin-top:12px;">Answer Text</div>
-              <textarea class="raw-edit" id="ceAText" dir="auto"></textarea>
-            </div>
-
-            <!-- Output Preview -->
-            <div class="ed-lbl" style="margin-top:16px; border-top:1px solid var(--line); padding-top:12px;">Live Preview</div>
-            
-            <div class="row" style="margin-bottom:8px">
-              <label style="font-size:0.85rem; display:flex; gap:6px; cursor:pointer;"><input type="radio" name="cemode" value="one" checked> Single Card</label>
-              <label style="font-size:0.85rem; display:flex; gap:6px; cursor:pointer;"><input type="radio" name="cemode" value="each"> Card per blank</label>
-            </div>
-            
-            <div id="cePreview"></div>
-
-            <div class="row" style="margin-top:20px;">
-              <button class="primary" id="ceSave" style="flex:1; padding:12px;">Save Card</button>
-              <button class="danger" id="ceDelete" style="padding:12px;">Delete</button>
-            </div>
-            <div class="msg" id="ceMsg"></div>
-          </div>
-        </div>
-      </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="c"><input type="checkbox" id="chkAll"></th>
+            <th style="width:46px">#</th>
+            <th>Question</th>
+            <th>Answer</th>
+            <th>Deck</th>
+            <th>Crumb</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="more"><button id="btnMore" class="hidden"></button></div>
     </div>
   </section>
 
-  <!-- GENERATE TAB -->
-  <section id="tab-gen" class="hidden">
-    <div class="box">
-      <h2>Generate Access Codes</h2>
-      <div class="grid" style="grid-template-columns: 1fr 1fr;">
-        <div>
-          <label class="f">1. Select Decks to unlock</label>
-          <div class="row" style="margin-top:4px;">
-            <input type="text" id="genSearch" placeholder="Search decks..." style="flex:1;">
-            <button class="sm" id="genPrem">Premium</button>
-            <button class="sm" id="genAll">All</button>
-            <button class="sm" id="genNone">None</button>
-          </div>
-          <div style="border:1px solid var(--line); border-radius:8px; height:250px; overflow-y:auto; padding:8px; margin-top:8px; background:var(--bg);" id="genList"></div>
-          <div class="mut" id="genSelCount" style="margin-top:4px;"></div>
-        </div>
-        
-        <div>
-          <label class="f">2. Configuration</label>
-          <div class="grid">
-            <label class="f">Number of codes<input type="number" id="genCount" min="1" max="5000" value="10"></label>
-            <label class="f">Users per code<input type="number" id="genMax" min="1" value="1"></label>
-            <label class="f">Prefix (optional)<input type="text" id="genPrefix" placeholder="e.g. MED-" maxlength="10"></label>
-          </div>
-          <label class="f" style="margin-top:16px;">Or: one code per specific name (one per line)
-            <textarea id="genNames" placeholder="Ahmed&#10;Mona" style="height:100px;"></textarea>
-          </label>
-          <div class="row" style="margin-top:16px;"><button class="primary" id="genGo" style="width:100%;">Generate Codes</button></div>
-          <div class="msg" id="genMsg"></div>
-        </div>
-      </div>
+  <section class="pane edit-pane" id="editor">
+    <div class="empty" id="edEmpty">
+      👈 Select a card from the list to edit it<br>or click <b>＋ New card</b>
+      <small>Ctrl+S save · Ctrl+B bold · Ctrl+Shift+C hide word · Alt+↑↓ navigate</small>
     </div>
-    
-    <div class="box hidden" id="genResult">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0">New Codes Created</h2>
-        <div class="row" style="margin:0">
-          <button id="genCopy">Copy all</button>
-          <button id="genCsv">Download CSV</button>
-        </div>
-      </div>
-      <div style="max-height:300px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; margin-top:12px;">
-        <table><thead><tr><th>Code</th><th>Name / Note</th></tr></thead><tbody id="genBody"></tbody></table>
-      </div>
-    </div>
-  </section>
 
-  <!-- CODES TAB -->
-  <section id="tab-codes" class="hidden">
-    <div class="box" style="display:flex; flex-direction:column; height:100%; padding-bottom:0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div class="row" style="margin:0">
-          <select id="codeFilter"><option value="all">All</option><option value="unused">Unused</option><option value="used">Used</option><option value="disabled">Disabled</option></select>
-          <input type="text" id="codeSearch" placeholder="Search codes/names..." style="width:250px;">
-          <button id="codeReload">↻ Refresh</button>
+    <div class="ed hidden" id="edForm">
+      <div class="ed-head">
+        <div>
+          <b id="edTitle">New card</b>
+          <small id="edMeta"></small>
         </div>
-        <div class="row" style="margin:0">
-          <button class="sm" id="codeCopy">Copy Listed</button>
-          <button class="sm" id="codeCsv">Export CSV</button>
+        <div class="nav">
+          <span class="dirty hidden" id="dirty">● Unsaved</span>
+          <button class="sm" id="btnPrev" title="Alt+↑">‹</button>
+          <button class="sm" id="btnNext" title="Alt+↓">›</button>
+          <button class="sm" id="btnClose" title="Close">✕</button>
         </div>
       </div>
-      
-      <div class="mut" id="codeCount" style="margin-bottom:8px;"></div>
-      <div class="msg" id="codeMsg"></div>
-      
-      <div style="flex:1; overflow-y:auto; border:1px solid var(--line); border-radius:12px 12px 0 0; background:var(--bg);">
-        <table>
-          <thead><tr><th>Code</th><th>Decks</th><th>Used</th><th>Used By</th><th>Name</th><th style="text-align:right">Actions</th></tr></thead>
-          <tbody id="codeBody"></tbody>
-        </table>
+
+      <div class="meta">
+        <label>Deck<input id="ceDeck" list="deckDL"></label>
+        <label>Crumb<input id="ceCrumb" list="crumbDL" placeholder="Optional"></label>
+        <label>Order<input id="ceOrder" type="number"></label>
+      </div>
+
+      <div>
+        <div class="field-hd"><span>Question</span><span class="cnt" id="cntQ"></span></div>
+        <div class="toolbar" data-target="ceQ">
+          <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <span class="mut">|</span>
+          <button data-cmd="cloze" title="Hide selected word (Ctrl+Shift+C)">▭ Hide</button>
+          <button data-cmd="uncloze" title="Show word (Ctrl+Shift+X)">Show</button>
+          <span class="mut">|</span>
+          <button data-cmd="clear" title="Clear formatting">⌫ Format</button>
+        </div>
+        <div class="rt" id="ceQ" contenteditable="true" data-ph="Type the question here…"></div>
+      </div>
+
+      <div>
+        <div class="field-hd"><span>Answer</span><span class="cnt" id="cntA"></span></div>
+        <div class="toolbar" data-target="ceA">
+          <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <span class="mut">|</span>
+          <button data-cmd="cloze" title="Hide selected word">▭ Hide</button>
+          <button data-cmd="uncloze" title="Show word">Show</button>
+          <span class="mut">|</span>
+          <button data-cmd="clear" title="Clear formatting">⌫ Format</button>
+        </div>
+        <div class="rt" id="ceA" contenteditable="true" data-ph="Type the answer here…"></div>
+      </div>
+
+      <div class="preview">
+        <div class="pv-hd">
+          <span>Preview</span>
+          <select id="pvMode"></select>
+        </div>
+        <div class="pv-card">
+          <small>Front</small>
+          <div id="pvFront"></div>
+          <hr>
+          <small>Back</small>
+          <div id="pvBack"></div>
+        </div>
+        <div class="mut" id="pvCount" style="margin-top:8px;font-size:12px"></div>
+      </div>
+
+      <div class="ed-actions">
+        <button class="primary" id="btnSave" style="flex:1">💾 Save</button>
+        <button id="btnRevert" title="Revert to saved version">↶ Discard changes</button>
+        <button id="btnDup" title="Duplicate card">⧉ Copy</button>
+        <button class="danger" id="btnDel" title="Delete">🗑</button>
       </div>
     </div>
   </section>
 </main>
 
-<datalist id="deckListDL"></datalist>
+<datalist id="deckDL"></datalist>
+<datalist id="crumbDL"></datalist>
+<div id="toast"></div>
 
-<!-- (The JS is identical to your provided Admin script, except adapting to the correct HTML IDs for the editor: #ceQ, #ceA, #ceQText, #ceAText) -->
 <script>
 const ENV = localStorage.getItem('env') || 'prod';
-const ENV_CONFIG = { prod: { url: "https://rphakvxxjnzzwxzghcld.supabase.co", key: "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf" } };
-const sb = window.supabase.createClient(ENV_CONFIG[ENV].url, ENV_CONFIG[ENV].key);
+const CFG = { prod: { url: "https://rphakvxxjnzzwxzghcld.supabase.co", key: "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf" } };
+const sb = window.supabase.createClient(CFG[ENV].url, CFG[ENV].key);
 
-var $ = function(i){ return document.getElementById(i); };
-var CATS = [], GROUPS = [], GMAP = {}, CODES = [], FILTERED = [], GEN = new Set(), LASTGEN = [], CARDS = [], FILTERED_CARDS = [];
-var CARD_PAGE = 100, CARD_SHOWN = 0, EDIT_CARD = null, SELECTED = new Set();
-var CE = { qTokens: [], aTokens: [], mode: 'rich' };
-var HISTORY = { stack: [], index: -1, maxSize: 50 };
+const $ = id => document.getElementById(id);
+const PAGE = 150;
+const CLOZE_RE = /\{\{c(\d+)::([\s\S]*?)\}\}/g;
+const CRUMB_RE = /^\s*<span class="crumb">([\s\S]*?)<\/span>/;
 
-function el(tag, props, kids){
-  var e = document.createElement(tag);
-  if (props) Object.keys(props).forEach(function(k){
-    if (k === 'text') e.textContent = props[k]; else if (k === 'class') e.className = props[k];
-    else if (k.slice(0,2) === 'on') e[k] = props[k]; else e.setAttribute(k, props[k]);
-  });
-  (kids || []).forEach(function(c){ e.appendChild(c); }); return e;
+let DECKS = [], CARDS = [], VIEW = [], SEL = new Set();
+let CUR = null, SAVED = null, SHOWN = 0;
+const HIST = { stack: [], i: -1 };
+
+/* ---------- helpers ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hasCloze = s => /\{\{c\d+::/.test(s || '');
+const plain = s => String(s ?? '')
+  .replace(CLOZE_RE, '$2').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const isIssue = c => !plain(c.question) || !plain(c.answer) || !c.category;
+const pick = c => ({ question: c.question, answer: c.answer, category: c.category, crumb: c.crumb, card_order: c.card_order });
+const chunks = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
+const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
+
+function toast(msg, kind = '') {
+  const t = $('toast'); t.textContent = msg; t.className = 'show ' + kind;
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.className = '', 2200);
 }
-function setMsg(id, text, kind){ var m = $(id); if (m) { m.className = 'msg ' + (kind || ''); m.textContent = text || ''; } }
-function stripHtml(s){ return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim(); }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-/* History Logic ... (Kept identical to original) */
-function pushHistory(action){ HISTORY.stack = HISTORY.stack.slice(0, HISTORY.index + 1); HISTORY.stack.push(action); if (HISTORY.stack.length > HISTORY.maxSize) HISTORY.stack.shift(); else HISTORY.index++; updateHistoryUI(); }
-function updateHistoryUI(){
-  var canUndo = HISTORY.index >= 0, canRedo = HISTORY.index < HISTORY.stack.length - 1;
-  $('undoBtn').disabled = !canUndo; $('redoBtn').disabled = !canRedo;
-  $('historyInfo').textContent = HISTORY.stack.length === 0 ? 'No changes yet' : (HISTORY.index + 1) + ' / ' + HISTORY.stack.length + (canUndo ? ' — ' + HISTORY.stack[HISTORY.index].label : '');
+function clozeNums(s) {
+  const nums = [...s.matchAll(/\{\{c(\d+)::/g)].map(m => Number(m[1]));
+  return [...new Set(nums)].sort((a, b) => a - b);
 }
-$('undoBtn').onclick = async function(){ if (HISTORY.index < 0) return; var action = HISTORY.stack[HISTORY.index]; $('undoBtn').disabled = true; try { await action.undo(); HISTORY.index--; updateHistoryUI(); setMsg('dkMsg', '↶ Undone', 'ok'); } catch(e){ alert('Undo failed'); updateHistoryUI(); } };
-$('redoBtn').onclick = async function(){ if (HISTORY.index >= HISTORY.stack.length - 1) return; var action = HISTORY.stack[HISTORY.index + 1]; $('redoBtn').disabled = true; try { await action.redo(); HISTORY.index++; updateHistoryUI(); setMsg('dkMsg', '↷ Redone', 'ok'); } catch(e){ alert('Redo failed'); updateHistoryUI(); } };
-$('histClear').onclick = function(){ if(confirm('Clear history?')) { HISTORY = { stack: [], index: -1, maxSize: 50 }; updateHistoryUI(); } };
+function fillSelect(sel, items, first) {
+  sel.innerHTML = `<option value="">${esc(first)}</option>` + items.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+}
 
-/* Init */
-async function init(){
-  $('envPill').textContent = ENV;
+/* ---------- init ---------- */
+async function init() {
+  bindEvents();
+  $('envLbl').textContent = ENV;
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { $('gateMsg').innerHTML = 'Please log in first.'; return; }
+  if (!session) { $('gate').textContent = 'Please sign in first.'; return; }
   const { data: ok } = await sb.rpc('is_admin');
-  if (ok !== true) { $('gateMsg').innerHTML = 'Not an admin.'; return; }
+  if (ok !== true) { $('gate').textContent = 'This account is not an admin.'; return; }
   $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
   await loadAll();
 }
-window.addEventListener('DOMContentLoaded', init);
 
-async function loadAll(){ await loadCats(); await loadCodes(); }
-
-/* Tabs */
-document.querySelectorAll('.tabs button').forEach(function(b){
-  b.onclick = function(){
-    document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active'); }); b.classList.add('active');
-    ['decks','cards','gen','codes'].forEach(function(t){ $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab); });
-    if (b.dataset.tab === 'codes') loadCodes(); if (b.dataset.tab === 'cards') { if(CARDS.length===0) loadCards(); } if (b.dataset.tab === 'decks') loadCats();
-  };
-});
-
-/* DECKS LOGIC (Identical) */
-async function loadCats(){
-  const [cr, gr, mr] = await Promise.all([ sb.from('categories').select('*').order('sort_order'), sb.from('deck_groups').select('*').order('sort_order'), sb.from('deck_group_map').select('*') ]);
-  CATS = cr.data || []; GROUPS = gr.data || []; GMAP = {}; (mr.data || []).forEach(r => GMAP[r.deck_name] = r.group_id);
-  renderDecks(); populateDeckFilters();
-}
-function populateDeckFilters(){
-  var selF = $('cardDeckFilter'), bm = $('bulkMoveDeck'), dl = $('deckListDL');
-  selF.innerHTML = '<option value="">All decks</option>'; bm.innerHTML = '<option value="">— Move to deck —</option>'; dl.innerHTML = '';
-  CATS.forEach(function(c){
-    var txt = c.name + (c.is_free ? ' (free)' : '');
-    selF.appendChild(el('option',{value:c.name, text:txt})); bm.appendChild(el('option',{value:c.name, text:txt})); dl.appendChild(el('option',{value:c.name}));
-  });
-}
-function renderDecks(){ /* Simplified for brevity, same logic as before */
-  $('dkTree').innerHTML = '<div class="mut">Decks loaded (' + CATS.length + ').</div>'; // Placeholder for drag/drop render logic you provided
-}
-
-/* CARDS LOGIC */
-async function loadCards(){
-  var all = [], from = 0, step = 1000;
-  while (true){
+async function fetchAllCards() {
+  let all = [], from = 0; const step = 1000;
+  while (true) {
     const { data, error } = await sb.from('flashcards').select('*').order('id').range(from, from + step - 1);
-    if (error) return; all = all.concat(data || []); if (!data || data.length < step) break; from += step;
+    if (error) { toast('Failed to load: ' + error.message, 'no'); break; }
+    all = all.concat(data || []);
+    if (!data || data.length < step) break;
+    from += step;
   }
-  CARDS = all; buildCrumbFilter(); renderCards();
+  return all;
 }
-function buildCrumbFilter(){
-  var s = $('cardCrumbFilter'), prev = s.value, set = {};
-  CARDS.forEach(c => { if(c.crumb) set[c.crumb]=true; });
-  s.innerHTML = '<option value="">All crumbs</option>';
-  Object.keys(set).sort().forEach(x => s.appendChild(el('option',{value:x, text:x})));
-  if (Object.keys(set).includes(prev)) s.value = prev;
+
+async function loadAll() {
+  const [cats, cards] = await Promise.all([
+    sb.from('categories').select('name').order('sort_order'),
+    fetchAllCards()
+  ]);
+  DECKS = (cats.data || []).map(c => c.name);
+  CARDS = cards;
+  buildFilters();
+  applyFilters();
 }
-function renderCards(){
-  var deckF = $('cardDeckFilter').value, crumbF = $('cardCrumbFilter').value, q = $('cardSearch').value.toLowerCase().trim();
-  FILTERED_CARDS = CARDS.filter(c => {
-    if (deckF && c.category !== deckF) return false;
-    if (crumbF && (c.crumb || '') !== crumbF) return false;
-    if (q && (stripHtml(c.question)+' '+stripHtml(c.answer)).toLowerCase().indexOf(q) < 0) return false;
+
+function buildFilters() {
+  const decks = [...new Set([...DECKS, ...CARDS.map(c => c.category).filter(Boolean)])];
+  const crumbs = [...new Set(CARDS.map(c => c.crumb).filter(Boolean))].sort();
+  const keepDeck = $('fDeck').value, keepCrumb = $('fCrumb').value;
+  fillSelect($('fDeck'), decks, 'All decks');
+  fillSelect($('fCrumb'), crumbs, 'All crumbs');
+  fillSelect($('bulkDeck'), decks, 'Move to deck…');
+  $('fDeck').value = keepDeck; $('fCrumb').value = keepCrumb;
+  $('deckDL').innerHTML = decks.map(d => `<option value="${esc(d)}">`).join('');
+  $('crumbDL').innerHTML = crumbs.map(d => `<option value="${esc(d)}">`).join('');
+}
+
+/* ---------- list ---------- */
+function applyFilters() {
+  const q = $('fSearch').value.trim().toLowerCase();
+  const d = $('fDeck').value, cr = $('fCrumb').value, st = $('fStatus').value;
+
+  VIEW = CARDS.filter(c => {
+    if (d && c.category !== d) return false;
+    if (cr && (c.crumb || '') !== cr) return false;
+    const cl = hasCloze(c.question);
+    if (st === 'cloze' && !cl) return false;
+    if (st === 'plain' && cl) return false;
+    if (st === 'issues' && !isIssue(c)) return false;
+    if (q && (plain(c.question) + ' ' + plain(c.answer)).toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
-  $('cardBody').innerHTML = ''; CARD_SHOWN = 0; showMoreCards(); updateBulkBar();
+
+  const s = $('fSort').value;
+  VIEW.sort((a, b) => {
+    if (s === 'id_desc') return cmp(b.id, a.id);
+    if (s === 'order') return (Number(a.card_order) || 0) - (Number(b.card_order) || 0) || cmp(a.category || '', b.category || '');
+    if (s === 'q') return plain(a.question).localeCompare(plain(b.question), 'en');
+    return cmp(a.id, b.id);
+  });
+
+  SHOWN = 0;
+  renderTable();
+  updateBulk();
 }
-function showMoreCards(){
-  var tb = $('cardBody'), end = Math.min(CARD_SHOWN + CARD_PAGE, FILTERED_CARDS.length);
-  for (var i = CARD_SHOWN; i < end; i++) tb.appendChild(cardRow(FILTERED_CARDS[i], i));
-  CARD_SHOWN = end; $('cardCount').textContent = CARD_SHOWN + ' / ' + FILTERED_CARDS.length;
-  $('cardMore').classList.toggle('hidden', CARD_SHOWN >= FILTERED_CARDS.length);
-}
-$('cardMore').onclick = showMoreCards;
-function cardRow(c, i){
-  var tr = el('tr', { 'data-id': c.id });
-  var cb = el('input', { type: 'checkbox' }); cb.checked = SELECTED.has(c.id);
-  cb.onclick = e => e.stopPropagation();
-  cb.onchange = function(){ if(cb.checked) SELECTED.add(c.id); else SELECTED.delete(c.id); tr.classList.toggle('sel', cb.checked); updateBulkBar(); };
-  tr.onclick = function(){
-    document.querySelectorAll('#cardBody tr').forEach(x=>x.classList.remove('active')); tr.classList.add('active');
-    openCardEdit(c);
-  };
-  tr.appendChild(el('td', {style:'text-align:center'}, [cb]));
-  var qCell = el('td', { class: 'q-cell' }); qCell.appendChild(el('div', { class: 'qi', text: stripHtml(c.question) }));
-  var aCell = el('td', { class: 'a-cell' }); aCell.appendChild(el('div', { class: 'ai', text: stripHtml(c.answer) }));
-  tr.appendChild(qCell); tr.appendChild(aCell);
-  tr.appendChild(el('td', null, [el('span', { class: 'tag-deck', text: c.category || '—' })]));
+
+function makeRow(c, n) {
+  const tr = document.createElement('tr');
+  tr.dataset.id = c.id;
+  const checked = SEL.has(c.id);
+  if (checked) tr.classList.add('sel');
+  if (CUR && String(CUR.id) === String(c.id)) tr.classList.add('on');
+  tr.innerHTML = `
+    <td class="c"><input type="checkbox" ${checked ? 'checked' : ''}></td>
+    <td class="num">${n}</td>
+    <td class="t"><div class="ell">${esc(plain(c.question)) || '<span class="issue">— empty —</span>'}</div></td>
+    <td class="t"><div class="ell mut">${esc(plain(c.answer)) || '<span class="issue">— empty —</span>'}</div></td>
+    <td><span class="tag">${esc(c.category || '—')}</span></td>
+    <td class="mut">${esc(c.crumb || '')}</td>`;
+  tr.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') openCard(c); });
+  tr.querySelector('input').addEventListener('change', e => {
+    e.target.checked ? SEL.add(c.id) : SEL.delete(c.id);
+    tr.classList.toggle('sel', e.target.checked);
+    updateBulk();
+  });
   return tr;
 }
-function updateBulkBar(){ $('bulkBar').classList.toggle('hidden', SELECTED.size === 0); $('bulkCount').textContent = SELECTED.size + ' selected'; }
-$('bulkClearBtn').onclick = () => { SELECTED.clear(); renderCards(); };
 
-/* EDITOR LOGIC */
-// Using the token logic you provided
-function tokensFromHtml(html){ /* Your exact token logic here */ return []; }
-function tokensToHtml(tokens){ return ''; }
-function tokensFromMarkedText(text){ return []; }
-function tokensToMarkedText(tokens){ return ''; }
-function ceBuildQuestionHtml(tokens){ return ''; }
-function ceBuildHtml(tokens){ return ''; }
-
-function setCEMode(mode){
-  CE.mode = mode;
-  $('ceRichPane').classList.toggle('hidden', mode !== 'rich');
-  $('ceTextPane').classList.toggle('hidden', mode !== 'text');
-  $('ceModeRich').classList.toggle('on', mode === 'rich');
-  $('ceModeText').classList.toggle('on', mode === 'text');
+function appendRows(end) {
+  const frag = document.createDocumentFragment();
+  for (let i = SHOWN; i < end; i++) frag.appendChild(makeRow(VIEW[i], i + 1));
+  $('tbody').appendChild(frag);
+  SHOWN = end;
+  const left = VIEW.length - SHOWN;
+  $('btnMore').classList.toggle('hidden', left <= 0);
+  $('btnMore').textContent = `Show more (${left} remaining)`;
 }
-$('ceModeRich').onclick = () => setCEMode('rich');
-$('ceModeText').onclick = () => setCEMode('text');
 
-function openCardEdit(c){
-  EDIT_CARD = c; $('edEmpty').classList.add('hidden'); $('edForm').classList.remove('hidden');
-  $('ceTitle').textContent = 'Edit Card'; $('ceMeta').textContent = 'ID: ' + c.id;
-  $('ceDeck').value = c.category || ''; $('ceCrumb').value = c.crumb || ''; $('ceOrder').value = c.card_order || '';
-  // Populate tokens (Assuming logic exists)
-  $('ceQText').value = c.question; $('ceAText').value = c.answer;
-  setCEMode('text'); // Defaulting to text as it's safer if tokens logic is missing here
+function renderTable() {
+  const keep = Math.max(SHOWN, PAGE);
+  SHOWN = 0; $('tbody').innerHTML = '';
+  appendRows(Math.min(keep, VIEW.length));
+  updateStats();
 }
-$('ceCancel').onclick = () => { $('edEmpty').classList.remove('hidden'); $('edForm').classList.add('hidden'); EDIT_CARD=null; };
-$('btnNewCard').onclick = () => { /* Logic to clear form and prep for new card */ };
 
-/* GENERATE / CODES (Boilerplate kept safe) */
-async function loadCodes(){}
-</script></body></html>
+function markRows() {
+  document.querySelectorAll('#tbody tr').forEach(r =>
+    r.classList.toggle('on', !!CUR && String(r.dataset.id) === String(CUR.id)));
+}
+
+function updateBulk() {
+  $('bulk').classList.toggle('hidden', SEL.size === 0);
+  $('bulkCount').textContent = `${SEL.size} selected`;
+  $('chkAll').checked = VIEW.length > 0 && VIEW.every(c => SEL.has(c.id));
+  updateStats();
+}
+
+function updateStats() {
+  $('stTotal').textContent = CARDS.length;
+  $('stShown').textContent = VIEW.length;
+  $('stSel').textContent = SEL.size;
+  $('stIssues').textContent = CARDS.filter(isIssue).length;
+}
+
+/* ---------- rich editor ---------- */
+function setRich(ed, html) {
+  const t = document.createElement('template');
+  t.innerHTML = String(html ?? '').replace(CLOZE_RE, '<span class="cloze" data-c="$1">$2</span>');
+  t.content.querySelectorAll('script,style,iframe,img,object').forEach(n => n.remove());
+  ed.innerHTML = '';
+  ed.appendChild(t.content);
+  renumber(ed);
+}
+
+function serialize(ed) {
+  const c = ed.cloneNode(true);
+  c.querySelectorAll('.cloze').forEach(s => s.replaceWith(`{{c${s.dataset.c}::${s.textContent}}}`));
+  let h = c.innerHTML.replace(/&nbsp;/g, ' ')
+    .replace(/<div><br><\/div>/gi, '<br>').replace(/<div>/gi, '<br>').replace(/<\/div>/gi, '')
+    .replace(/^(<br>)+/i, '').replace(/(<br>)+$/i, '');
+  return h.trim();
+}
+
+function renumber(ed) {
+  ed.querySelectorAll('.cloze').forEach((s, i) => s.dataset.c = i + 1);
+}
+
+function wrapCloze(ed) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed || !ed.contains(sel.anchorNode)) { toast('Select a word first', 'no'); return false; }
+  const r = sel.getRangeAt(0);
+  const anc = r.commonAncestorContainer;
+  const host = anc.nodeType === 1 ? anc : anc.parentElement;
+  if (host && host.closest('.cloze')) { toast('This word is already hidden', 'no'); return false; }
+  const span = document.createElement('span');
+  span.className = 'cloze';
+  try { r.surroundContents(span); }
+  catch (e) { span.appendChild(r.extractContents()); r.insertNode(span); }
+  renumber(ed);
+  sel.removeAllRanges();
+  return true;
+}
+
+function unwrapCloze(ed) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return false;
+  const anc = sel.getRangeAt(0).commonAncestorContainer;
+  const host = anc.nodeType === 1 ? anc : anc.parentElement;
+  const el = host && host.closest('.cloze');
+  if (!el || !ed.contains(el)) { toast('Place the cursor inside a hidden word', 'no'); return false; }
+  const parent = el.parentNode;
+  while (el.firstChild) parent.insertBefore(el.firstChild, el);
+  el.remove();
+  parent.normalize();
+  renumber(ed);
+  return true;
+}
+
+function runCmd(ed, cmd) {
+  if (cmd === 'bold' || cmd === 'italic') document.execCommand(cmd);
+  else if (cmd === 'clear') document.execCommand('removeFormat');
+  else if (cmd === 'cloze') wrapCloze(ed);
+  else if (cmd === 'uncloze') unwrapCloze(ed);
+  onEdit();
+}
+
+/* ---------- editor state ---------- */
+function snapshot() {
+  return {
+    question: serialize($('ceQ')),
+    answer: serialize($('ceA')),
+    category: $('ceDeck').value.trim(),
+    crumb: $('ceCrumb').value.trim() || null,
+    card_order: $('ceOrder').value === '' ? null : Number($('ceOrder').value)
+  };
+}
+function isDirty() {
+  return !!SAVED && JSON.stringify(snapshot()) !== JSON.stringify(SAVED);
+}
+function confirmDiscard() {
+  return !isDirty() || confirm('You have unsaved changes. Discard them?');
+}
+function showEditor() {
+  $('edEmpty').classList.add('hidden');
+  $('edForm').classList.remove('hidden');
+}
+function loadEditorFrom(c) {
+  $('ceDeck').value = c.category || '';
+  $('ceCrumb').value = c.crumb || '';
+  $('ceOrder').value = c.card_order ?? '';
+  setRich($('ceQ'), c.question);
+  setRich($('ceA'), c.answer);
+  SAVED = snapshot();
+  refreshEditor();
+}
+function openCard(c, force) {
+  if (!force && !confirmDiscard()) return;
+  CUR = c;
+  loadEditorFrom(c);
+  showEditor();
+  markRows();
+}
+function openNew() {
+  if (!confirmDiscard()) return;
+  CUR = null;
+  const deck = $('fDeck').value || DECKS[0] || '';
+  const maxO = CARDS.reduce((m, c) => c.category === deck ? Math.max(m, Number(c.card_order) || 0) : m, 0);
+  $('ceDeck').value = deck;
+  $('ceCrumb').value = $('fCrumb').value || '';
+  $('ceOrder').value = maxO + 1;
+  setRich($('ceQ'), ''); setRich($('ceA'), '');
+  SAVED = snapshot();
+  showEditor(); refreshEditor(); markRows();
+  $('ceQ').focus();
+}
+function closeEditor(force) {
+  if (!force && !confirmDiscard()) return;
+  CUR = null; SAVED = null;
+  $('edEmpty').classList.remove('hidden');
+  $('edForm').classList.add('hidden');
+  markRows();
+}
+function step(dir) {
+  if (!CUR) return;
+  const i = VIEW.findIndex(c => String(c.id) === String(CUR.id));
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= VIEW.length) return;
+  openCard(VIEW[j]);
+}
+function onEdit() { refreshEditor(); }
+
+function refreshEditor() {
+  const q = serialize($('ceQ')), a = serialize($('ceA'));
+  $('ceQ').classList.toggle('is-empty', !q);
+  $('ceA').classList.toggle('is-empty', !a);
+  const nums = clozeNums(q);
+  $('cntQ').textContent = `${plain(q).length} chars` + (nums.length ? ` · ${nums.length} blank${nums.length > 1 ? 's' : ''}` : '');
+  $('cntA').textContent = `${plain(a).length} chars`;
+  const dirty = isDirty();
+  $('dirty').classList.toggle('hidden', !dirty);
+  $('btnRevert').disabled = !dirty;
+  $('edTitle').textContent = CUR ? 'Edit card' : 'New card';
+  $('edMeta').textContent = CUR ? `ID: ${CUR.id}` : 'Not saved yet';
+  $('btnDup').disabled = !CUR;
+  $('btnDel').disabled = !CUR;
+  const idx = CUR ? VIEW.findIndex(c => String(c.id) === String(CUR.id)) : -1;
+  $('btnPrev').disabled = idx <= 0;
+  $('btnNext').disabled = idx < 0 || idx >= VIEW.length - 1;
+  updatePreview(q, a, nums);
+}
+
+function render(s, hideN, reveal) {
+  return s.replace(CLOZE_RE, (_, n, t) => {
+    const hide = !reveal && (hideN === 'all' || Number(n) === hideN);
+    return hide ? '<span class="pv-blank">[ ? ]</span>' : `<span class="pv-rev">${t}</span>`;
+  });
+}
+
+function updatePreview(q, a, nums) {
+  const sel = $('pvMode'), prev = sel.value;
+  sel.innerHTML = '<option value="all">All blanks hidden (one card)</option>' +
+    nums.map(n => `<option value="${n}">Card hiding blank ${n}</option>`).join('');
+  sel.value = [...sel.options].some(o => o.value === prev) ? prev : 'all';
+  const mode = sel.value === 'all' ? 'all' : Number(sel.value);
+
+  $('pvFront').innerHTML = q ? render(q, mode, false) : '<span class="mut">— empty —</span>';
+  let back = '';
+  if (nums.length) back += render(q, null, true);
+  if (a) back += (back ? '<hr>' : '') + render(a, null, true);
+  $('pvBack').innerHTML = back || '<span class="mut">— empty —</span>';
+
+  const count = nums.length || 1;
+  $('pvCount').textContent = count > 1 ? `Will produce ${count} cards (one per blank)` : 'Will produce one card';
+}
+
+/* ---------- save / delete / duplicate ---------- */
+function replaceLocal(row) {
+  const i = CARDS.findIndex(c => String(c.id) === String(row.id));
+  if (i >= 0) CARDS[i] = row;
+}
+
+async function writeBack(id, fields) {
+  const { data, error } = await sb.from('flashcards').update(fields).eq('id', id).select().single();
+  if (error) throw error;
+  replaceLocal(data);
+  if (CUR && String(CUR.id) === String(id)) { CUR = data; loadEditorFrom(data); }
+  applyFilters();
+}
+
+async function save() {
+  if ($('edForm').classList.contains('hidden')) return;
+  const p = snapshot();
+  if (!plain(p.question)) return toast('Question is empty', 'no');
+  if (!p.category) return toast('Choose a deck', 'no');
+
+  if (CUR) {
+    const id = CUR.id, before = pick(CUR);
+    const { data, error } = await sb.from('flashcards').update(p).eq('id', id).select().single();
+    if (error) return toast('Save failed: ' + error.message, 'no');
+    replaceLocal(data);
+    CUR = data;
+    pushHist('Edit card', () => writeBack(id, before), () => writeBack(id, p));
+  } else {
+    const { data, error } = await sb.from('flashcards').insert(p).select().single();
+    if (error) return toast('Add failed: ' + error.message, 'no');
+    CARDS.push(data);
+    CUR = data;
+  }
+  SAVED = snapshot();
+  toast('Saved ✓', 'ok');
+  applyFilters();
+  refreshEditor();
+  markRows();
+}
+
+async function duplicate() {
+  if (!CUR) return;
+  const row = { ...pick(CUR), card_order: (Number(CUR.card_order) || 0) + 1 };
+  const { data, error } = await sb.from('flashcards').insert(row).select().single();
+  if (error) return toast('Copy failed: ' + error.message, 'no');
+  CARDS.push(data);
+  toast('Copy created ✓', 'ok');
+  applyFilters();
+  openCard(data, true);
+}
+
+async function deleteCurrent() {
+  if (!CUR || !confirm('Permanently delete this card?')) return;
+  const { error } = await sb.from('flashcards').delete().eq('id', CUR.id);
+  if (error) return toast('Delete failed: ' + error.message, 'no');
+  CARDS = CARDS.filter(c => String(c.id) !== String(CUR.id));
+  SEL.delete(CUR.id);
+  closeEditor(true);
+  applyFilters();
+  toast('Deleted', 'ok');
+}
+
+/* ---------- bulk actions ---------- */
+async function setCategories(list) {
+  const groups = {};
+  list.forEach(x => (groups[x.category] ??= []).push(x.id));
+  for (const [cat, ids] of Object.entries(groups)) {
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').update({ category: cat }).in('id', ch);
+      if (error) throw error;
+    }
+  }
+  list.forEach(x => {
+    const c = CARDS.find(y => String(y.id) === String(x.id));
+    if (c) c.category = x.category;
+  });
+  if (CUR) {
+    const f = CARDS.find(c => String(c.id) === String(CUR.id));
+    if (f) { CUR = f; if (!isDirty()) loadEditorFrom(f); }
+  }
+}
+
+async function bulkMove() {
+  const d = $('bulkDeck').value;
+  if (!d) return toast('Choose the new deck', 'no');
+  const ids = [...SEL];
+  const before = CARDS.filter(c => SEL.has(c.id)).map(c => ({ id: c.id, category: c.category }));
+  const after = before.map(b => ({ id: b.id, category: d }));
+  try { await setCategories(after); }
+  catch (e) { return toast('Move failed: ' + e.message, 'no'); }
+  pushHist(`Move ${ids.length} card(s) to ${d}`, () => setCategories(before), () => setCategories(after));
+  SEL.clear();
+  applyFilters();
+  toast(`Moved ${ids.length} card(s) ✓`, 'ok');
+}
+
+async function bulkDelete() {
+  const ids = [...SEL];
+  if (!ids.length || !confirm(`Permanently delete ${ids.length} card(s)?`)) return;
+  try {
+    for (const ch of chunks(ids, 200)) {
+      const { error } = await sb.from('flashcards').delete().in('id', ch);
+      if (error) throw error;
+    }
+  } catch (e) { return toast('Delete failed: ' + e.message, 'no'); }
+  CARDS = CARDS.filter(c => !SEL.has(c.id));
+  if (CUR && SEL.has(CUR.id)) closeEditor(true);
+  SEL.clear();
+  applyFilters();
+  toast('Deleted ✓', 'ok');
+}
+
+/* ---------- history ---------- */
+function pushHist(label, undoFn, redoFn) {
+  HIST.stack = HIST.stack.slice(0, HIST.i + 1);
+  HIST.stack.push({ label, undo: undoFn, redo: redoFn });
+  if (HIST.stack.length > 50) HIST.stack.shift();
+  HIST.i = HIST.stack.length - 1;
+  updHist();
+}
+function updHist() {
+  $('btnUndo').disabled = HIST.i < 0;
+  $('btnRedo').disabled = HIST.i >= HIST.stack.length - 1;
+  $('btnUndo').title = HIST.i >= 0 ? 'Undo: ' + HIST.stack[HIST.i].label : '';
+  $('btnRedo').title = HIST.i < HIST.stack.length - 1 ? 'Redo: ' + HIST.stack[HIST.i + 1].label : '';
+}
+async function undo() {
+  if (HIST.i < 0) return;
+  const a = HIST.stack[HIST.i];
+  try { await a.undo(); HIST.i--; toast('↶ ' + a.label, 'ok'); }
+  catch (e) { toast('Undo failed: ' + e.message, 'no'); }
+  updHist(); applyFilters();
+}
+async function redo() {
+  if (HIST.i >= HIST.stack.length - 1) return;
+  const a = HIST.stack[HIST.i + 1];
+  try { await a.redo(); HIST.i++; toast('↷ ' + a.label, 'ok'); }
+  catch (e) { toast('Redo failed: ' + e.message, 'no'); }
+  updHist(); applyFilters();
+}
+
+/* ---------- import / export (tab-separated, with comma fallback) ---------- */
+function exportTsv() {
+  const cell = v => {
+    const s = String(v ?? '');
+    return /["\t\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows = [['id','category','question','answer','crumb','card_order'],
+    ...VIEW.map(c => [c.id, c.category, c.question, c.answer, c.crumb, c.card_order])];
+  const tsv = rows.map(r => r.map(cell).join('\t')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8' }));
+  a.download = `cards-${new Date().toISOString().slice(0, 10)}.tsv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`Exported ${VIEW.length} card(s)`, 'ok');
+}
+
+// Repairs UTF-8 text that was decoded as Windows-1252 (e.g. "â€º" → "›").
+const CP1252_HI = '€\0‚ƒ„…†‡ˆ‰Š‹Œ\0Ž\0\0‘’“”•–—˜™š›œ\0žŸ';
+function fixMojibake(s) {
+  if (!s || !/[\u00C2-\u00F4]/.test(s)) return s;
+  const bytes = [];
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (c > 127 && c < 256) bytes.push(c);
+    else if (c > 255 && CP1252_HI.includes(ch)) bytes.push(0x80 + CP1252_HI.indexOf(ch));
+    else if (c < 128) bytes.push(c);
+    else return s;
+  }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bytes)); }
+  catch { return s; }
+}
+
+// Parses tab-separated (or comma-separated) text. Quotes only wrap a field when
+// they open at field start and close before a delimiter/newline, so unescaped
+// quotes inside HTML (class="crumb") are tolerated.
+function parseTable(text) {
+  const d = text.split(/\r?\n/, 1)[0].includes('\t') ? '\t' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { f += '"'; i++; }
+        else if (i + 1 >= text.length || text[i + 1] === d || text[i + 1] === '\n' || text[i + 1] === '\r') q = false;
+        else f += '"';
+      } else f += ch;
+    } else if (ch === '"' && f === '') q = true;
+    else if (ch === d) { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    } else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+async function importFile(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const rows = parseTable((await file.text()).replace(/^\uFEFF/, '')).filter(r => r.some(x => x.trim()));
+  if (rows.length < 2) return toast('File is empty', 'no');
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const idx = n => head.indexOf(n);
+  if (idx('question') < 0 || idx('answer') < 0 || idx('category') < 0)
+    return toast('Required columns: category, question, answer', 'no');
+
+  const get = (r, n) => idx(n) >= 0 ? fixMojibake(r[idx(n)] ?? '') : '';
+
+  const items = rows.slice(1).map(r => {
+    let question = get(r, 'question');
+    let answer = get(r, 'answer');
+    let crumb = get(r, 'crumb').trim() || null;
+
+    // Move a leading <span class="crumb"> out of the question into the crumb field.
+    const m = question.match(CRUMB_RE);
+    if (m) {
+      crumb = crumb || plain(m[1]);
+      question = question.slice(m[0].length);
+    }
+    answer = answer.replace(CRUMB_RE, '');
+
+    const ord = idx('card_order') >= 0 ? Number(get(r, 'card_order')) : NaN;
+    return {
+      question,
+      answer,
+      category: get(r, 'category').trim(),
+      crumb,
+      card_order: Number.isFinite(ord) ? ord : null
+    };
+  }).filter(x => plain(x.question) && x.category);
+
+  if (!items.length) return toast('No valid rows found', 'no');
+  if (!confirm(`Import ${items.length} card(s)?`)) return;
+  try {
+    for (const ch of chunks(items, 500)) {
+      const { error } = await sb.from('flashcards').insert(ch);
+      if (error) throw error;
+    }
+  } catch (err) { return toast('Import failed: ' + err.message, 'no'); }
+  toast(`Imported ${items.length} card(s) ✓`, 'ok');
+  await loadAll();
+}
+
+/* ---------- events ---------- */
+function bindEvents() {
+  // Toolbars (keep text selection when clicking buttons)
+  document.querySelectorAll('.toolbar button').forEach(b => {
+    b.addEventListener('mousedown', e => e.preventDefault());
+    b.addEventListener('click', () => runCmd($(b.closest('.toolbar').dataset.target), b.dataset.cmd));
+  });
+
+  ['ceQ', 'ceA'].forEach(id => {
+    const ed = $(id);
+    ed.addEventListener('input', onEdit);
+    ed.addEventListener('keydown', e => {
+      const m = e.ctrlKey || e.metaKey;
+      if (m && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); if (wrapCloze(ed)) onEdit(); }
+      else if (m && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); if (unwrapCloze(ed)) onEdit(); }
+    });
+    ed.addEventListener('paste', e => {
+      e.preventDefault();
+      document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+    });
+  });
+
+  ['ceDeck', 'ceCrumb', 'ceOrder'].forEach(id => $(id).addEventListener('input', onEdit));
+  $('pvMode').addEventListener('change', () => refreshEditor());
+
+  $('btnSave').onclick = save;
+  $('btnRevert').onclick = () => { if (CUR) openCard(CUR, true); };
+  $('btnDup').onclick = duplicate;
+  $('btnDel').onclick = deleteCurrent;
+  $('btnClose').onclick = () => closeEditor();
+  $('btnPrev').onclick = () => step(-1);
+  $('btnNext').onclick = () => step(1);
+  $('btnNew').onclick = openNew;
+  $('btnRefresh').onclick = loadAll;
+  $('btnUndo').onclick = undo;
+  $('btnRedo').onclick = redo;
+  $('btnExport').onclick = exportTsv;
+  $('btnImport').onclick = () => $('csvFile').click();
+  $('csvFile').onchange = importFile;
+
+  let t;
+  $('fSearch').addEventListener('input', () => { clearTimeout(t); t = setTimeout(applyFilters, 150); });
+  ['fDeck', 'fCrumb', 'fStatus', 'fSort'].forEach(id => $(id).addEventListener('change', applyFilters));
+
+  $('chkAll').onchange = e => {
+    VIEW.forEach(c => e.target.checked ? SEL.add(c.id) : SEL.delete(c.id));
+    renderTable(); updateBulk();
+  };
+  $('btnMore').onclick = () => appendRows(Math.min(SHOWN + PAGE, VIEW.length));
+  $('bulkMove').onclick = bulkMove;
+  $('bulkDel').onclick = bulkDelete;
+  $('bulkClear').onclick = () => { SEL.clear(); renderTable(); updateBulk(); };
+
+  document.addEventListener('keydown', e => {
+    const m = e.ctrlKey || e.metaKey;
+    const ae = document.activeElement;
+    const inField = /INPUT|TEXTAREA|SELECT/.test(ae.tagName) || ae.isContentEditable;
+    const key = e.key.toLowerCase();
+
+    if (m && key === 's') { e.preventDefault(); save(); }
+    else if (m && key === 'n') { e.preventDefault(); openNew(); }
+    else if (m && key === 'z' && !inField) { e.preventDefault(); undo(); }
+    else if (m && key === 'y' && !inField) { e.preventDefault(); redo(); }
+    else if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); step(e.key === 'ArrowDown' ? 1 : -1); }
+    else if (e.key === '/' && !inField) { e.preventDefault(); $('fSearch').focus(); }
+  });
+}
+
+init();
+</script>
+</body>
+  </html>
