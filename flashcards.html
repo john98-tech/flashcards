@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Shany – Flash Cards</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 :root{--bg:#f7f8f5;--fg:#1d2b27;--mut:#5b6b66;--line:#9db3ab;--acc:#0f766e;--bl:#fff3c4;--card:#fff;--ok:#15803d;--no:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201d;--fg:#e6eeeb;--mut:#9fb2ac;--line:#3f5a52;--acc:#5eead4;--bl:#3d3a14;--card:#1b2b27;--ok:#4ade80;--no:#f87171}}
@@ -570,11 +571,13 @@ function calcW(tool, size, p, prev){
     return prev ? prev.w * 0.7 + target * 0.3 : target;
 }
 
-function drawStroke(ctx, s){
+/* inkOverride: يسمح برسم الحبر بلون ثابت (أسود) للتعرف على الكتابة */
+function drawStroke(ctx, s, inkOverride){
     var p = s.pts; if (!p.length) return;
+    var col = inkOverride || s.color;
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = s.color; ctx.fillStyle = s.color;
+    ctx.strokeStyle = col; ctx.fillStyle = col;
     if (s.tool === 'eraser') ctx.globalCompositeOperation = 'destination-out';
     if (s.tool === 'highlighter') ctx.globalAlpha = 0.35;
     if (s.tool === 'pencil') ctx.globalAlpha = 0.8;
@@ -659,7 +662,7 @@ function endStroke(){
 cv.addEventListener('pointerup', endStroke);
 cv.addEventListener('pointercancel', endStroke);
 
-/* ---------- تصدير الكتابة كصورة للتحقق ---------- */
+/* ---------- تصدير الكتابة كصورة للتعرف (أسود على أبيض، مكبّرة) ---------- */
 function exportInk(){
     var mnX = 1e9, mnY = 1e9, mxX = -1e9, mxY = -1e9, any = false;
     strokes().forEach(function(s){
@@ -671,18 +674,104 @@ function exportInk(){
         });
     });
     if (!any) return null;
-    var pad = 20; mnX -= pad; mnY -= pad; mxX += pad; mxY += pad;
-    var w = mxX - mnX, h = mxY - mnY, k = Math.min(1, 1024 / w);
+    var pad = 24; mnX -= pad; mnY -= pad; mxX += pad; mxY += pad;
+    var w = mxX - mnX, h = mxY - mnY;
+    /* تكبير: Tesseract بيقرا أحسن لما الخط يكون ارتفاعه حوالي 150px */
+    var k = Math.min(4, Math.max(1, 160 / h), 2400 / w);
     var W = Math.max(1, Math.ceil(w * k)), H = Math.max(1, Math.ceil(h * k));
     var t = document.createElement('canvas'); t.width = W; t.height = H;
     var tx = t.getContext('2d'); tx.scale(k, k); tx.translate(-mnX, -mnY);
-    strokes().forEach(function(s){ drawStroke(tx, s); });
+    strokes().forEach(function(s){ drawStroke(tx, s, '#000000'); });
     var c = document.createElement('canvas'); c.width = W; c.height = H;
     var cx = c.getContext('2d'); cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, H); cx.drawImage(t, 0, 0);
     return c.toDataURL('image/png').split(',')[1];
 }
 
-/* ---------- التحقق بالذكاء الاصطناعي ---------- */
+/* =====================================================================
+   التعرف على الكتابة (Tesseract.js - مجاني ومحلي، من غير AI سحابي)
+   ===================================================================== */
+var ocrWorkers = {};
+function getOCR(lang){
+    if (!ocrWorkers[lang]) {
+        ocrWorkers[lang] = (async function(){
+            var w = await Tesseract.createWorker(lang);
+            /* PSM 7 = سطر واحد */
+            await w.setParameters({ tessedit_pageseg_mode: '7' });
+            return w;
+        })().catch(function(err){ delete ocrWorkers[lang]; throw err; });
+    }
+    return ocrWorkers[lang];
+}
+
+async function recognize(pngB64, expected){
+    var lang = /\p{Script=Arabic}/u.test(expected) ? 'ara+eng' : 'eng';
+    var w = await getOCR(lang);
+    var r = await w.recognize('data:image/png;base64,' + pngB64);
+    return String((r.data && r.data.text) || '').trim();
+}
+
+/* =====================================================================
+   المطابقة: بتتجاهل المسافات والترقيم والتشكيل والحروف الكبيرة،
+   وبتتسامح مع الأخطاء الإملائية البسيطة
+   ===================================================================== */
+function normKey(s){
+    return String(s || '')
+        .normalize('NFD')
+        .replace(/\p{Mn}/gu, '')            /* التشكيل والحركات والتشكيل اللاتيني */
+        .replace(/\u0640/g, '')             /* التطويل ـ */
+        .replace(/[إأآٱ]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        .replace(/ة/g, 'ه')
+        .replace(/ؤ/g, 'و')
+        .replace(/ئ/g, 'ي')
+        .replace(/[٠-٩]/g, function(d){ return String(d.charCodeAt(0) - 0x0660); })
+        .replace(/[۰-۹]/g, function(d){ return String(d.charCodeAt(0) - 0x06F0); })
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, '');   /* يشيل المسافات كلها (عشان الكلمات المتجمعة) والترقيم */
+}
+
+function levenshtein(a, b){
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+        cur = [i];
+        for (j = 1; j <= b.length; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+        prev = cur;
+    }
+    return prev[b.length];
+}
+
+function similarity(a, b){
+    var m = Math.max(a.length, b.length);
+    if (!m) return 1;
+    return 1 - levenshtein(a, b) / m;
+}
+
+/* نسبة التسامح حسب طول الكلمة: الكلمات القصيرة لازم تكون مظبوطة */
+function tolerance(len){
+    if (len <= 3) return 1;
+    if (len <= 6) return 0.8;
+    return 0.75;
+}
+
+/* الإجابات البديلة مفصولة بـ | */
+function isMatch(read, expectedRaw){
+    var r = normKey(read);
+    if (!r) return false;
+    return String(expectedRaw).split('|').some(function(alt){
+        var e = normKey(alt);
+        if (!e) return false;
+        if (r === e) return true;
+        return similarity(r, e) >= tolerance(e.length);
+    });
+}
+
+/* ---------- التحقق ---------- */
 function setChip(kind, text){
     var c = $('wmChip'); c.className = 'wm-chip show' + (kind ? ' ' + kind : '');
     $('wmChipT').textContent = text;
@@ -695,18 +784,21 @@ async function runCheck(){
     if (!strokes().some(function(s){ return s.tool !== 'eraser'; })) return;
     var d = getDeck(curName); if (!d) return;
     var x = d.cards[list[pos]], key = wmKey;
+    var expected = stripHtml(x.b);
     var img = exportInk(); if (!img) return;
     dirty = false; checking = true;
     setChip('', '⏳ جاري قراءة الكتابة…');
     try {
-        var r = await supabaseClient.functions.invoke('check-answer', {
-            body: { image: img, question: stripHtml(x.f), expected: stripHtml(x.b) }
-        });
-        if (r.error) throw r.error;
+        var text = await recognize(img, expected);
         if (key !== wmKey) return;
-        var res = r.data || {};
-        setChip(res.correct ? 'ok' : 'no', (res.text || '—') + (res.correct ? '  ✓' : '  ✗'));
-        if (res.correct) passCorrect();
+        var ok = isMatch(text, expected);
+        var shown = text || '—';
+        if (ok) {
+            setChip('ok', shown + '  ✓');
+            passCorrect();
+        } else {
+            setChip('no', shown + '  ✗' + (expected ? '  ← ' + expected.split('|')[0].trim() : ''));
+        }
     } catch (err) {
         if (key === wmKey) setChip('no', 'تعذّر التحقق، جرّب تاني');
     } finally {
@@ -770,6 +862,8 @@ function enterWM(){
     closePicker(); closeJumpPicker();
     buildSwatches(); $('wmCustom').value = wmColor; markUI();
     wmKey = null; wmSync();
+    /* تحميل محرك التعرف مسبقاً عشان أول تحقق يبقى أسرع */
+    getOCR(/\p{Script=Arabic}/u.test(stripHtml(getDeck(curName).cards[list[pos]].b)) ? 'ara+eng' : 'eng').catch(function(){});
 }
 function exitWM(){
     wmOn = false; dirty = false; drawing = false; active = null;
