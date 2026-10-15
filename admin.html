@@ -1282,7 +1282,11 @@ async function generateCodes() {
     p_count: count, p_student: $('cgName').value, p_decks: decks, p_note: $('cgNote').value
   });
   btn.disabled = false;
-  if (error) return toast('Failed: ' + error.message, 'no');
+ if (error) {
+  console.error('admin_create_codes error:', error);
+  const extra = [error.details, error.hint].filter(Boolean).join(' | ');
+  return toast('Failed: ' + error.message + (extra ? ' | ' + extra : ''), 'no');
+}
 
   toast(`${data.length} code(s) created ✓`, 'ok');
   $('cgName').value = ''; $('cgNote').value = '';
