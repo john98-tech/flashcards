@@ -111,7 +111,33 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 .ud-box.open .ud-list{display:block}
 .ud-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:.9rem;color:var(--fg);border-radius:8px;margin-bottom:2px}
 .ud-item:hover{background:var(--bg)}
-.ud-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.ud-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===================== وضع الكتابة ===================== */
+.wm-layer{position:fixed;left:0;right:0;top:0;bottom:0;z-index:10;display:none;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+body.wm .wm-layer{display:block}
+.wm-stage{position:relative;max-width:640px;margin:0 auto;padding:0 16px;box-sizing:border-box;background-image:repeating-linear-gradient(to bottom,transparent 0 39px,color-mix(in srgb,var(--line) 30%,transparent) 39px 40px);}
+.wm-q{position:relative;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:24px 22px;box-shadow:0 8px 24px rgba(0,0,0,.04);transition:border-color .25s, box-shadow .25s;}
+.wm-q.ok-frame{border-color:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent),0 8px 24px rgba(0,0,0,.04)}
+.wm-q.flipin{animation:wmFlip .3s ease-out}
+@keyframes wmFlip{from{transform:perspective(900px) rotateY(80deg);opacity:.2}to{transform:none;opacity:1}}
+.wm-cv{position:absolute;left:0;top:0;touch-action:pan-y;cursor:crosshair}
+.wm-tools{position:fixed;left:10px;right:10px;bottom:120px;z-index:45;display:none;align-items:center;gap:8px;padding:8px 12px;overflow-x:auto;white-space:nowrap;border-radius:18px;background:color-mix(in srgb,var(--card) 72%,transparent);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border:1px solid color-mix(in srgb,var(--line) 80%,transparent);box-shadow:0 12px 32px rgba(0,0,0,.15);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+body.wm .wm-tools{display:flex}
+.wm-tools button{flex-shrink:0;padding:6px 9px;font-size:1rem;line-height:1.1;border-radius:10px;border:1px solid transparent;background:transparent}
+.wm-tools button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.wm-sw{width:24px!important;height:24px;border-radius:50%!important;border:2px solid var(--card)!important;box-shadow:0 0 0 1px var(--line);padding:0!important;flex-shrink:0}
+.wm-sw.on{box-shadow:0 0 0 2px var(--acc)}
+.wm-sep{width:1px;height:24px;background:var(--line);flex-shrink:0}
+.wm-tools input[type=range]{width:100px;accent-color:var(--acc)}
+.wm-tools input[type=color]{width:26px;height:26px;border:none;background:none;padding:0;cursor:pointer;flex-shrink:0}
+.wm-lbl{display:flex;align-items:center;gap:6px;font:.8rem system-ui,sans-serif;color:var(--mut);flex-shrink:0}
+.wm-chip{position:fixed;right:12px;z-index:46;max-width:min(70vw,320px);padding:10px 14px;border-radius:14px;font:600 .92rem system-ui,sans-serif;color:var(--fg);background:color-mix(in srgb,var(--card) 55%,transparent);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 10px 30px rgba(0,0,0,.12);pointer-events:none;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s,border-color .2s,color .2s;}
+.wm-chip.show{opacity:1;transform:none}
+.wm-chip.ok{border-color:var(--ok);color:var(--ok)}
+.wm-chip.no{border-color:var(--no);color:var(--no)}
+/* العناصر اللي فوق تفضل شغالة ومش بتتكتب عليها */
+body.wm .logo,body.wm h1,body.wm .top,body.wm #deckPicker,body.wm #jumpPicker,body.wm .row{position:relative;z-index:25}
 </style></head><body>
 
 <div class="logo">
@@ -155,6 +181,7 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 
 <div class="row" style="margin-top:16px; justify-content:center; background:var(--card); padding:8px; border-radius:12px; border:1px solid var(--line);">
   <label style="font-size:.9rem; display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:500; margin-right:auto; padding-left:8px;"><input type="checkbox" id="shuf"> Shuffle</label>
+  <button id="writeBtn" data-tip="Write your answer" style="border:none; background:color-mix(in srgb, var(--acc) 12%, var(--bg)); color:var(--acc); font-weight:600;">✍ كتابة</button>
   <button id="all" data-tip="Show all cards" style="border:none; background:var(--bg);">All cards</button>
   <button id="miss" data-tip="Review missed cards only" style="border:none; background:color-mix(in srgb, var(--no) 10%, var(--bg)); color:var(--no);">Review missed</button>
 </div>
@@ -162,6 +189,40 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
 <div class="card" id="card"><div class="txt">Loading protected content...</div></div>
 <div class="stat" id="stat"></div>
 </main>
+
+<!-- طبقة الكتابة -->
+<div class="wm-layer" id="wmLayer">
+  <div class="wm-stage" id="wmStage">
+    <div class="wm-q" id="wmQ"></div>
+    <canvas class="wm-cv" id="wmCv"></canvas>
+  </div>
+</div>
+
+<!-- شريط الأدوات -->
+<div class="wm-tools" id="wmTools">
+  <button class="wt on" data-tool="pen" title="حبر جاف">🖊</button>
+  <button class="wt" data-tool="fountain" title="حبر سائل">✒️</button>
+  <button class="wt" data-tool="brush" title="فرشاة">🖌️</button>
+  <button class="wt" data-tool="highlighter" title="فلوريسنت">🖍️</button>
+  <button class="wt" data-tool="pencil" title="رصاص">✏️</button>
+  <button class="wt" data-tool="eraser" title="ممحاة">🧽</button>
+  <span class="wm-sep"></span>
+  <span id="wmSwatches" style="display:inline-flex;gap:6px;align-items:center"></span>
+  <input type="color" id="wmCustom" title="لون مخصص">
+  <span class="wm-sep"></span>
+  <label class="wm-lbl" title="السُمك">سُمك
+    <input type="range" id="wmSize" min="0" max="100" value="20">
+    <b id="wmSizeV" style="min-width:2.2em;color:var(--fg)">20</b>
+  </label>
+  <span class="wm-sep"></span>
+  <button id="wmUndo" title="تراجع">↶</button>
+  <button id="wmClear" title="مسح">🗑</button>
+  <button id="wmCheck" title="تحقق الآن" style="color:var(--ok)">✓ تحقق</button>
+  <button id="wmExit" title="خروج (Esc)" style="color:var(--no)">✕ خروج</button>
+</div>
+
+<!-- كبسولة نتيجة القراءة -->
+<div class="wm-chip" id="wmChip" dir="auto"><span id="wmChipT"></span></div>
 
 <div class="bottom-bar">
   <div class="bottom-inner">
@@ -190,7 +251,6 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   </div>
 </div>
 
-<!-- (The JavaScript logic remains exactly the same as provided by you) -->
 <script>
 const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
@@ -372,11 +432,14 @@ function start(missed){
 }
 
 function stat(){
-    var s = st[curName];
-    if (!s) { $('stat').textContent = ''; return; }
-    var ok = 0, no = 0;
-    for(var i = 0; i < s.length; i++){ if(s[i] === 'ok') ok++; else if(s[i] === 'no') no++; }
-    $('stat').textContent = '✓ ' + ok + '    ✗ ' + no;
+    var s = st[curName], txt = '';
+    if (s) {
+        var ok = 0, no = 0;
+        for(var i = 0; i < s.length; i++){ if(s[i] === 'ok') ok++; else if(s[i] === 'no') no++; }
+        txt = '✓ ' + ok + '    ✗ ' + no;
+    }
+    $('stat').textContent = txt;
+    if ($('wmStat')) $('wmStat').textContent = txt;
 }
 
 function render(){
@@ -465,6 +528,11 @@ document.addEventListener('contextmenu', event => event.preventDefault());
 document.onkeydown = function(e){
     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
     if (!$('modal').classList.contains('hidden')) { if (e.key === 'Enter') { e.preventDefault(); redeem(); } else if (e.key === 'Escape') { closeModal(); } return; }
+    if (wmOn) {
+        if (e.key === 'Escape') { exitWM(); }
+        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); strokes().pop(); paintAll(); }
+        return;
+    }
     if (e.key === 'Escape'){ closePicker(); closeJumpPicker(); return; }
     if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){ e.preventDefault(); flip(); }
     else if(e.key === 'ArrowRight' || e.code === 'ArrowRight'){ e.preventDefault(); go(1); }
@@ -472,4 +540,254 @@ document.onkeydown = function(e){
     else if(e.key === 'ArrowUp' || e.code === 'ArrowUp'){ e.preventDefault(); mark('ok'); }
     else if(e.key === 'ArrowDown' || e.code === 'ArrowDown'){ e.preventDefault(); mark('no'); }
 };
+
+/* =====================================================================
+   وضع الكتابة
+   ===================================================================== */
+var DARK = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+var DPR = window.devicePixelRatio || 1;
+var PALETTE = [DARK ? '#e6eeeb' : '#1f2937', '#6b7280', '#ffffff', '#dc2626', '#f97316', '#facc15', '#84cc16', '#22c55e', '#14b8a6', '#0ea5e9', '#2563eb', '#8b5cf6', '#ec4899', '#92400e'];
+var wmOn = false, wmTool = 'pen', wmColor = PALETTE[0], wmKey = null, wmStore = {};
+var drawing = false, active = null, stageH = 0, rafId = 0, dirty = false, checking = false, idleT = null;
+var cv = $('wmCv');
+
+function strokes(){ if (!wmKey) return []; return wmStore[wmKey] || (wmStore[wmKey] = []); }
+function sizePx(){ return 1 + (+$('wmSize').value) * 0.4; }
+function clamp(v, a, b){ return Math.min(b, Math.max(a, v)); }
+
+function calcW(tool, size, p, prev){
+    var speed = 0;
+    if (prev) { var dt = Math.max(1, p.t - prev.t); speed = Math.hypot(p.x - prev.x, p.y - prev.y) / dt; }
+    var target;
+    switch (tool) {
+        case 'fountain': target = size * clamp(1.3 - speed * 1.2, 0.4, 1.3); break;
+        case 'brush': target = size * (p.pr != null ? (0.25 + p.pr * 1.1) : clamp(1.2 - speed * 0.6, 0.3, 1.2)); break;
+        case 'highlighter': target = Math.max(size * 2.5, 10); break;
+        case 'pencil': target = Math.max(size * 0.55, 1); break;
+        case 'eraser': target = size * 1.6; break;
+        default: target = size;
+    }
+    return prev ? prev.w * 0.7 + target * 0.3 : target;
+}
+
+function drawStroke(ctx, s){
+    var p = s.pts; if (!p.length) return;
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = s.color; ctx.fillStyle = s.color;
+    if (s.tool === 'eraser') ctx.globalCompositeOperation = 'destination-out';
+    if (s.tool === 'highlighter') ctx.globalAlpha = 0.35;
+    if (s.tool === 'pencil') ctx.globalAlpha = 0.8;
+    if (s.tool === 'fountain' || s.tool === 'brush' || s.tool === 'eraser') {
+        if (p.length === 1) { ctx.beginPath(); ctx.arc(p[0].x, p[0].y, p[0].w / 2, 0, Math.PI * 2); ctx.fill(); }
+        for (var i = 1; i < p.length; i++) {
+            ctx.beginPath(); ctx.moveTo(p[i-1].x, p[i-1].y); ctx.lineTo(p[i].x, p[i].y);
+            ctx.lineWidth = (p[i-1].w + p[i].w) / 2; ctx.stroke();
+        }
+    } else {
+        ctx.lineWidth = p[0].w; ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y);
+        for (var j = 1; j < p.length; j++) ctx.lineTo(p[j].x, p[j].y);
+        if (p.length === 1) ctx.lineTo(p[0].x + 0.01, p[0].y);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function paintAll(){
+    if (!wmOn) return;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    strokes().forEach(function(s){ drawStroke(ctx, s); });
+    if (active) drawStroke(ctx, active);
+}
+function paintSoon(){ if (!rafId) rafId = requestAnimationFrame(function(){ rafId = 0; paintAll(); }); }
+
+function sizeCanvas(){
+    var w = $('wmStage').clientWidth;
+    cv.style.width = w + 'px'; cv.style.height = stageH + 'px';
+    cv.width = Math.round(w * DPR); cv.height = Math.round(stageH * DPR);
+    paintAll();
+}
+function growStage(){
+    stageH += $('wmLayer').clientHeight;
+    $('wmStage').style.height = stageH + 'px';
+    sizeCanvas();
+}
+
+function layoutWM(){
+    var lay = $('wmLayer'), stg = $('wmStage'), tools = $('wmTools');
+    var barH = document.querySelector('.bottom-bar').offsetHeight;
+    var toolH = tools.offsetHeight || 56;
+    var cardTop = $('card').getBoundingClientRect().top;
+    stg.style.paddingTop = Math.max(0, cardTop) + 'px';
+    tools.style.bottom = barH + 'px';
+    $('wmChip').style.bottom = (barH + toolH + 12) + 'px';
+    lay.style.paddingBottom = (barH + toolH + 24) + 'px';
+    stageH = Math.max(stageH, lay.clientHeight);
+    stg.style.height = stageH + 'px';
+    sizeCanvas();
+}
+
+function addPoint(e){
+    var r = cv.getBoundingClientRect();
+    var p = { x: e.clientX - r.left, y: e.clientY - r.top, t: e.timeStamp,
+              pr: (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : null };
+    var prev = active.pts[active.pts.length - 1];
+    p.w = calcW(active.tool, active.size, p, prev);
+    active.pts.push(p);
+    if (p.y > stageH - 220) growStage();
+}
+
+cv.addEventListener('pointerdown', function(e){
+    if (!wmOn || e.pointerType === 'touch' || (e.button !== undefined && e.button > 0)) return;
+    e.preventDefault();
+    if (e.pointerType === 'pen') cv.style.touchAction = 'none';
+    cv.setPointerCapture(e.pointerId);
+    drawing = true;
+    active = { tool: wmTool, color: wmColor, size: sizePx(), pts: [] };
+    addPoint(e); paintSoon();
+});
+cv.addEventListener('pointermove', function(e){ if (!drawing) return; addPoint(e); paintSoon(); });
+function endStroke(){
+    if (!drawing) return;
+    drawing = false;
+    if (active && active.pts.length) { strokes().push(active); dirty = true; scheduleCheck(); }
+    active = null; paintAll();
+}
+cv.addEventListener('pointerup', endStroke);
+cv.addEventListener('pointercancel', endStroke);
+
+/* ---------- تصدير الكتابة كصورة للتحقق ---------- */
+function exportInk(){
+    var mnX = 1e9, mnY = 1e9, mxX = -1e9, mxY = -1e9, any = false;
+    strokes().forEach(function(s){
+        if (s.tool === 'eraser') return;
+        s.pts.forEach(function(p){
+            any = true; var r = p.w / 2 + 2;
+            mnX = Math.min(mnX, p.x - r); mnY = Math.min(mnY, p.y - r);
+            mxX = Math.max(mxX, p.x + r); mxY = Math.max(mxY, p.y + r);
+        });
+    });
+    if (!any) return null;
+    var pad = 20; mnX -= pad; mnY -= pad; mxX += pad; mxY += pad;
+    var w = mxX - mnX, h = mxY - mnY, k = Math.min(1, 1024 / w);
+    var W = Math.max(1, Math.ceil(w * k)), H = Math.max(1, Math.ceil(h * k));
+    var t = document.createElement('canvas'); t.width = W; t.height = H;
+    var tx = t.getContext('2d'); tx.scale(k, k); tx.translate(-mnX, -mnY);
+    strokes().forEach(function(s){ drawStroke(tx, s); });
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var cx = c.getContext('2d'); cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, H); cx.drawImage(t, 0, 0);
+    return c.toDataURL('image/png').split(',')[1];
+}
+
+/* ---------- التحقق بالذكاء الاصطناعي ---------- */
+function setChip(kind, text){
+    var c = $('wmChip'); c.className = 'wm-chip show' + (kind ? ' ' + kind : '');
+    $('wmChipT').textContent = text;
+}
+function hideChip(){ $('wmChip').className = 'wm-chip'; }
+function scheduleCheck(){ clearTimeout(idleT); idleT = setTimeout(runCheck, 1800); }
+
+async function runCheck(){
+    if (!wmOn || checking || !dirty || !list.length || back) return;
+    if (!strokes().some(function(s){ return s.tool !== 'eraser'; })) return;
+    var d = getDeck(curName); if (!d) return;
+    var x = d.cards[list[pos]], key = wmKey;
+    var img = exportInk(); if (!img) return;
+    dirty = false; checking = true;
+    setChip('', '⏳ جاري قراءة الكتابة…');
+    try {
+        var r = await supabaseClient.functions.invoke('check-answer', {
+            body: { image: img, question: stripHtml(x.f), expected: stripHtml(x.b) }
+        });
+        if (r.error) throw r.error;
+        if (key !== wmKey) return;
+        var res = r.data || {};
+        setChip(res.correct ? 'ok' : 'no', (res.text || '—') + (res.correct ? '  ✓' : '  ✗'));
+        if (res.correct) passCorrect();
+    } catch (err) {
+        if (key === wmKey) setChip('no', 'تعذّر التحقق، جرّب تاني');
+    } finally {
+        checking = false;
+        if (dirty && wmOn) scheduleCheck();
+    }
+}
+
+function passCorrect(){
+    var key = wmKey, q = $('wmQ');
+    st[curName][list[pos]] = 'ok'; stat();
+    q.classList.add('ok-frame');
+    setTimeout(function(){
+        if (!wmOn || key !== wmKey) return;
+        q.classList.remove('ok-frame');
+        if (isMissedMode) { list.splice(pos, 1); if (pos >= list.length) pos = 0; }
+        else pos = (pos + 1) % list.length;
+        back = false; buildJumpPicker(); render();
+    }, 700);
+}
+
+/* ---------- دورة الحياة ---------- */
+function wmSync(){
+    if (!wmOn) return;
+    var d = getDeck(curName), q = $('wmQ');
+    if (!d || !list.length) {
+        wmKey = null;
+        q.innerHTML = '<div class="txt" style="text-align:center">' + (isMissedMode ? 'Great job! 🎉' : 'لا توجد بطاقات هنا') + '</div>';
+        hideChip(); stat(); layoutWM(); return;
+    }
+    var key = curName + '|' + list[pos];
+    if (key !== wmKey) {
+        wmKey = key; hideChip();
+        var x = d.cards[list[pos]];
+        q.innerHTML = '<div class="tag">' + esc(x.s) + ' · ' + (pos + 1) + ' / ' + list.length + (x.fr ? '' : ' 🔒') + '</div>'
+            + (x.c ? '<div class="crumb">' + esc(x.c) + '</div>' : '')
+            + '<div class="txt">' + x.f + '</div><div class="stat" id="wmStat"></div>';
+        q.classList.remove('flipin'); void q.offsetWidth; q.classList.add('flipin');
+    }
+    stat(); layoutWM();
+}
+
+function buildSwatches(){
+    var box = $('wmSwatches'); box.innerHTML = '';
+    PALETTE.forEach(function(c){
+        var b = document.createElement('button');
+        b.className = 'wm-sw'; b.style.background = c; b.title = c; b.dataset.c = c;
+        b.onclick = function(){ setColor(c); };
+        box.appendChild(b);
+    });
+}
+function setColor(c){ wmColor = c; if (/^#[0-9a-f]{6}$/i.test(c)) $('wmCustom').value = c; markUI(); }
+function markUI(){
+    document.querySelectorAll('.wt').forEach(function(b){ b.classList.toggle('on', b.dataset.tool === wmTool); });
+    document.querySelectorAll('.wm-sw').forEach(function(b){ b.classList.toggle('on', b.dataset.c === wmColor); });
+}
+
+function enterWM(){
+    if (!getDeck(curName) || !list.length) return;
+    wmOn = true; document.body.classList.add('wm');
+    closePicker(); closeJumpPicker();
+    buildSwatches(); $('wmCustom').value = wmColor; markUI();
+    wmKey = null; wmSync();
+}
+function exitWM(){
+    wmOn = false; dirty = false; drawing = false; active = null;
+    clearTimeout(idleT);
+    document.body.classList.remove('wm');
+    hideChip();
+}
+
+document.querySelectorAll('.wt').forEach(function(b){ b.onclick = function(){ wmTool = b.dataset.tool; markUI(); }; });
+$('writeBtn').onclick = enterWM;
+$('wmExit').onclick = exitWM;
+$('wmUndo').onclick = function(){ strokes().pop(); paintAll(); };
+$('wmClear').onclick = function(){ if (wmKey) wmStore[wmKey] = []; paintAll(); hideChip(); };
+$('wmCheck').onclick = function(){ dirty = true; clearTimeout(idleT); runCheck(); };
+$('wmSize').oninput = function(){ $('wmSizeV').textContent = this.value; };
+$('wmCustom').oninput = function(){ setColor(this.value); };
+window.addEventListener('resize', function(){ if (wmOn) layoutWM(); });
+
+// نربط render عشان وضع الكتابة يتحدّث مع أي تغيير في البطاقات
+render = (function(orig){ return function(){ orig(); if (wmOn) wmSync(); }; })(render);
 </script></body></html>
