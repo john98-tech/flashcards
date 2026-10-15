@@ -101,9 +101,17 @@ mark{font:inherit;font-weight:700;background:var(--bl);color:var(--fg);padding:0
   .jp-item .jp-preview{font-size:.75rem}
   .card{padding:20px;min-height:240px;}
 }
-  .ud-menu{margin-top:8px;max-height:40vh;overflow-y:auto;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.1);text-align:start}
-.ud-menu.hidden{display:none}
-.ud-wrap{width:100%;margin-top:10px;font-family:system-ui,sans-serif}
+.ud-box{width:100%;margin-top:12px;font-family:system-ui,sans-serif;text-align:start}
+.ud-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border:2px solid var(--acc);background:var(--card);color:var(--fg);border-radius:12px;cursor:pointer;font:600 .95rem system-ui,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.03)}
+.ud-btn:hover{background:color-mix(in srgb,var(--acc) 4%,var(--card))}
+.ud-title{display:flex;align-items:center;gap:8px}
+.ud-caret{transition:transform .2s;opacity:.7;font-size:.8rem}
+.ud-box.open .ud-caret{transform:rotate(180deg)}
+.ud-list{display:none;margin-top:8px;max-height:40vh;overflow-y:auto;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.1)}
+.ud-box.open .ud-list{display:block}
+.ud-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:.9rem;color:var(--fg);border-radius:8px;margin-bottom:2px}
+.ud-item:hover{background:var(--bg)}
+.ud-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style></head><body>
 
 <div class="logo">
@@ -404,26 +412,25 @@ function showUnlocked(names){
     m.className = 'stat msg-ok';
     m.innerHTML = '';
     var wrap = document.createElement('div');
-    wrap.className = 'dp ud-wrap';
+    wrap.className = 'ud-box';
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'dp-btn';
-    btn.innerHTML = '<span class="dp-label"><span class="ic">✅</span>اتفتح ' + names.length + ' دكّة</span><span class="dp-caret">▼</span>';
-    var menu = document.createElement('div');
-    menu.className = 'ud-menu hidden';
+    btn.className = 'ud-btn';
+    btn.innerHTML = '<span class="ud-title"><span>✅</span><span>اتفتح ' + names.length + ' دكّة</span></span><span class="ud-caret">▼</span>';
+    var list = document.createElement('div');
+    list.className = 'ud-list';
     names.forEach(function(n){
         var it = document.createElement('div');
-        it.className = 'dp-item';
-        it.innerHTML = '<span class="ic">📄</span><span class="nm">' + esc(n) + '</span>';
-        menu.appendChild(it);
+        it.className = 'ud-item';
+        it.innerHTML = '<span>📄</span><span class="ud-name">' + esc(n) + '</span>';
+        list.appendChild(it);
     });
     btn.onclick = function(e){
         e.stopPropagation();
         wrap.classList.toggle('open');
-        menu.classList.toggle('hidden');
     };
     wrap.appendChild(btn);
-    wrap.appendChild(menu);
+    wrap.appendChild(list);
     m.appendChild(wrap);
 }
 async function redeem(){
