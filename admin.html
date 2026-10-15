@@ -167,6 +167,20 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
   .cv-body{grid-template-columns:1fr}
   .cv-table-wrap{overflow:auto}
 }
+  .dk-dd{position:relative;display:inline-block}
+.dk-dd summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
+  padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);
+  font-size:13px;white-space:nowrap;max-width:200px;overflow:hidden}
+.dk-dd summary::-webkit-details-marker{display:none}
+.dk-dd summary:hover{border-color:var(--acc)}
+.dk-dd[open] summary{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.dk-caret{margin-inline-start:auto;color:var(--mut);font-size:11px}
+.dk-more{background:var(--acc-soft);color:var(--acc);border-radius:99px;padding:0 7px;font-size:11px;font-weight:700}
+.dk-panel{position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:20;min-width:200px;
+  max-height:220px;overflow:auto;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:2px}
+.dk-item{padding:6px 10px;border-radius:6px;font-size:13px;white-space:nowrap}
+.dk-item:hover{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -1240,6 +1254,17 @@ function renderDeckPick() {
     : '<div class="mut">No decks</div>';
 }
 
+  function deckDropdown(c) {
+  const ds = c.decks || [];
+  if (!ds.length) return '<span class="mut">—</span>';
+  const label = ds.length === 1
+    ? esc(ds[0])
+    : `${esc(ds[0])} <span class="dk-more">+${ds.length - 1}</span>`;
+  return `<details class="dk-dd">
+    <summary>${label}<span class="dk-caret">▾</span></summary>
+    <div class="dk-panel">${ds.map(d => `<div class="dk-item">📄 ${esc(d)}</div>`).join('')}</div>
+  </details>`;
+}
 function renderCodes() {
   const q = $('cvSearch').value.trim().toLowerCase(), st = $('cvStatus').value;
   const rows = CV.rows.filter(c =>
@@ -1256,7 +1281,7 @@ function renderCodes() {
     return `<tr data-id="${c.id}">
       <td><code class="cv-code">${esc(c.code)}</code></td>
       <td>${esc(c.student_name || '—')}${c.note ? `<div class="mut sm2">${esc(c.note)}</div>` : ''}</td>
-      <td>${(c.decks || []).map(d => `<span class="tag">${esc(d)}</span>`).join(' ')}</td>
+      <td>${deckDropdown(c)}</td>
       <td><span class="badge b-${s}">${STATUS_LBL[s]}</span></td>
       <td class="mut">${fmtDate(c.used_at)}</td>
       <td class="cv-acts">
