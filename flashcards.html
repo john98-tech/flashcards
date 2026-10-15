@@ -396,15 +396,28 @@ function flip(){if(list.length){back=!back;render()}}
 function codeMsg(text, kind){ var m = $('codeMsg'); m.className = 'stat' + (kind === true ? ' msg-ok' : kind === false ? ' msg-no' : ''); m.textContent = text; }
 function openModal(){ codeMsg('', null); $('codeInput').value = ''; $('modal').classList.remove('hidden'); setTimeout(function(){ $('codeInput').focus(); }, 50); }
 function closeModal(){ $('modal').classList.add('hidden'); }
+
 async function redeem(){
     var code = $('codeInput').value.trim().toUpperCase();
-    if (!code) { codeMsg('Please enter a code.', false); return; }
+    if (!code) { codeMsg('اكتب الكود الأول', false); return; }
     $('codeGo').disabled = true; codeMsg('Checking...', null);
     const { data, error } = await supabaseClient.rpc('redeem_code', { p_code: code });
     $('codeGo').disabled = false;
-    if (error) { codeMsg(error.message, false); return; }
-    var names = Array.isArray(data) ? data : []; codeMsg('Unlocked: ' + names.join(', '), true);
-    await loadAll(names[0]); setTimeout(closeModal, 1200);
+    if (error) { codeMsg(friendlyErr(error.message), false); return; }
+    var names = Array.isArray(data) ? data : [];
+    if (!names.length) { codeMsg('الكود ده مفيهوش أي دكّة', false); return; }
+    codeMsg('✅ اتفتح: ' + names.join(', '), true);
+    await loadAll(names[0]);
+    setTimeout(closeModal, 1500);
+}
+
+function friendlyErr(m){
+    m = String(m || '');
+    if (/اتستخدم/.test(m)) return 'الكود ده اتستخدم قبل كده';
+    if (/متوقف/.test(m)) return 'الكود ده متوقف، كلم الأدمن';
+    if (/غير صحيح/.test(m)) return 'الكود غير صحيح';
+    if (/sign in/i.test(m)) return 'سجّل دخول الأول';
+    return m;
 }
 
 $('unlock').onclick = openModal; $('codeCancel').onclick = closeModal; $('codeGo').onclick = redeem; $('modal').onclick = function(e){ if (e.target === this) closeModal(); };
