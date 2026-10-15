@@ -526,6 +526,30 @@ fillSelect($('bulkDeck'), DECKS, 'Move to deck…');  $('deckDL').innerHTML = de
   $('crumbDL').innerHTML = crumbs.map(d => `<option value="${esc(d)}">`).join('');
 }
 
+/* ---------- empty deck cleanup ---------- */
+// Removes decks that have no cards left from the categories table (and from the UI).
+async function pruneEmptyDecks() {
+  const used = new Set(CARDS.map(c => c.category).filter(Boolean));
+  const empty = DECKS.filter(d => !used.has(d));
+  if (!empty.length) return;
+  const { error } = await sb.from('categories').delete().in('name', empty);
+  if (error) { toast('Could not remove empty deck: ' + error.message, 'no'); return; }
+  DECKS = DECKS.filter(d => used.has(d));
+  buildFilters();
+  applyFilters();
+}
+
+// Makes sure decks exist in the categories table (used by undo after a deck was pruned).
+async function ensureDecks(names) {
+  let added = false;
+  for (const d of new Set(names)) {
+    if (!d || DECKS.includes(d)) continue;
+    const { error } = await sb.from('categories').insert({ name: d });
+    if (!error) { DECKS.push(d); added = true; }
+  }
+  if (added) buildFilters();
+}
+
 /* ---------- multi-select dropdowns ---------- */
 function msLabel(key) {
   const m = MS[key], n = m.sel.size;
@@ -853,6 +877,7 @@ function replaceLocal(row) {
 }
 
 async function writeBack(id, fields) {
+  if (fields.category) await ensureDecks([fields.category]);
   const { data, error } = await sb.from('flashcards').update(fields).eq('id', id).select().single();
   if (error) throw error;
   replaceLocal(data);
@@ -884,6 +909,7 @@ async function save() {
   applyFilters();
   refreshEditor();
   markRows();
+  await pruneEmptyDecks();
 }
 
 async function duplicate() {
@@ -906,10 +932,12 @@ async function deleteCurrent() {
   closeEditor(true);
   applyFilters();
   toast('Deleted', 'ok');
+  await pruneEmptyDecks();
 }
 
 /* ---------- bulk actions ---------- */
 async function setCategories(list) {
+  await ensureDecks(list.map(x => x.category));
   const groups = {};
   list.forEach(x => (groups[x.category] ??= []).push(x.id));
   for (const [cat, ids] of Object.entries(groups)) {
@@ -972,6 +1000,7 @@ async function bulkMove() {
   SEL.clear();
   applyFilters();
   toast(`Moved ${ids.length} card(s) ✓`, 'ok');
+  await pruneEmptyDecks();
 }
 
 async function bulkDelete() {
@@ -988,6 +1017,7 @@ async function bulkDelete() {
   SEL.clear();
   applyFilters();
   toast('Deleted ✓', 'ok');
+  await pruneEmptyDecks();
 }
 
 /* ---------- history ---------- */
@@ -1010,6 +1040,7 @@ async function undo() {
   try { await a.undo(); HIST.i--; toast('↶ ' + a.label, 'ok'); }
   catch (e) { toast('Undo failed: ' + e.message, 'no'); }
   updHist(); applyFilters();
+  await pruneEmptyDecks();
 }
 async function redo() {
   if (HIST.i >= HIST.stack.length - 1) return;
@@ -1017,6 +1048,7 @@ async function redo() {
   try { await a.redo(); HIST.i++; toast('↷ ' + a.label, 'ok'); }
   catch (e) { toast('Redo failed: ' + e.message, 'no'); }
   updHist(); applyFilters();
+  await pruneEmptyDecks();
 }
 
 /* ---------- import / export (tab-separated, with comma fallback) ---------- */
