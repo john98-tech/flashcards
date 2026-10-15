@@ -197,7 +197,7 @@ const SUPABASE_URL = "https://rphakvxxjnzzwxzghcld.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KrRdYi553EtaX_ggzzVHeQ_L_gb6xFf";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 var CATS = [], GROUPS = [], GMAP = {}, unlocked = {}, D = [], st = {};
-  var PAID = {};
+  var PAID = {}, FREEDECK = {};
 var curName = null, list = [], pos = 0, back = false, isMissedMode = false;
 var $ = function(i){return document.getElementById(i)};
 var currentUserId = null, kicked = false;
@@ -250,6 +250,8 @@ async function fetchCards() {
 }
 
 function isOpen(c){ return !!c.is_free || !!unlocked[c.name]; }
+// الدكّة بتظهر لو مفتوحة بالكامل، أو فيها ولا كارت مجاني
+function canView(c){ return isOpen(c) || !!FREEDECK[c.name]; }
 function getDeck(name){ return D.find(function(d){ return d.n === name; }); }
 
 async function loadAll(preferName) {
@@ -266,15 +268,18 @@ async function loadAll(preferName) {
     unlocked = {}; ((ur.data) || []).forEach(function(r){ unlocked[r.category] = true; });
     const cards = await fetchCards();
     if (cards === null) { $('card').innerHTML = '<div class="txt">Error loading cards.</div>'; return; }
-      PAID = {};
-    cards.forEach(function(item){ if (!item.is_free) PAID[item.category || 'General'] = true; });
+    PAID = {}; FREEDECK = {};
+    cards.forEach(function(item){ var n = item.category || 'General'; if (item.is_free) FREEDECK[n] = true; else PAID[n] = true; });
     var map = {};
     cards.forEach(function(item){
         var n = item.category || 'General';
         if (!map[n]) map[n] = [];
         map[n].push({ f: item.question, b: item.answer, s: n, c: item.crumb || '', fr: !!item.is_free });
     });
-    D = CATS.filter(function(c){ return isOpen(c) && map[c.name]; }).map(function(c){ return { n: c.name, cards: map[c.name] }; });
+    D = CATS.filter(function(c){ return canView(c) && map[c.name]; }).map(function(c){
+        var all = map[c.name];
+        return { n: c.name, cards: isOpen(c) ? all : all.filter(function(x){ return x.fr; }) };
+    }).filter(function(d){ return d.cards.length; });
     D.forEach(function(d){ if (!st[d.n] || st[d.n].length !== d.cards.length) st[d.n] = new Array(d.cards.length).fill(null); });
     var order = CATS.filter(function(c){ return c.is_free; }).concat(CATS.filter(function(c){ return !c.is_free; }));
     var firstOpen = null;
@@ -303,13 +308,13 @@ function buildGroupEl(groupName, decks){
     hd.onclick = function(){ box.classList.toggle('open'); }; box.appendChild(hd);
     var items = document.createElement('div'); items.className = 'dp-group-items';
     decks.forEach(function(c){
-        var it = document.createElement('div'), open = isOpen(c), dk = getDeck(c.name);
+        var it = document.createElement('div'), open = canView(c), dk = getDeck(c.name);
         it.className = 'dp-item' + (curName === c.name ? ' cur' : '') + (open ? '' : ' locked');
         var icon = open ? '📄' : '🔒', cnt = (open && dk) ? '<span class="cnt">' + dk.cards.length + '</span>' : '';
-        var lockIc = (open && PAID[c.name]) ? ' 🔒' : '';
-        it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + lockIc + '</span>' + cnt;        it.onclick = function(){
+        it.innerHTML = '<span class="ic">' + icon + '</span><span class="nm">' + esc(c.name) + '</span>' + cnt;
+        it.onclick = function(){
             var cc = CATS.find(function(x){ return x.name === c.name; });
-            if (!cc || !isOpen(cc)){ closePicker(); openModal(); return; }
+            if (!cc || !canView(cc)){ closePicker(); openModal(); return; }
             curName = cc.name; closePicker(); updatePickerCurrent(); buildPicker(); start(false);
         };
         items.appendChild(it);
@@ -324,7 +329,7 @@ function updatePickerCurrent(){
     if (!curName){ label.innerHTML = '<span class="ic">📖</span>No deck selected'; return; }
     var c = CATS.find(function(x){ return x.name === curName; });
     if (!c){ label.textContent = curName; return; }
-    var open = isOpen(c), icon = open ? '📖' : '🔒', dk = getDeck(curName), cnt = (open && dk) ? ' · ' + dk.cards.length + ' cards' : '';
+    var open = canView(c), icon = open ? '📖' : '🔒', dk = getDeck(curName), cnt = (open && dk) ? ' · ' + dk.cards.length + ' cards' : '';
     label.innerHTML = '<span class="ic">' + icon + '</span>' + esc(curName) + cnt;
 }
 
