@@ -131,6 +131,42 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
   .edit-pane{min-height:70vh}
   .stats{margin-inline-start:0}
 }
+.cv{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.cv-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+.cv-top b{display:block;font-size:15px}
+.cv-top small{color:var(--mut);font-size:12px}
+.cv-stats{display:flex;gap:6px;padding:10px 18px;flex-wrap:wrap}
+.cv-body{flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr);gap:14px;padding:0 18px 18px}
+.cv-card,.cv-list{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.cv-card{padding:16px;gap:12px;overflow:auto}
+.cv-card h3{margin:0;font-size:15px}
+.cv-field{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--mut)}
+.cv-field input{width:100%}
+.cg-hd{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--mut);margin-bottom:6px}
+.cg-hd a{cursor:pointer;color:var(--acc)}
+#cgDeckList{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:2px}
+.cg-opt{display:flex;flex-direction:row;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px}
+.cg-opt:hover{background:var(--bg)}
+.cv-filters{display:flex;gap:8px;flex-wrap:wrap;padding:12px;border-bottom:1px solid var(--line)}
+#cvSearch{flex:1 1 200px}
+.cv-table-wrap{flex:1;overflow:auto;min-height:0}
+.cv-table{width:100%;border-collapse:collapse;font-size:13px}
+.cv-table th,.cv-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;vertical-align:middle}
+.cv-table th{position:sticky;top:0;background:var(--card);color:var(--mut);font-size:12px;z-index:1}
+.cv-code{font-family:ui-monospace,Consolas,monospace;font-weight:700;letter-spacing:.5px;background:var(--bg);padding:2px 6px;border-radius:5px}
+.cv-acts{white-space:nowrap;text-align:end}
+.cv-acts button{margin-inline-start:4px}
+.badge{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.b-free{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.b-used{background:var(--acc-soft);color:var(--acc)}
+.b-off{background:color-mix(in srgb,var(--no) 15%,transparent);color:var(--no)}
+.sm2{font-size:12px}
+.empty-row{text-align:center;color:var(--mut);padding:30px!important}
+@media (max-width:900px){
+  .cv{overflow:auto}
+  .cv-body{grid-template-columns:1fr}
+  .cv-table-wrap{overflow:auto}
+}
 </style>
 </head>
 <body>
@@ -154,6 +190,7 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
     <button class="sm" id="btnImport">⬆ Import</button>
     <button class="sm" id="btnExport">⬇ Export</button>
     <button class="sm" id="btnRefresh">↻ Refresh</button>
+    <button class="sm primary" id="btnCodes">🔑 Codes</button>
     <a class="btn sm" href="flashcards.html">Exit</a>
     <input type="file" id="csvFile" accept=".tsv,.csv,text/tab-separated-values,text/csv" hidden>
   </div>
@@ -325,6 +362,63 @@ mark{background:var(--bl);color:inherit;border-radius:3px;padding:0 2px}
 <datalist id="deckDL"></datalist>
 <datalist id="crumbDL"></datalist>
 <div id="toast"></div>
+
+<div id="codesView" class="cv hidden">
+  <div class="cv-top">
+    <div><b>🔑 Activation Codes</b><small>كل كود يستخدم مرة واحدة ويفتح دكّات محددة</small></div>
+    <button class="sm" id="cvClose">✕ Close</button>
+  </div>
+  <div class="cv-stats">
+    <div class="stat"><b id="cvTotal">0</b><span>Total</span></div>
+    <div class="stat"><b id="cvFree">0</b><span>Available</span></div>
+    <div class="stat"><b id="cvUsed">0</b><span>Used</span></div>
+    <div class="stat"><b id="cvOff">0</b><span>Disabled</span></div>
+  </div>
+  <div class="cv-body">
+    <aside class="cv-card">
+      <h3>＋ Generate codes</h3>
+      <label class="cv-field">Count
+        <input id="cgCount" type="number" min="1" max="500" value="1">
+      </label>
+      <label class="cv-field">Student name
+        <input id="cgName" placeholder="مثال: Sara">
+      </label>
+      <label class="cv-field">Note
+        <input id="cgNote" placeholder="اختياري">
+      </label>
+      <div>
+        <div class="cg-hd">
+          <span>Decks to unlock</span>
+          <span><a id="cgAll">all</a> · <a id="cgNone">none</a></span>
+        </div>
+        <div id="cgDeckList"></div>
+      </div>
+      <button class="primary" id="cgGo">＋ Generate</button>
+    </aside>
+
+    <section class="cv-list">
+      <div class="cv-filters">
+        <input id="cvSearch" type="search" placeholder="🔍 Search code / name / note…">
+        <select id="cvStatus">
+          <option value="">All statuses</option>
+          <option value="free">Available</option>
+          <option value="used">Used</option>
+          <option value="off">Disabled</option>
+        </select>
+        <button class="sm" id="cvCopyAvail">📋 Copy available</button>
+        <button class="sm" id="cvExport">⬇ CSV</button>
+      </div>
+      <div class="cv-table-wrap">
+        <table class="cv-table">
+          <thead>
+            <tr><th>Code</th><th>Student</th><th>Decks</th><th>Status</th><th>Used at</th><th></th></tr>
+          </thead>
+          <tbody id="cvBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
 
 <script>
 const ENV = localStorage.getItem('env') || 'prod';
@@ -1104,6 +1198,176 @@ function bindEvents() {
     else if (e.key === '/' && !inField) { e.preventDefault(); $('fSearch').focus(); }
   });
 }
+
+/* ===================== ACTIVATION CODES ===================== */
+// عدّل نص رسالة الواتساب هنا براحتك
+const CODE_MSG = (name, code) =>
+`أهلاً ${name || ''} 👋
+ده كود تفعيل الفلاش كاردس بتاعك:
+
+*${code}*
+
+ادخل على الموقع واضغط 🔑 Unlock واكتب الكود.
+⚠️ الكود ده يستخدم مرة واحدة بس.`;
+
+const CV = { rows: [], selDecks: new Set() };
+const codeStatus = c => !c.active ? 'off' : c.used_at ? 'used' : 'free';
+const STATUS_LBL = { free: 'Available', used: 'Used', off: 'Disabled' };
+const fmtDate = s => s ? new Date(s).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+const allDecks = () => [...new Set([...DECKS, ...CARDS.map(c => c.category).filter(Boolean)])];
+
+async function copyText(text, msg = 'Copied ✓') {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
+  toast(msg, 'ok');
+}
+
+async function loadCodes() {
+  const { data, error } = await sb.rpc('admin_list_codes');
+  if (error) return toast('Codes load failed: ' + error.message, 'no');
+  CV.rows = data || [];
+  renderCodes();
+}
+
+function renderDeckPick() {
+  const list = allDecks();
+  $('cgDeckList').innerHTML = list.length
+    ? list.map(d => `<label class="cg-opt"><input type="checkbox" value="${esc(d)}" ${CV.selDecks.has(d) ? 'checked' : ''}><span>${esc(d)}</span></label>`).join('')
+    : '<div class="mut">No decks</div>';
+}
+
+function renderCodes() {
+  const q = $('cvSearch').value.trim().toLowerCase(), st = $('cvStatus').value;
+  const rows = CV.rows.filter(c =>
+    (!st || codeStatus(c) === st) &&
+    (!q || (c.code + ' ' + (c.student_name || '') + ' ' + (c.note || '')).toLowerCase().includes(q)));
+
+  $('cvTotal').textContent = CV.rows.length;
+  $('cvFree').textContent = CV.rows.filter(c => codeStatus(c) === 'free').length;
+  $('cvUsed').textContent = CV.rows.filter(c => codeStatus(c) === 'used').length;
+  $('cvOff').textContent = CV.rows.filter(c => codeStatus(c) === 'off').length;
+
+  $('cvBody').innerHTML = rows.length ? rows.map(c => {
+    const s = codeStatus(c);
+    return `<tr data-id="${c.id}">
+      <td><code class="cv-code">${esc(c.code)}</code></td>
+      <td>${esc(c.student_name || '—')}${c.note ? `<div class="mut sm2">${esc(c.note)}</div>` : ''}</td>
+      <td>${(c.decks || []).map(d => `<span class="tag">${esc(d)}</span>`).join(' ')}</td>
+      <td><span class="badge b-${s}">${STATUS_LBL[s]}</span></td>
+      <td class="mut">${fmtDate(c.used_at)}</td>
+      <td class="cv-acts">
+        <button class="sm" data-act="copy" title="Copy code">📋</button>
+        <button class="sm" data-act="wa" title="Copy WhatsApp message">💬</button>
+        <button class="sm" data-act="rename" title="Edit name / note">✏️</button>
+        ${s !== 'used' ? (c.active
+          ? `<button class="sm" data-act="off">Disable</button>`
+          : `<button class="sm" data-act="on">Enable</button>`) : ''}
+        <button class="sm danger" data-act="del" title="Delete">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty-row">No codes</td></tr>`;
+}
+
+async function generateCodes() {
+  const count = Math.min(500, Math.max(1, parseInt($('cgCount').value) || 1));
+  const decks = [...CV.selDecks];
+  if (!decks.length) return toast('Choose at least one deck', 'no');
+
+  const btn = $('cgGo'); btn.disabled = true;
+  const { data, error } = await sb.rpc('admin_create_codes', {
+    p_count: count, p_student: $('cgName').value, p_decks: decks, p_note: $('cgNote').value
+  });
+  btn.disabled = false;
+  if (error) return toast('Failed: ' + error.message, 'no');
+
+  toast(`${data.length} code(s) created ✓`, 'ok');
+  $('cgName').value = ''; $('cgNote').value = '';
+  await loadCodes();
+  copyText(data.map(c => c.code).join('\n'), 'New codes copied 📋');
+}
+
+async function setCodeActive(c, on) {
+  const { error } = await sb.rpc('admin_set_code_active', { p_id: c.id, p_active: on });
+  if (error) return toast(error.message, 'no');
+  toast(on ? 'Enabled ✓' : 'Disabled ✓', 'ok');
+  loadCodes();
+}
+
+async function deleteCode(c) {
+  if (!confirm(`Delete code ${c.code}?`)) return;
+  const { error } = await sb.rpc('admin_delete_code', { p_id: c.id });
+  if (error) return toast(error.message, 'no');
+  toast('Deleted ✓', 'ok');
+  loadCodes();
+}
+
+async function renameCode(c) {
+  const name = prompt('Student name:', c.student_name || ''); if (name === null) return;
+  const note = prompt('Note:', c.note || ''); if (note === null) return;
+  const { error } = await sb.rpc('admin_update_code', { p_id: c.id, p_student: name, p_note: note });
+  if (error) return toast(error.message, 'no');
+  toast('Updated ✓', 'ok');
+  loadCodes();
+}
+
+function exportCodes() {
+  const rows = [['code', 'student', 'decks', 'status', 'used_at', 'note'],
+    ...CV.rows.map(c => [c.code, c.student_name || '', (c.decks || []).join('|'),
+      STATUS_LBL[codeStatus(c)], c.used_at || '', c.note || ''])];
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `codes-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function openCodes() {
+  renderDeckPick();
+  $('codesView').classList.remove('hidden');
+  loadCodes();
+}
+function closeCodes() { $('codesView').classList.add('hidden'); }
+
+function bindCodes() {
+  $('btnCodes').onclick = openCodes;
+  $('cvClose').onclick = closeCodes;
+  $('cgGo').onclick = generateCodes;
+  $('cgAll').onclick = () => { allDecks().forEach(d => CV.selDecks.add(d)); renderDeckPick(); };
+  $('cgNone').onclick = () => { CV.selDecks.clear(); renderDeckPick(); };
+  $('cgDeckList').addEventListener('change', e => {
+    if (e.target.type !== 'checkbox') return;
+    e.target.checked ? CV.selDecks.add(e.target.value) : CV.selDecks.delete(e.target.value);
+  });
+  $('cvSearch').addEventListener('input', renderCodes);
+  $('cvStatus').addEventListener('change', renderCodes);
+  $('cvCopyAvail').onclick = () => {
+    const free = CV.rows.filter(c => codeStatus(c) === 'free');
+    if (!free.length) return toast('No available codes', 'no');
+    copyText(free.map(c => c.student_name ? `${c.student_name}: ${c.code}` : c.code).join('\n'),
+             `${free.length} code(s) copied 📋`);
+  };
+  $('cvExport').onclick = exportCodes;
+  $('cvBody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const c = CV.rows.find(x => String(x.id) === b.closest('tr').dataset.id); if (!c) return;
+    const a = b.dataset.act;
+    if (a === 'copy') copyText(c.code, 'Code copied ✓');
+    if (a === 'wa') copyText(CODE_MSG(c.student_name, c.code), 'Message copied 💬');
+    if (a === 'rename') renameCode(c);
+    if (a === 'off') setCodeActive(c, false);
+    if (a === 'on') setCodeActive(c, true);
+    if (a === 'del') deleteCode(c);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('codesView').classList.contains('hidden')) closeCodes();
+  });
+}
+bindCodes();
 
 init();
 </script>
